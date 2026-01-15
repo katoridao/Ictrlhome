@@ -1,57 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import auth from '@react-native-firebase/auth';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const AuthScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
-
-  // --- CẤU HÌNH GOOGLE SIGNIN ---
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: '927212459282-ospfo450f0taj3jrgufrlomj3n1e9icu.apps.googleusercontent.com', 
-    });
-  }, []);
-
-  // --- XỬ LÝ ĐĂNG NHẬP GOOGLE ---
-  async function onGoogleButtonPress() {
-    try {
-      // 1. Kiểm tra xem thiết bị có hỗ trợ Google Play Services không
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      
-      // 2. Lấy ID token của người dùng
-      const signInResult = await GoogleSignin.signIn();
-      
-      // Lấy idToken từ kết quả trả về (xử lý khác nhau tùy phiên bản thư viện)
-      let idToken = signInResult.idToken;
-      if (!idToken && signInResult.data) {
-        idToken = signInResult.data.idToken; // Cho phiên bản mới
-      }
-
-      if (!idToken) {
-        throw new Error('Không tìm thấy ID Token');
-      }
-
-      // 3. Tạo credential cho Firebase
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-
-      // 4. Đăng nhập vào Firebase
-      await auth().signInWithCredential(googleCredential);
-      
-      console.log('Đăng nhập Google thành công!');
-      navigation.replace('Home'); // Chuyển sang trang chủ ngay
-
-    } catch (error) {
-      console.error(error);
-      if (error.code === 'SIGN_IN_CANCELLED') {
-        // Người dùng hủy đăng nhập, không làm gì cả
-      } else {
-        Alert.alert('Lỗi Google Login', error.message);
-      }
-    }
-  }
 
   // --- XỬ LÝ ĐĂNG NHẬP/ĐĂNG KÝ THƯỜNG ---
   const handleAuthentication = async () => {
@@ -116,7 +70,6 @@ const AuthScreen = ({ navigation }) => {
             {/* Nút Google đã gắn hàm xử lý */}
             <TouchableOpacity 
               style={styles.socialBtn} 
-              onPress={onGoogleButtonPress}
             >
               <Image 
                 source={{ uri: 'https://cdn-icons-png.flaticon.com/512/300/300221.png' }} 
