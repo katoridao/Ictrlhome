@@ -1,37 +1,30 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, Text, Button } from 'react-native';
-import auth from '@react-native-firebase/auth';
 
-import SplashScreen from './src/screens/SplashScreen';
 import AuthScreen from './src/screens/AuthScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import RoomScreen from './src/screens/RoomScreen';
+import ScriptScreen from './src/screens/ScriptScreen';
+import HistoryScreen from './src/screens/HistoryScreen';
+import SettingScreen from './src/screens/SettingScreen';
 
 const Stack = createNativeStackNavigator();
 
-const HomeScreen = ({ navigation }) => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text style={{ fontSize: 20, marginBottom: 20 }}>Welcome Home!</Text>
-    <Button 
-      title="Logout" 
-      onPress={() => {
-        auth().signOut().then(() => navigation.replace('Auth'));
-      }} 
-    />
-  </View>
-);
-
-function App() {
+export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Splash" component={SplashScreen} />
+      <Stack.Navigator
+        initialRouteName="Auth"
+        screenOptions={{ headerShown: false }}
+      >
         <Stack.Screen name="Auth" component={AuthScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Room" component={RoomScreen} />
+        <Stack.Screen name="Script" component={ScriptScreen} />
+        <Stack.Screen name="History" component={HistoryScreen} />
+        <Stack.Screen name="Setting" component={SettingScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
-
-export default App;
-///
