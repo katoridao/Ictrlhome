@@ -60,35 +60,7 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* BOTTOM TAB */}
-      <View style={styles.bottomTab}>
-        <TabItem
-          iconKey="home"
-          label="Nhà"
-          active
-          onPress={() => navigation.replace('Home')}
-        />
-        <TabItem
-          iconKey="room"
-          label="Phòng"
-          onPress={() => navigation.replace('Room')}
-        />
-        <TabItem
-          iconKey="script"
-          label="Kịch bản"
-          onPress={() => navigation.replace('Script')}
-        />
-        <TabItem
-          iconKey="history"
-          label="Lịch sử"
-          onPress={() => navigation.replace('History')}
-        />
-        <TabItem
-          iconKey="setting"
-          label="Cài đặt"
-          onPress={() => navigation.replace('Setting')}
-        />
-      </View>
+      
 
     </View>
   );

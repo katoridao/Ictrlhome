@@ -99,38 +99,7 @@ export default function SettingScreen({ navigation }) {
 
       </ScrollView>
 
-      {/* BOTTOM MENU */}
-      <View style={styles.bottomTab}>
-        <BottomItem
-          icon={require('../../public/img/home.png')}
-          label="Nhà"
-          onPress={() => navigation.replace('Home')}
-        />
-
-        <BottomItem
-          icon={require('../../public/img/room.png')}
-          label="Phòng"
-          onPress={() => navigation.replace('Room')}
-        />
-
-        <BottomItem
-          icon={require('../../public/img/script.png')}
-          label="Kịch bản"
-          onPress={() => navigation.replace('Script')}
-        />
-
-        <BottomItem
-          icon={require('../../public/img/history.png')}
-          label="Lịch sử"
-          onPress={() => navigation.replace('History')}
-        />
-
-        <BottomItem
-          icon={require('../../public/img/settingclicked.png')}
-          label="Cài đặt"
-          active
-        />
-      </View>
+      
 
     </View>
   );

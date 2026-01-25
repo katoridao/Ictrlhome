@@ -17,7 +17,7 @@ const AuthScreen = ({ navigation }) => {
     try {
       if (isLogin) {
         await auth().signInWithEmailAndPassword(email, password);
-        navigation.replace('Home');
+        navigation.replace('Main');
       } else {
         await auth().createUserWithEmailAndPassword(email, password);
         await auth().signOut();

@@ -76,35 +76,7 @@ export default function HistoryScreen({ navigation }) {
         />
       </ScrollView>
 
-      {/* BOTTOM MENU */}
-      <View style={styles.bottomTab}>
-        <BottomItem
-          icon={require('../../public/img/home.png')}
-          label="Nhà"
-          onPress={() => navigation.replace('Home')}
-        />
-        <BottomItem
-          icon={require('../../public/img/room.png')}
-          label="Phòng"
-          onPress={() => navigation.replace('Room')}
-        />
-        <BottomItem
-          icon={require('../../public/img/script.png')}
-          label="Kịch bản"
-          onPress={() => navigation.replace('Script')}
-        />
-        <BottomItem
-          icon={require('../../public/img/historyclick.png')}
-          label="Lịch sử"
-          active
-          onPress={() => navigation.replace('History')}
-        />
-        <BottomItem
-          icon={require('../../public/img/setting.png')}
-          label="Cài đặt"
-          onPress={() => navigation.replace('Setting')}
-        />
-      </View>
+      
 
     </View>
   );
