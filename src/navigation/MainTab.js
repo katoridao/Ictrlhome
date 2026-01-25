@@ -11,11 +11,11 @@ import SettingScreen from '../screens/SettingScreen';
 const Tab = createBottomTabNavigator();
 
 const icons = {
-  Home: require('../public/img/home.png'),
-  Room: require('../public/img/room.png'),
-  Script: require('../public/img/script.png'),
-  History: require('../public/img/history.png'),
-  Setting: require('../public/img/setting.png'),
+  Home: require('../../public/img/home.png'),
+  Room: require('../../public/img/room.png'),
+  Script: require('../../public/img/script.png'),
+  History: require('../../public/img/history.png'),
+  Setting: require('../../public/img/setting.png'),
 };
 
 export default function MainTab() {
