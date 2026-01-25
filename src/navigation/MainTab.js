@@ -41,9 +41,7 @@ export default function MainTab() {
         tabBarIcon: ({ focused }) => (
           <Image
             source={
-              focused
-                ? icons[route.name].active
-                : icons[route.name].normal
+              focused ? icons[route.name].active : icons[route.name].normal
             }
             style={{ width: 24, height: 24 }}
             resizeMode="contain"
