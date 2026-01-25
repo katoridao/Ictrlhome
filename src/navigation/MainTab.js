@@ -11,11 +11,34 @@ import SettingScreen from '../screens/SettingScreen';
 const Tab = createBottomTabNavigator();
 
 const icons = {
+<<<<<<< HEAD
   Home: require('../../public/img/home.png'),
   Room: require('../../public/img/room.png'),
   Script: require('../../public/img/script.png'),
   History: require('../../public/img/history.png'),
   Setting: require('../../public/img/setting.png'),
+=======
+  Home: {
+    normal: require('../../public/img/home.png'),
+    active: require('../../public/img/homeclicked.png'),
+  },
+  Room: {
+    normal: require('../../public/img/room.png'),
+    active: require('../../public/img/roomclicked.png'),
+  },
+  Script: {
+    normal: require('../../public/img/script.png'),
+    active: require('../../public/img/scriptclicked.png'),
+  },
+  History: {
+    normal: require('../../public/img/history.png'),
+    active: require('../../public/img/historyclick.png'),
+  },
+  Setting: {
+    normal: require('../../public/img/setting.png'),
+    active: require('../../public/img/settingclicked.png'),
+  },
+>>>>>>> 416e2b5cc4d7c87f0168886dfed9d43ca5e873ec
 };
 
 export default function MainTab() {
@@ -25,16 +48,16 @@ export default function MainTab() {
         headerShown: false,
         tabBarIcon: ({ focused }) => (
           <Image
-            source={icons[route.name]}
-            style={{
-              width: 24,
-              height: 24,
-              tintColor: focused ? '#FF5A5F' : '#999',
-            }}
+            source={
+              focused
+                ? icons[route.name].active
+                : icons[route.name].normal
+            }
+            style={{ width: 24, height: 24 }}
             resizeMode="contain"
           />
         ),
-        tabBarActiveTintColor: '#FF5A5F',
+        tabBarActiveTintColor: '#000',
         tabBarInactiveTintColor: '#999',
         tabBarStyle: {
           height: 60,
