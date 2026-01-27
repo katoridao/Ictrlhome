@@ -1,9 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image, StatusBar } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 const WelcomeScreen = ({ navigation }) => {
-
   useEffect(() => {
     const timer = setTimeout(() => {
       navigation.replace('Login');
@@ -13,19 +11,14 @@ const WelcomeScreen = ({ navigation }) => {
   }, [navigation]);
 
   return (
-    <>
+    <View>
       <StatusBar
         barStyle="dark-content"
         backgroundColor="transparent"
         translucent
       />
 
-      <LinearGradient
-        colors={['#CFE9FF', '#E6C7FF', '#FFB3E6']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         <View style={styles.content}>
           <Image
             source={require('../../public/img/logo.png')}
@@ -34,8 +27,8 @@ const WelcomeScreen = ({ navigation }) => {
           />
           <Text style={styles.title}>iCtrlHome</Text>
         </View>
-      </LinearGradient>
-    </>
+      </View>
+    </View>
   );
 };
 
@@ -44,6 +37,7 @@ export default WelcomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#CFE9FF',
   },
   content: {
     flex: 1,

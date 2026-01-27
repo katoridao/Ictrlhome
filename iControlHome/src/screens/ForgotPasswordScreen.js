@@ -8,7 +8,6 @@ import {
   Image,
   StatusBar,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 export default function ForgotPasswordScreen() {
   return (
@@ -18,38 +17,32 @@ export default function ForgotPasswordScreen() {
         backgroundColor="transparent"
         translucent
       />
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../../public/img/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.appName}>iCtrlHome</Text>
+      </View>
 
-      <LinearGradient
-        colors={['#CFE9FF', '#E6C7FF', '#FFB3E6']}
-        style={styles.container}
-      >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../../public/img/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.appName}>iCtrlHome</Text>
-        </View>
+      {/* Form */}
+      <View style={styles.form}>
+        <TextInput
+          placeholder="Nhập email"
+          placeholderTextColor="#888"
+          keyboardType="email-address"
+          style={styles.input}
+        />
 
-        {/* Form */}
-        <View style={styles.form}>
-          <TextInput
-            placeholder="Nhập email"
-            placeholderTextColor="#888"
-            keyboardType="email-address"
-            style={styles.input}
-          />
+        <TouchableOpacity style={styles.button}>
+          <Text style={styles.buttonText}>TIẾP TỤC</Text>
+        </TouchableOpacity>
+      </View>
 
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>TIẾP TỤC</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Spacer */}
-        <View style={{ height: 80 }} />
-      </LinearGradient>
+      {/* Spacer */}
+      <View style={{ height: 80 }} />
     </>
   );
 }

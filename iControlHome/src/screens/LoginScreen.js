@@ -8,7 +8,6 @@ import {
   Image,
   StatusBar,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -16,64 +15,63 @@ const LoginScreen = ({ navigation }) => {
   return (
     <>
       <StatusBar translucent backgroundColor="transparent" />
-      <LinearGradient
-        colors={['#CFE9FF', '#E6C7FF', '#FFB3E6']}
-        style={styles.container}
-      >
-        {/* Logo */}
-        <View style={styles.logoBox}>
-          <Image
-            source={require('../../public/img/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.logoText}>iCtrlHome</Text>
-        </View>
 
-        {/* Input username */}
-        <View style={styles.input}>
-          <TextInput
-            placeholder="Nhập tài khoản"
-            placeholderTextColor="#666"
-            style={styles.textInput}
-          />
-        </View>
+      {/* Logo */}
+      <View style={styles.logoBox}>
+        <Image
+          source={require('../../public/img/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.logoText}>iCtrlHome</Text>
+      </View>
 
-        {/* Input password */}
-        <View style={styles.input}>
-          <TextInput
-            placeholder="Nhập mật khẩu"
-            placeholderTextColor="#666"
-            secureTextEntry={!showPassword}
-            style={styles.textInput}
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Text style={styles.showText}>
-              {showPassword ? 'Ẩn' : 'Hiện'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+      {/* Input username */}
+      <View style={styles.input}>
+        <TextInput
+          placeholder="Nhập tài khoản"
+          placeholderTextColor="#666"
+          style={styles.textInput}
+        />
+      </View>
 
-        {/* Button */}
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.replace('Main')}
-        >
-          <Text style={styles.buttonText}>TIẾP TỤC</Text>
+      {/* Input password */}
+      <View style={styles.input}>
+        <TextInput
+          placeholder="Nhập mật khẩu"
+          placeholderTextColor="#666"
+          secureTextEntry={!showPassword}
+          style={styles.textInput}
+        />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Text style={styles.showText}>{showPassword ? 'Ẩn' : 'Hiện'}</Text>
         </TouchableOpacity>
+      </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text
-            style={styles.register}
-            onPress={() => navigation.navigate('Register')}
-          >
-            ĐĂNG KÝ TÀI KHOẢN
-          </Text>
+      {/* Button */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.replace('Main')}
+      >
+        <Text style={styles.buttonText}>TIẾP TỤC</Text>
+      </TouchableOpacity>
 
-          <Text style={styles.forgot} onPress={() => navigation.navigate('ForgotPassword')}>Quên mật khẩu</Text>
-        </View>
-      </LinearGradient>
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text
+          style={styles.register}
+          onPress={() => navigation.navigate('Register')}
+        >
+          ĐĂNG KÝ TÀI KHOẢN
+        </Text>
+
+        <Text
+          style={styles.forgot}
+          onPress={() => navigation.navigate('ForgotPassword')}
+        >
+          Quên mật khẩu
+        </Text>
+      </View>
     </>
   );
 };

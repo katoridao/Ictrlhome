@@ -7,17 +7,13 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 export default function RegisterScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   return (
-    <LinearGradient
-      colors={['#A8C0FF', '#D9A7C7', '#FBC2EB']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       {/* Logo */}
       <View style={styles.logoContainer}>
         <Image
@@ -72,13 +68,14 @@ export default function RegisterScreen({ navigation }) {
 
         <Text style={styles.forgotText}>Quên mật khẩu</Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'space-between',
+    backgroundColor: '#A8C0FF',
   },
 
   logoContainer: {
