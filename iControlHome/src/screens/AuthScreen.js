@@ -1,37 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
-import auth from '@react-native-firebase/auth';
 
 const AuthScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
 
-  // --- XỬ LÝ ĐĂNG NHẬP/ĐĂNG KÝ THƯỜNG ---
-  const handleAuthentication = async () => {
-    if (!email || !password) {
-      Alert.alert('Lỗi', 'Vui lòng nhập email và mật khẩu');
-      return;
-    }
-
-    try {
-      if (isLogin) {
-        await auth().signInWithEmailAndPassword(email, password);
-        navigation.replace('Main');
-      } else {
-        await auth().createUserWithEmailAndPassword(email, password);
-        await auth().signOut();
-        Alert.alert('Thành công', 'Tạo tài khoản thành công! Vui lòng đăng nhập.');
-        setIsLogin(true);
-        setPassword('');
-      }
-    } catch (error) {
-      let msg = error.message;
-      if (error.code === 'auth/email-already-in-use') msg = 'Email này đã được sử dụng';
-      if (error.code === 'auth/invalid-email') msg = 'Email không hợp lệ';
-      if (error.code === 'auth/wrong-password') msg = 'Sai mật khẩu';
-      Alert.alert('Lỗi', msg);
-    }
+  // --- XỬ LÝ ĐĂNG NHẬP (GIẢ LẬP) ---
+  const handleAuthentication = () => {
+    // Bỏ qua mọi kiểm tra, chuyển thẳng vào màn hình chính
+    navigation.replace('Main');
   };
 
   return (
@@ -54,6 +32,7 @@ const AuthScreen = ({ navigation }) => {
         secureTextEntry
       />
 
+      {}
       <TouchableOpacity style={styles.button} onPress={handleAuthentication}>
         <Text style={styles.buttonText}>{isLogin ? 'Đăng Nhập' : 'Đăng Ký'}</Text>
       </TouchableOpacity>
@@ -67,9 +46,10 @@ const AuthScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.socialButtonsRow}>
-            {/* Nút Google đã gắn hàm xử lý */}
+            {}
             <TouchableOpacity 
               style={styles.socialBtn} 
+              onPress={handleAuthentication} 
             >
               <Image 
                 source={{ uri: 'https://cdn-icons-png.flaticon.com/512/300/300221.png' }} 
@@ -124,4 +104,3 @@ const styles = StyleSheet.create({
 });
 
 export default AuthScreen;
-//
