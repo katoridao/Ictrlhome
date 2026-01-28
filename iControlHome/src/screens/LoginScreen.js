@@ -19,7 +19,7 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!phone || !password) {
-      Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin");
+      Alert.alert('Thông báo', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
 
@@ -33,14 +33,11 @@ const LoginScreen = ({ navigation }) => {
       );
 
       if (response.status === 200) {
-<<<<<<< HEAD
         Alert.alert('Thành công', 'Đăng nhập thành công!');
-=======
         const user = response.data.user;
         await AsyncStorage.setItem('user_info', JSON.stringify(user));
-        
-        Alert.alert("Thành công", "Đăng nhập thành công!");
->>>>>>> 9a8dd71708b3248d86eb14be8fae8b9b3a6fd29c
+
+        Alert.alert('Thành công', 'Đăng nhập thành công!');
         navigation.replace('Main');
       }
     } catch (error) {
