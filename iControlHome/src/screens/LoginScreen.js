@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +18,11 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
+    if (!phone || !password) {
+      Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
     try {
       const response = await axios.post('http://192.168.56.2:3000/api/login', {
         phone: phone,
@@ -24,6 +30,9 @@ const LoginScreen = ({ navigation }) => {
       });
 
       if (response.status === 200) {
+        const user = response.data.user;
+        await AsyncStorage.setItem('user_info', JSON.stringify(user));
+        
         Alert.alert("Thành công", "Đăng nhập thành công!");
         navigation.replace('Main');
       }

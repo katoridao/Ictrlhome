@@ -27,7 +27,7 @@ export default function RegisterScreen({ navigation }) {
     }
 
     try {
-      const response = await axios.post('http://192.168.56.2:3000/api/register', {
+      const response = await axios.post('http://192.168.56.2:3000/api/register', { //thay bằng ipV4 của mọi người vào, mở CMD gõ ipconfig
         name: name,
         phone: phone,
         email: email,
