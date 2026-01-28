@@ -27,6 +27,7 @@ export default function RegisterScreen({ navigation }) {
     }
 
     try {
+<<<<<<< HEAD
       const response = await axios.post(
         'http://192.168.100.91:3000/api/register',
         {
@@ -36,6 +37,14 @@ export default function RegisterScreen({ navigation }) {
           password: password,
         },
       );
+=======
+      const response = await axios.post('http://192.168.56.2:3000/api/register', { //thay bằng ipV4 của mọi người vào, mở CMD gõ ipconfig
+        name: name,
+        phone: phone,
+        email: email,
+        password: password
+      });
+>>>>>>> 9a8dd71708b3248d86eb14be8fae8b9b3a6fd29c
 
       if (response.status === 200) {
         Alert.alert('Thành công', 'Đăng ký thành công!');
