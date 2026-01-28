@@ -18,24 +18,32 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post('http://192.168.56.2:3000/api/login', {
-        phone: phone,
-        password: password,
-      });
+      const response = await axios.post(
+        'http://192.168.100.91:3000/api/login',
+        {
+          phone: phone,
+          password: password,
+        },
+      );
 
       if (response.status === 200) {
-        Alert.alert("Thành công", "Đăng nhập thành công!");
+        Alert.alert('Thành công', 'Đăng nhập thành công!');
         navigation.replace('Main');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Lỗi kết nối server";
-      Alert.alert("Thất bại", errorMessage);
+      const errorMessage =
+        error.response?.data?.message || 'Lỗi kết nối server';
+      Alert.alert('Thất bại', errorMessage);
     }
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
 
       <View style={styles.logoBox}>
         <Image
@@ -71,10 +79,7 @@ const LoginScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-      >
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>TIẾP TỤC</Text>
       </TouchableOpacity>
 

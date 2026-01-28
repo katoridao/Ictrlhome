@@ -22,25 +22,29 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
-      Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp");
+      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp');
       return;
     }
 
     try {
-      const response = await axios.post('http://192.168.56.2:3000/api/register', {
-        name: name,
-        phone: phone,
-        email: email,
-        password: password
-      });
+      const response = await axios.post(
+        'http://192.168.100.91:3000/api/register',
+        {
+          name: name,
+          phone: phone,
+          email: email,
+          password: password,
+        },
+      );
 
       if (response.status === 200) {
-        Alert.alert("Thành công", "Đăng ký thành công!");
+        Alert.alert('Thành công', 'Đăng ký thành công!');
         navigation.navigate('Login');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Lỗi kết nối server";
-      Alert.alert("Thất bại", errorMessage);
+      const errorMessage =
+        error.response?.data?.message || 'Lỗi kết nối server';
+      Alert.alert('Thất bại', errorMessage);
     }
   };
 
@@ -92,7 +96,7 @@ export default function RegisterScreen({ navigation }) {
             onChangeText={setPassword}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Text style={styles.showText}>{showPassword ? "Ẩn" : "Hiện"}</Text>
+            <Text style={styles.showText}>{showPassword ? 'Ẩn' : 'Hiện'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -106,7 +110,7 @@ export default function RegisterScreen({ navigation }) {
             onChangeText={setConfirmPassword}
           />
           <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-            <Text style={styles.showText}>{showConfirm ? "Ẩn" : "Hiện"}</Text>
+            <Text style={styles.showText}>{showConfirm ? 'Ẩn' : 'Hiện'}</Text>
           </TouchableOpacity>
         </View>
 
