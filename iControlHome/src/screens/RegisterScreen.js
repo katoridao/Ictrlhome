@@ -16,6 +16,7 @@ export default function RegisterScreen({ navigation }) {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -29,6 +30,7 @@ export default function RegisterScreen({ navigation }) {
       const response = await axios.post('http://192.168.56.2:3000/api/register', {
         name: name,
         phone: phone,
+        email: email,
         password: password
       });
 
@@ -68,6 +70,16 @@ export default function RegisterScreen({ navigation }) {
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
+        />
+
+        <TextInput
+          placeholder="Nhập email"
+          placeholderTextColor="#888"
+          style={styles.input}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
         />
 
         <View style={styles.passwordBox}>
