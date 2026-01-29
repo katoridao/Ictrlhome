@@ -2,35 +2,30 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
 
+// ĐĂNG KÝ
 router.post("/register", async (req, res) => {
   try {
-    const { name, phone, email, password } = req.body;
+    const { name, phone, password } = req.body;
 
+    // Kiểm tra trống
     if (!name || name.trim() === "") {
       return res.status(400).json({ message: "Họ tên không được bỏ trống" });
     }
     if (!phone) {
       return res.status(400).json({ message: "Số điện thoại không được bỏ trống" });
     }
-    if (!email) {
-      return res.status(400).json({ message: "Email không được bỏ trống" });
-    }
     if (!password) {
       return res.status(400).json({ message: "Mật khẩu không được bỏ trống" });
     }
 
+    // Kiểm tra dấu cách
     const spaceRegex = /\s/;
-    if (spaceRegex.test(phone) || spaceRegex.test(email) || spaceRegex.test(password)) {
+    if (spaceRegex.test(phone) || spaceRegex.test(password)) {
       return res.status(400).json({ message: "Thông tin không được chứa dấu cách" });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Email không đúng định dạng" });
-    }
-
+    // Kiểm tra định dạng số điện thoại (Việt Nam)
     const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
     if (!phoneRegex.test(phone)) {
       return res.status(400).json({ message: "Số điện thoại không đúng định dạng (phải có 10 số)" });
@@ -40,11 +35,7 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Mật khẩu phải có ít nhất 6 ký tự" });
     }
 
-    const existingEmail = await User.findOne({ email: email.toLowerCase() });
-    if (existingEmail) {
-      return res.status(400).json({ message: "Email này đã được đăng ký" });
-    }
-
+    // Kiểm tra số điện thoại đã tồn tại chưa
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
       return res.status(400).json({ message: "Số điện thoại này đã được đăng ký" });
@@ -56,7 +47,6 @@ router.post("/register", async (req, res) => {
     const newUser = new User({
       name: name.trim(),
       phone,
-      email: email.toLowerCase(),
       password: hashedPassword,
     });
 
@@ -67,25 +57,18 @@ router.post("/register", async (req, res) => {
   }
 });
 
+// ĐĂNG NHẬP
 router.post("/login", async (req, res) => {
   try {
     const { phone, password } = req.body;
 
-    if (!phone) {
-      return res.status(400).json({ message: "Số điện thoại không được bỏ trống" });
-    }
-    if (!password) {
-      return res.status(400).json({ message: "Mật khẩu không được bỏ trống" });
-    }
-
-    const spaceRegex = /\s/;
-    if (spaceRegex.test(phone) || spaceRegex.test(password)) {
-      return res.status(400).json({ message: "Tài khoản hoặc mật khẩu không được chứa dấu cách" });
+    if (!phone || !password) {
+      return res.status(400).json({ message: "Vui lòng nhập đầy đủ số điện thoại và mật khẩu" });
     }
 
     const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: "Tài khoản không tồn tại" });
+      return res.status(404).json({ message: "Số điện thoại không tồn tại" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -102,65 +85,41 @@ router.post("/login", async (req, res) => {
   }
 });
 
+
 router.post("/forgot-password", async (req, res) => {
   try {
-    const { email } = req.body;
+    const { phone, newPassword, confirmPassword } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ message: "Vui lòng nhập email" });
+    if (!phone || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin" });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Mật khẩu xác nhận không khớp" });
+    }
+
+    const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: "Email này chưa được đăng ký" });
+      return res.status(404).json({ message: "Số điện thoại này chưa được đăng ký" });
     }
 
-    const newPassword = Math.random().toString(36).slice(-8);
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Mật khẩu phải có ít nhất 6 ký tự" });
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     user.password = hashedPassword;
     await user.save();
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'adicontrolhome@gmail.com',
-        pass: 'hwfi gltd itxc rlnj'
-      }
-    });
-
-    const mailOptions = {
-      from: 'iCtrlHome <EMAIL_CUA_BAN@gmail.com>',
-      to: email,
-      subject: 'Đặt lại mật khẩu iCtrlHome',
-      text: `Mật khẩu mới của bạn là: ${newPassword}. Vui lòng đăng nhập và đổi mật khẩu ngay.`
-    };
-
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "Mật khẩu mới đã được gửi đến email của bạn" });
+    res.status(200).json({ message: "Đặt lại mật khẩu thành công" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 });
 
-router.post("/change-password", async (req, res) => {
-  try {
-    const { phone, oldPassword, newPassword } = req.body;
-    const user = await User.findOne({ phone });
-
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
-
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
-    await user.save();
-
-    res.status(200).json({ message: "Đổi mật khẩu thành công" });
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi hệ thống" });
-  }
-});
+// ĐỔI MẬT KHẨU
 router.post("/change-password", async (req, res) => {
   try {
     const { phone, oldPassword, newPassword } = req.body;
@@ -190,4 +149,5 @@ router.post("/change-password", async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 });
+
 module.exports = router;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Toast from 'react-native-toast-message'; // Import thư viện Toast
 
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -13,22 +14,26 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
 
-        {/* Welcome / Splash */}
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+          {/* Welcome / Splash */}
+          <Stack.Screen name="Welcome" component={WelcomeScreen} />
 
-        {/* Auth */}
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name='ForgotPassword' component={ForgotPasswordScreen}/>
-        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+          {/* Auth */}
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name='ForgotPassword' component={ForgotPasswordScreen}/>
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
 
-        {/* Main App */}
-        <Stack.Screen name="Main" component={MainTab} />
+          {/* Main App */}
+          <Stack.Screen name="Main" component={MainTab} />
 
-      </Stack.Navigator>
-    </NavigationContainer>
+        </Stack.Navigator>
+      </NavigationContainer>
+      
+      <Toast />
+    </>
   );
 }

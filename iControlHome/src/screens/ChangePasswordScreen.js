@@ -1,36 +1,72 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import axios from 'axios';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import Toast from 'react-native-toast-message';
+import api from '../database/api';
 
 const ChangePasswordScreen = ({ navigation, route }) => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const phone = route.params?.phone;
 
   const handleChangePassword = async () => {
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ các trường");
-      return;
-    }
+    const cleanOld = oldPassword.trim();
+    const cleanNew = newPassword.trim();
+    const cleanConfirm = confirmPassword.trim();
 
-    if (newPassword !== confirmPassword) {
-      Alert.alert("Lỗi", "Xác nhận mật khẩu mới không khớp");
-      return;
-    }
-
-    try {
-      const response = await axios.post('http://192.168.56.2:3000/api/change-password', {
-        phone,
-        oldPassword,
-        newPassword
+    if (!cleanOld || !cleanNew || !cleanConfirm) {
+      Toast.show({
+        type: 'error',
+        text1: 'Thông báo',
+        text2: 'Vui lòng nhập đầy đủ các trường'
       });
-      Alert.alert("Thành công", response.data.message);
+      return;
+    }
+
+    if (cleanNew !== cleanConfirm) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Xác nhận mật khẩu mới không khớp'
+      });
+      return;
+    }
+
+    if (cleanNew.length < 6) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Mật khẩu mới phải có ít nhất 6 ký tự'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post('/change-password', {
+        phone,
+        oldPassword: cleanOld,
+        newPassword: cleanNew
+      });
+
+      Toast.show({
+        type: 'success',
+        text1: 'Thành công',
+        text2: response.data.message || 'Đổi mật khẩu thành công'
+      });
+      
       navigation.goBack();
     } catch (error) {
       const msg = error.response?.data?.message || "Không thể đổi mật khẩu";
-      Alert.alert("Lỗi", msg);
+      Toast.show({
+        type: 'error',
+        text1: 'Thất bại',
+        text2: msg
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,6 +80,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
         style={styles.input} 
         onChangeText={setOldPassword}
         placeholderTextColor="#999"
+        autoCapitalize="none"
       />
       
       <TextInput 
@@ -52,6 +89,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
         style={styles.input} 
         onChangeText={setNewPassword}
         placeholderTextColor="#999"
+        autoCapitalize="none"
       />
 
       <TextInput 
@@ -60,10 +98,19 @@ const ChangePasswordScreen = ({ navigation, route }) => {
         style={styles.input} 
         onChangeText={setConfirmPassword}
         placeholderTextColor="#999"
+        autoCapitalize="none"
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleChangePassword}>
-        <Text style={styles.buttonText}>CẬP NHẬT</Text>
+      <TouchableOpacity 
+        style={[styles.button, loading && { backgroundColor: '#A5CFFF' }]} 
+        onPress={handleChangePassword}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>CẬP NHẬT</Text>
+        )}
       </TouchableOpacity>
       
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelButton}>
