@@ -26,21 +26,18 @@ const icons = {
 };
 
 export default function HomeScreen({ navigation }) {
-   return (
+  return (
     <View style={styles.container}>
 
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => navigation.navigate('SelectHouse')}
-        >
+        <View style={styles.dropdown}>
           <Text style={styles.dropdownText}>Nhà riêng</Text>
           <Image
             source={require('../../public/img/down.png')}
             style={{ width: 16, height: 16 }}
           />
-        </TouchableOpacity>
+        </View>
 
         <View style={styles.headerIcons}>
           <Image
@@ -62,6 +59,8 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.addButtonText}>Thêm thiết bị</Text>
         </TouchableOpacity>
       </View>
+
+      
 
     </View>
   );
