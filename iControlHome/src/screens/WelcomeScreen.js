@@ -1,5 +1,12 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, StatusBar } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  StatusBar,
+  ImageBackground,
+} from 'react-native';
 
 const WelcomeScreen = ({ navigation }) => {
   useEffect(() => {
@@ -11,33 +18,35 @@ const WelcomeScreen = ({ navigation }) => {
   }, [navigation]);
 
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       <StatusBar
         barStyle="dark-content"
         backgroundColor="transparent"
         translucent
       />
 
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <Image
-            source={require('../../public/img/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>iCtrlHome</Text>
-        </View>
-      </View>
+      <ImageBackground
+  source={require('../../public/img/background.jpg')}
+  style={{ flex: 1 }}
+  resizeMode="cover"
+>
+  <View style={styles.content}>
+    <Image
+      source={require('../../public/img/logo.png')}
+      style={styles.logo}
+    />
+    <Text style={styles.title}>iCtrlHome</Text>
+  </View>
+</ImageBackground>
+
     </View>
   );
 };
 
 export default WelcomeScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#CFE9FF',
   },
   content: {
     flex: 1,

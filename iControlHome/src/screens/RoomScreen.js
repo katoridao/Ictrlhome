@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,14 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Modal,
+  TextInput,
 } from 'react-native';
 
-export default function RoomScreen({ navigation }) {
+export default function RoomScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+
   return (
     <View style={styles.container}>
 
@@ -16,7 +21,12 @@ export default function RoomScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.sortText}>Sắp xếp</Text>
         <Text style={styles.headerTitle}>Phòng</Text>
-        <TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            setIsEdit(false);
+            setModalVisible(true);
+          }}
+        >
           <Image
             source={require('../../public/img/add.png')}
             style={{ width: 22, height: 22 }}
@@ -26,11 +36,34 @@ export default function RoomScreen({ navigation }) {
 
       {/* BODY */}
       <ScrollView contentContainerStyle={styles.body}>
-
-        <RoomItem name="Phòng khách" />
-        <RoomItem name="Phòng bếp" />
-        <RoomItem name="Phòng ngủ" />
-        <RoomItem name="Phòng tắm" />
+        <RoomItem
+          name="Phòng khách"
+          onEdit={() => {
+            setIsEdit(true);
+            setModalVisible(true);
+          }}
+        />
+        <RoomItem
+          name="Phòng bếp"
+          onEdit={() => {
+            setIsEdit(true);
+            setModalVisible(true);
+          }}
+        />
+        <RoomItem
+          name="Phòng ngủ"
+          onEdit={() => {
+            setIsEdit(true);
+            setModalVisible(true);
+          }}
+        />
+        <RoomItem
+          name="Phòng tắm"
+          onEdit={() => {
+            setIsEdit(true);
+            setModalVisible(true);
+          }}
+        />
 
         <Text style={styles.defaultText}>(Phòng mặc định)</Text>
 
@@ -41,17 +74,48 @@ export default function RoomScreen({ navigation }) {
         <View style={styles.sectionBox}>
           <Text style={styles.sectionText}>Chưa thuộc phòng</Text>
         </View>
-
       </ScrollView>
 
-      
+      {/* MODAL (UI ONLY) */}
+      <Modal transparent visible={modalVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>
+              {isEdit ? 'Sửa tên phòng' : 'Thêm phòng'}
+            </Text>
+
+            <TextInput
+              placeholder="Nhập tên phòng"
+              style={styles.input}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#ccc' }]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#3b9cff' }]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={{ color: '#fff' }}>
+                  {isEdit ? 'Lưu' : 'Thêm'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
 }
 
-/* ROOM ITEM */
-function RoomItem({ name }) {
+/* ROOM ITEM – UI ONLY */
+function RoomItem({ name, onEdit }) {
   return (
     <View style={styles.roomItem}>
       <Text style={styles.roomName}>{name}</Text>
@@ -64,7 +128,7 @@ function RoomItem({ name }) {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity>
+        <TouchableOpacity onPress={onEdit}>
           <Image
             source={require('../../public/img/edit.png')}
             style={[styles.icon, { marginLeft: 12 }]}
@@ -72,30 +136,6 @@ function RoomItem({ name }) {
         </TouchableOpacity>
       </View>
     </View>
-  );
-}
-
-/* BOTTOM ITEM */
-function BottomItem({ icon, label, active, onPress }) {
-  return (
-    <TouchableOpacity style={styles.bottomItem} onPress={onPress}>
-      <Image
-        source={icon}
-        style={[
-          styles.bottomIcon,
-          active && { tintColor: '#000' },
-        ]}
-        resizeMode="contain"
-      />
-      <Text
-        style={[
-          styles.bottomText,
-          active && styles.bottomActive,
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
   );
 }
 
@@ -157,28 +197,46 @@ const styles = StyleSheet.create({
 
   sectionText: { fontSize: 16, color: '#000' },
 
-  bottomTab: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalBox: {
+    width: '80%',
     backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
+    borderRadius: 16,
+    padding: 20,
   },
 
-  bottomItem: { alignItems: 'center' },
-
-  bottomIcon: {
-    width: 22,
-    height: 22,
-    tintColor: '#666',
-    marginBottom: 2,
-  },
-
-  bottomText: { fontSize: 12, color: '#666' },
-
-  bottomActive: {
-    color: '#000',
+  modalTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 42,
+    marginBottom: 16,
+  },
+
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginHorizontal: 6,
   },
 });

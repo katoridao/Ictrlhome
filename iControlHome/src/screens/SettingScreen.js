@@ -104,19 +104,20 @@ export default function SettingScreen({ navigation }) {
           <SettingItem
             icon={require('../../public/img/notification.png')}
             label="Thông báo"
-            onPress={() => Alert.alert("Thông báo", "Tính năng đang phát triển")}
+            onPress={() => navigation.navigate('NotificationSetting')}
           />
           <SettingItem
             icon={require('../../public/img/moon.png')}
             label="Giao diện"
             value="Tối/Sáng"
           />
-          <SettingItem
+         <SettingItem
             icon={require('../../public/img/language.png')}
             label="Ngôn ngữ"
             value="Vie/Eng"
             noBorder
-          />
+            onPress={() => Alert.alert("Thông báo", "Tính năng đang phát triển")}
+/>
         </View>
 
         {/* OTHER */}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,12 @@ import {
 } from 'react-native';
 
 export default function HistoryScreen({ navigation }) {
+  // 🔒 TẤT CẢ HOOK PHẢI Ở ĐÂY
+  const [openFilter, setOpenFilter] = useState(null);
+  const [device, setDevice] = useState('Thiết bị');
+  const [action, setAction] = useState('Hành động');
+  const [time, setTime] = useState('Hôm nay');
+
   return (
     <View style={styles.container}>
 
@@ -20,17 +26,84 @@ export default function HistoryScreen({ navigation }) {
             style={styles.backIcon}
           />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Lịch sử hoạt động</Text>
-
-        <View style={{ width: 24 }} />
+        <View style={{ width: 22 }} />
       </View>
 
       {/* FILTER */}
-      <View style={styles.filterRow}>
-        <FilterItem label="Thiết bị" />
-        <FilterItem label="Hành động" />
-        <FilterItem label="Hôm nay" />
+      <View style={styles.filterWrapper}>
+        <View style={styles.filterRow}>
+          <FilterItem
+            label={device}
+            active={openFilter === 'device'}
+            onPress={() =>
+              setOpenFilter(openFilter === 'device' ? null : 'device')
+            }
+          />
+          <FilterItem
+            label={action}
+            active={openFilter === 'action'}
+            onPress={() =>
+              setOpenFilter(openFilter === 'action' ? null : 'action')
+            }
+          />
+          <FilterItem
+            label={time}
+            active={openFilter === 'time'}
+            onPress={() =>
+              setOpenFilter(openFilter === 'time' ? null : 'time')
+            }
+          />
+        </View>
+
+        {openFilter && (
+          <View style={styles.dropdown}>
+            {openFilter === 'device' &&
+              ['Quạt', 'Đèn', 'Điều hòa'].map(item => (
+                <DropdownItem
+                  key={item}
+                  label={item}
+                  active={device === item}
+                  onPress={() => {
+                    setDevice(item);
+                    setOpenFilter(null);
+                  }}
+                />
+              ))}
+
+            {openFilter === 'action' &&
+              ['Bật', 'Tắt'].map(item => (
+                <DropdownItem
+                  key={item}
+                  label={item}
+                  active={action === item}
+                  onPress={() => {
+                    setAction(item);
+                    setOpenFilter(null);
+                  }}
+                />
+              ))}
+
+            {openFilter === 'time' &&
+              [
+                '7 ngày trước',
+                '14 ngày trước',
+                '30 ngày trước',
+                '60 ngày trước',
+                '90 ngày trước',
+              ].map(item => (
+                <DropdownItem
+                  key={item}
+                  label={item}
+                  active={time === item}
+                  onPress={() => {
+                    setTime(item);
+                    setOpenFilter(null);
+                  }}
+                />
+              ))}
+          </View>
+        )}
       </View>
 
       {/* LIST */}
@@ -42,8 +115,7 @@ export default function HistoryScreen({ navigation }) {
           user="Hưng"
           time="7:00 am"
         />
-
-        <HistoryItem
+         <HistoryItem
           icon={require('../../public/img/tv.png')}
           title="Tivi phòng khách"
           status="Bật"
@@ -75,18 +147,18 @@ export default function HistoryScreen({ navigation }) {
           time="21:00 pm"
         />
       </ScrollView>
-
-      
-
     </View>
   );
 }
 
-/* FILTER ITEM */
-function FilterItem({ label }) {
+/* COMPONENT CON – KHÔNG ĐƯỢC DÙNG HOOK */
+function FilterItem({ label, active, onPress }) {
   return (
-    <TouchableOpacity style={styles.filterItem}>
-      <Text style={styles.filterText}>{label}</Text>
+    <TouchableOpacity
+      style={[styles.filterItem, active && styles.filterActive]}
+      onPress={onPress}
+    >
+      <Text>{label}</Text>
       <Image
         source={require('../../public/img/down.png')}
         style={styles.filterIcon}
@@ -95,174 +167,46 @@ function FilterItem({ label }) {
   );
 }
 
-/* HISTORY ITEM */
-function HistoryItem({ icon, title, status, user, time }) {
+function DropdownItem({ label, active, onPress }) {
   return (
-    <View style={styles.historyItem}>
-      <Image source={icon} style={styles.deviceIcon} />
-
-      <View style={styles.historyContent}>
-        <Text style={styles.historyTitle}>{title}</Text>
-        <Text style={styles.historySub}>
-          {status} &nbsp; {user}
-        </Text>
-      </View>
-
-      <Text style={styles.historyTime}>{time}</Text>
-    </View>
-  );
-}
-
-/* BOTTOM ITEM */
-function BottomItem({ icon, label, active, onPress }) {
-  return (
-    <TouchableOpacity style={styles.bottomItem} onPress={onPress}>
-      <Image
-        source={icon}
-        style={[
-          styles.bottomIcon,
-          active && { tintColor: '#000' },
-        ]}
-        resizeMode="contain"
-      />
-      <Text
-        style={[
-          styles.bottomText,
-          active && styles.bottomActive,
-        ]}
-      >
+    <TouchableOpacity
+      style={[styles.dropdownItem, active && styles.dropdownActive]}
+      onPress={onPress}
+    >
+      <Text style={{ color: active ? '#fff' : '#000' }}>
         {label}
       </Text>
     </TouchableOpacity>
   );
 }
+
+function HistoryItem({ icon, title, status, user, time }) {
+  return (
+    <View style={styles.historyItem}>
+      <Image source={icon} style={styles.deviceIcon} />
+      <View style={{ flex: 1 }}>
+        <Text>{title}</Text>
+        <Text>{status} · {user}</Text>
+      </View>
+      <Text>{time}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#e6e6e6',
-  },
-
-  /* HEADER */
-  header: {
-    height: 70,
-    backgroundColor: '#3b9cff',
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  backIcon: {
-    width: 22,
-    height: 22,
-    tintColor: '#fff',
-  },
-
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginRight: 22,
-  },
-
-  /* FILTER */
-  filterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 14,
-  },
-
-  filterItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-
-  filterText: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-
-  filterIcon: {
-    width: 12,
-    height: 12,
-  },
-
-  /* LIST */
-  body: {
-    paddingHorizontal: 16,
-    paddingBottom: 90,
-  },
-
-  historyItem: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  deviceIcon: {
-    width: 34,
-    height: 34,
-    marginRight: 12,
-  },
-
-  historyContent: {
-    flex: 1,
-  },
-
-  historyTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-
-  historySub: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 2,
-  },
-
-  historyTime: {
-    fontSize: 13,
-    color: '#000',
-  },
-
-  /* BOTTOM TAB */
-  bottomTab: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-
-  bottomItem: {
-    alignItems: 'center',
-  },
-
-  bottomIcon: {
-    width: 22,
-    height: 22,
-    tintColor: '#666',
-    marginBottom: 2,
-  },
-
-  bottomText: {
-    fontSize: 12,
-    color: '#666',
-  },
-
-  bottomActive: {
-    color: '#000',
-    fontWeight: '600',
-  },
+  container: { flex: 1, backgroundColor: '#e6e6e6' },
+  header: { height: 70, backgroundColor: '#3b9cff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  backIcon: { width: 22, height: 22, tintColor: '#fff' },
+  headerTitle: { flex: 1, textAlign: 'center', color: '#fff', fontSize: 18 },
+  filterWrapper: { padding: 16 },
+  filterRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  filterItem: { backgroundColor: '#fff', padding: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center' },
+  filterActive: { borderColor: '#1e66d0', borderWidth: 1 },
+  filterIcon: { width: 12, height: 12, marginLeft: 6 },
+  dropdown: { backgroundColor: '#fff', marginTop: 8, borderRadius: 8 },
+  dropdownItem: { padding: 12 },
+  dropdownActive: { backgroundColor: '#1e66d0' },
+  body: { padding: 16 },
+  historyItem: { backgroundColor: '#fff', padding: 14, borderRadius: 14, flexDirection: 'row', marginBottom: 12 },
+  deviceIcon: { width: 34, height: 34, marginRight: 12 },
 });

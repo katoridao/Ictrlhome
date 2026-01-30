@@ -21,7 +21,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
     }
 
     try {
-      const response = await axios.post('http://192.168.56.2:3000/api/change-password', {
+      const response = await axios.post('http://192.168.0.192:3000/api/change-password', {
         phone,
         oldPassword,
         newPassword

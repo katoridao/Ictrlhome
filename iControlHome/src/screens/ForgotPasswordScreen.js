@@ -21,7 +21,7 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
 
     try {
-      const response = await axios.post('http://192.168.56.2:3000/api/forgot-password', {
+      const response = await axios.post('http://192.168.0.192:3000/api/forgot-password', {
         email: email.toLowerCase().trim()
       });
 

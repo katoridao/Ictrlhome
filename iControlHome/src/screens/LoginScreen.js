@@ -8,6 +8,7 @@ import {
   Image,
   StatusBar,
   Alert,
+  ImageBackground,
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,101 +20,127 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!phone || !password) {
-      Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin");
+      Alert.alert('Thông báo', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
 
     try {
-      const response = await axios.post('http://192.168.56.2:3000/api/login', {
-        phone: phone,
-        password: password,
-      });
+      const response = await axios.post(
+        'http://192.168.0.192:3000/api/login', 
+        {
+          phone: phone,
+          password: password,
+        }
+      );
 
       if (response.status === 200) {
         const user = response.data.user;
         await AsyncStorage.setItem('user_info', JSON.stringify(user));
-        
-        Alert.alert("Thành công", "Đăng nhập thành công!");
+
+        Alert.alert('Thành công', 'Đăng nhập thành công!');
         navigation.replace('Main');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Lỗi kết nối server";
-      Alert.alert("Thất bại", errorMessage);
+      const message =
+        error.response?.data?.message || 'Lỗi kết nối server';
+      Alert.alert('Thất bại', message);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+    <ImageBackground
+      source={require('../../public/img/background.jpg')}
+      style={styles.bg}
+      resizeMode="cover"
+    >
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
 
-      <View style={styles.logoBox}>
-        <Image
-          source={require('../../public/img/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.logoText}>iCtrlHome</Text>
-      </View>
+      
+      <View style={styles.overlay} />
 
-      <View style={styles.input}>
-        <TextInput
-          placeholder="Nhập số điện thoại"
-          placeholderTextColor="#666"
-          style={styles.textInput}
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-        />
-      </View>
+      <View style={styles.container}>
+        {/* Logo */}
+        <View style={styles.logoBox}>
+          <Image
+            source={require('../../public/img/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.logoText}>iCtrlHome</Text>
+        </View>
 
-      <View style={styles.input}>
-        <TextInput
-          placeholder="Nhập mật khẩu"
-          placeholderTextColor="#666"
-          secureTextEntry={!showPassword}
-          style={styles.textInput}
-          value={password}
-          onChangeText={setPassword}
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Text style={styles.showText}>{showPassword ? 'Ẩn' : 'Hiện'}</Text>
+        {/* Phone */}
+        <View style={styles.input}>
+          <TextInput
+            placeholder="Nhập số điện thoại"
+            placeholderTextColor="#666"
+            style={styles.textInput}
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+          />
+        </View>
+
+        {/* Password */}
+        <View style={styles.input}>
+          <TextInput
+            placeholder="Nhập mật khẩu"
+            placeholderTextColor="#666"
+            secureTextEntry={!showPassword}
+            style={styles.textInput}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Text style={styles.showText}>
+              {showPassword ? 'Ẩn' : 'Hiện'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Button */}
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>TIẾP TỤC</Text>
         </TouchableOpacity>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text
+            style={styles.register}
+            onPress={() => navigation.navigate('Register')}
+          >
+            ĐĂNG KÝ TÀI KHOẢN
+          </Text>
+
+          <Text
+            style={styles.forgot}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            Quên mật khẩu
+          </Text>
+        </View>
       </View>
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-      >
-        <Text style={styles.buttonText}>TIẾP TỤC</Text>
-      </TouchableOpacity>
-
-      <View style={styles.footer}>
-        <Text
-          style={styles.register}
-          onPress={() => navigation.navigate('Register')}
-        >
-          ĐĂNG KÝ TÀI KHOẢN
-        </Text>
-
-        <Text
-          style={styles.forgot}
-          onPress={() => navigation.navigate('ForgotPassword')}
-        >
-          Quên mật khẩu
-        </Text>
-      </View>
-    </View>
+    </ImageBackground>
   );
 };
 
 export default LoginScreen;
-
 const styles = StyleSheet.create({
+  bg: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.65)', // chỉnh 0.5–0.7 tuỳ nền
+  },
   container: {
     flex: 1,
     paddingHorizontal: 30,
     justifyContent: 'center',
-    backgroundColor: '#F5F5F5',
   },
   logoBox: {
     alignItems: 'center',
