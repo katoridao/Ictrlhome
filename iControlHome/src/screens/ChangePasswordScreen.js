@@ -10,7 +10,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
 
   const phone = route.params?.phone;
-
+// àajfafa
   const handleChangePassword = async () => {
     const cleanOld = oldPassword.trim();
     const cleanNew = newPassword.trim();

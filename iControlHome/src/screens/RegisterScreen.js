@@ -36,7 +36,7 @@ export default function RegisterScreen({ navigation }) {
       });
       return;
     }
-
+// ạkdjakdj
     try {
       const response = await api.post('/register', {
         name: name.trim(),

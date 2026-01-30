@@ -31,6 +31,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       });
       return;
     }
+<<<<<<< HEAD
 
     if (cleanNew !== cleanConfirm) {
       Toast.show({
@@ -51,6 +52,9 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
 
     setLoading(true);
+=======
+// ahadhahd
+>>>>>>> origin/Hung
     try {
       const response = await api.post('/forgot-password', {
         phone: cleanPhone,

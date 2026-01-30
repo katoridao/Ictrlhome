@@ -18,6 +18,7 @@ const WelcomeScreen = ({ navigation }) => {
         translucent
       />
 
+<<<<<<< HEAD
       <View style={styles.container}>
         <View style={styles.content}>
           <Image
@@ -28,6 +29,23 @@ const WelcomeScreen = ({ navigation }) => {
           <Text style={styles.title}>iCtrlHome</Text>
         </View>
       </View>
+=======
+      <ImageBackground
+  source={require('../../public/img/background.jpg')}
+  style={{ flex: 1 }}
+  resizeMode="cover"
+>
+  <View style={styles.content}>
+    <Image
+      source={require('../../public/img/logo.png')}
+      style={styles.logo}
+    />
+    <Text style={styles.title}>iCtrlHome</Text>
+  </View>
+  {/* ahdhadhj */}
+</ImageBackground>
+
+>>>>>>> origin/Hung
     </View>
   );
 };

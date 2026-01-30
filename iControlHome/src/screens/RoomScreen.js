@@ -8,7 +8,14 @@ import {
   ScrollView,
 } from 'react-native';
 
+<<<<<<< HEAD
 export default function RoomScreen({ navigation }) {
+=======
+export default function RoomScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+// hạdha
+>>>>>>> origin/Hung
   return (
     <View style={styles.container}>
 

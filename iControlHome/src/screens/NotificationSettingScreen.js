@@ -65,6 +65,7 @@ export default function NotificationSettingScreen({ navigation }) {
               darkMode && { color: '#fff' },
             ]}
           >
+            {/* shadhjah */}
             Bật thông báo
           </Text>
           <Switch

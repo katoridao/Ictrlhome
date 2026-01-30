@@ -111,7 +111,12 @@ export default function SettingScreen({ navigation }) {
             label="Giao diện"
             value="Tối/Sáng"
           />
+<<<<<<< HEAD
           <SettingItem
+=======
+          {/* sjjakjd */}
+         <SettingItem
+>>>>>>> origin/Hung
             icon={require('../../public/img/language.png')}
             label="Ngôn ngữ"
             value="Vie/Eng"

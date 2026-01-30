@@ -64,8 +64,23 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
+<<<<<<< HEAD
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+=======
+    <ImageBackground
+      source={require('../../public/img/background.jpg')}
+      style={styles.bg}
+      resizeMode="cover"
+    >
+      {/* sssa */}
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
+
+>>>>>>> origin/Hung
       
       <View style={styles.logoBox}>
         <Image
