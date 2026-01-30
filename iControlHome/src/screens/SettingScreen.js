@@ -22,27 +22,23 @@ export default function SettingScreen({ navigation }) {
           setUserData(JSON.parse(jsonValue));
         }
       } catch (e) {
-        console.error("Lỗi lấy dữ liệu:", e);
+        console.error('Lỗi lấy dữ liệu:', e);
       }
     };
     loadUserData();
   }, []);
 
   const handleLogout = () => {
-    Alert.alert(
-      "Đăng xuất",
-      "Bạn có chắc chắn muốn thoát khỏi ứng dụng?",
-      [
-        { text: "Hủy", style: "cancel" },
-        { 
-          text: "Đồng ý", 
-          onPress: async () => {
-            await AsyncStorage.removeItem('user_info');
-            navigation.replace('Login');
-          } 
-        }
-      ]
-    );
+    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn thoát khỏi ứng dụng?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đồng ý',
+        onPress: async () => {
+          await AsyncStorage.removeItem('user_info');
+          navigation.replace('Login');
+        },
+      },
+    ]);
   };
 
   return (
@@ -63,7 +59,7 @@ export default function SettingScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.body}>
         {/* USER INFO */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.userBox}
           onPress={() => navigation.navigate('Profile')}
         >
@@ -72,8 +68,12 @@ export default function SettingScreen({ navigation }) {
             style={styles.avatar}
           />
           <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{userData?.name || "Đang tải..."}</Text>
-            <Text style={styles.userEmail}>{userData?.email || "Chưa cập nhật"}</Text>
+            <Text style={styles.userName}>
+              {userData?.name || 'Đang tải...'}
+            </Text>
+            <Text style={styles.userEmail}>
+              {userData?.email || 'Chưa cập nhật'}
+            </Text>
           </View>
           <Text style={styles.roleText}>Chủ nhà</Text>
           <Image
@@ -94,7 +94,9 @@ export default function SettingScreen({ navigation }) {
             icon={require('../../public/img/lock.png')}
             label="Đổi mật khẩu"
             noBorder
-            onPress={() => navigation.navigate('ChangePassword', { phone: userData?.phone })}
+            onPress={() =>
+              navigation.navigate('ChangePassword', { phone: userData?.phone })
+            }
           />
         </View>
 
@@ -104,19 +106,17 @@ export default function SettingScreen({ navigation }) {
           <SettingItem
             icon={require('../../public/img/notification.png')}
             label="Thông báo"
-            onPress={() => Alert.alert("Thông báo", "Tính năng đang phát triển")}
+            onPress={() =>
+              Alert.alert('Thông báo', 'Tính năng đang phát triển')
+            }
           />
           <SettingItem
             icon={require('../../public/img/moon.png')}
             label="Giao diện"
             value="Tối/Sáng"
           />
-<<<<<<< HEAD
+
           <SettingItem
-=======
-          {/* sjjakjd */}
-         <SettingItem
->>>>>>> origin/Hung
             icon={require('../../public/img/language.png')}
             label="Ngôn ngữ"
             value="Vie/Eng"
@@ -193,10 +193,32 @@ const styles = StyleSheet.create({
   avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
   userName: { fontSize: 18, fontWeight: '700', color: '#333' },
   userEmail: { fontSize: 14, color: '#777' },
-  roleText: { fontSize: 13, color: '#3b9cff', fontWeight: '600', marginRight: 6 },
-  sectionTitle: { fontSize: 15, fontWeight: '600', color: '#888', marginBottom: 8, marginLeft: 4 },
-  sectionBox: { backgroundColor: '#fff', borderRadius: 16, marginBottom: 20, elevation: 1 },
-  item: { flexDirection: 'row', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  roleText: {
+    fontSize: 13,
+    color: '#3b9cff',
+    fontWeight: '600',
+    marginRight: 6,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#888',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  sectionBox: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 20,
+    elevation: 1,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
   itemIcon: { width: 22, height: 22, marginRight: 14 },
   itemText: { flex: 1, fontSize: 16, color: '#333' },
   valueText: { fontSize: 14, color: '#999', marginRight: 6 },

@@ -1,5 +1,12 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, StatusBar } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  StatusBar,
+  ImageBackground,
+} from 'react-native';
 
 const WelcomeScreen = ({ navigation }) => {
   useEffect(() => {
@@ -11,41 +18,19 @@ const WelcomeScreen = ({ navigation }) => {
   }, [navigation]);
 
   return (
-    <View>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
-      />
-
-<<<<<<< HEAD
-      <View style={styles.container}>
+    <View style={{ flex: 1 }}>
+      <ImageBackground
+        source={require('../../public/img/background.jpg')}
+        style={{ flex: 1 }}
+        resizeMode="cover"
+      >
         <View style={styles.content}>
           <Image
             source={require('../../public/img/logo.png')}
             style={styles.logo}
-            resizeMode="contain"
           />
-          <Text style={styles.title}>iCtrlHome</Text>
         </View>
-      </View>
-=======
-      <ImageBackground
-  source={require('../../public/img/background.jpg')}
-  style={{ flex: 1 }}
-  resizeMode="cover"
->
-  <View style={styles.content}>
-    <Image
-      source={require('../../public/img/logo.png')}
-      style={styles.logo}
-    />
-    <Text style={styles.title}>iCtrlHome</Text>
-  </View>
-  {/* ahdhadhj */}
-</ImageBackground>
-
->>>>>>> origin/Hung
+      </ImageBackground>
     </View>
   );
 };
@@ -66,11 +51,5 @@ const styles = StyleSheet.create({
     width: 130,
     height: 130,
     marginBottom: 14,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    letterSpacing: 0.6,
   },
 });

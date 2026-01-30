@@ -27,17 +27,16 @@ export default function ForgotPasswordScreen({ navigation }) {
       Toast.show({
         type: 'error',
         text1: 'Thông báo',
-        text2: 'Vui lòng nhập đầy đủ thông tin'
+        text2: 'Vui lòng nhập đầy đủ thông tin',
       });
       return;
     }
-<<<<<<< HEAD
 
     if (cleanNew !== cleanConfirm) {
       Toast.show({
         type: 'error',
         text1: 'Lỗi',
-        text2: 'Mật khẩu xác nhận không khớp'
+        text2: 'Mật khẩu xác nhận không khớp',
       });
       return;
     }
@@ -46,15 +45,12 @@ export default function ForgotPasswordScreen({ navigation }) {
       Toast.show({
         type: 'error',
         text1: 'Lỗi',
-        text2: 'Mật khẩu phải có ít nhất 6 ký tự'
+        text2: 'Mật khẩu phải có ít nhất 6 ký tự',
       });
       return;
     }
 
     setLoading(true);
-=======
-// ahadhahd
->>>>>>> origin/Hung
     try {
       const response = await api.post('/forgot-password', {
         phone: cleanPhone,
@@ -66,16 +62,17 @@ export default function ForgotPasswordScreen({ navigation }) {
         Toast.show({
           type: 'success',
           text1: 'Thành công',
-          text2: 'Mật khẩu đã được thay đổi thành công!'
+          text2: 'Mật khẩu đã được thay đổi thành công!',
         });
         navigation.navigate('Login');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Lỗi kết nối server";
+      const errorMessage =
+        error.response?.data?.message || 'Lỗi kết nối server';
       Toast.show({
         type: 'error',
         text1: 'Thất bại',
-        text2: errorMessage
+        text2: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -84,8 +81,12 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
       <View style={styles.logoContainer}>
         <Image
           source={require('../../public/img/logo.png')}
@@ -127,8 +128,8 @@ export default function ForgotPasswordScreen({ navigation }) {
           autoCapitalize="none"
         />
 
-        <TouchableOpacity 
-          style={[styles.button, loading && { backgroundColor: '#A5B1FF' }]} 
+        <TouchableOpacity
+          style={[styles.button, loading && { backgroundColor: '#A5B1FF' }]}
           onPress={handleResetPassword}
           disabled={loading}
         >
@@ -139,8 +140,8 @@ export default function ForgotPasswordScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Text style={styles.backText}>Quay lại đăng nhập</Text>
@@ -157,8 +158,24 @@ const styles = StyleSheet.create({
   appName: { fontSize: 22, fontWeight: '600', color: '#2D2D2D' },
   subTitle: { fontSize: 14, color: '#666', marginTop: 5 },
   form: { paddingHorizontal: 32, marginTop: 30 },
-  input: { backgroundColor: '#fff', borderRadius: 8, height: 48, paddingHorizontal: 16, borderWidth: 1, borderColor: '#ccc', marginBottom: 16, color: '#333' },
-  button: { backgroundColor: '#6C7CFF', height: 48, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    height: 48,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 16,
+    color: '#333',
+  },
+  button: {
+    backgroundColor: '#6C7CFF',
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
   buttonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   backButton: { marginTop: 20, alignItems: 'center' },
   backText: { color: '#6C7CFF', fontSize: 14, fontWeight: '500' },

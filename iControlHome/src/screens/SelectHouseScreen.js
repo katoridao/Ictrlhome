@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
 export default function SelectHouseScreen({ navigation }) {
   return (
@@ -18,7 +12,7 @@ export default function SelectHouseScreen({ navigation }) {
             style={{ width: 22, height: 22 }}
           />
         </TouchableOpacity>
-{/* hjsahdah */}
+
         <Text style={styles.headerTitle}>CHỌN NHÀ</Text>
 
         <TouchableOpacity>
@@ -42,9 +36,7 @@ export default function SelectHouseScreen({ navigation }) {
         NHÀ ĐƯỢC CHIA SẺ
       </Text>
 
-      <Text style={styles.emptyText}>
-        Không có nhà nào bạn được chia sẻ
-      </Text>
+      <Text style={styles.emptyText}>Không có nhà nào bạn được chia sẻ</Text>
     </View>
   );
 }

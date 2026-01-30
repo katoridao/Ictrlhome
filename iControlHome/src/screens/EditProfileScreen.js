@@ -32,7 +32,6 @@ export default function EditProfileScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-
         {/* AVATAR */}
         <View style={styles.avatarBox}>
           <Image
@@ -65,7 +64,6 @@ export default function EditProfileScreen({ navigation }) {
             />
           </View>
         </View>
-
       </ScrollView>
     </View>
   );
@@ -89,18 +87,10 @@ function InputItem({ label, placeholder }) {
 function RoleItem({ label, active, onPress }) {
   return (
     <TouchableOpacity
-      style={[
-        styles.roleItem,
-        active && styles.roleActive,
-      ]}
+      style={[styles.roleItem, active && styles.roleActive]}
       onPress={onPress}
     >
-      <Text
-        style={[
-          styles.roleText,
-          active && { color: '#fff' },
-        ]}
-      >
+      <Text style={[styles.roleText, active && { color: '#fff' }]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -159,7 +149,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e6f0ff',
     borderRadius: 20,
   },
-// adjahjdajsd
+
   changeAvatarText: {
     color: '#3b9cff',
     fontSize: 14,

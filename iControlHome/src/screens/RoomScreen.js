@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,17 +8,12 @@ import {
   ScrollView,
 } from 'react-native';
 
-<<<<<<< HEAD
 export default function RoomScreen({ navigation }) {
-=======
-export default function RoomScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-// hạdha
->>>>>>> origin/Hung
+
   return (
     <View style={styles.container}>
-
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.sortText}>Sắp xếp</Text>
@@ -33,7 +28,6 @@ export default function RoomScreen() {
 
       {/* BODY */}
       <ScrollView contentContainerStyle={styles.body}>
-
         <RoomItem name="Phòng khách" />
         <RoomItem name="Phòng bếp" />
         <RoomItem name="Phòng ngủ" />
@@ -48,11 +42,7 @@ export default function RoomScreen() {
         <View style={styles.sectionBox}>
           <Text style={styles.sectionText}>Chưa thuộc phòng</Text>
         </View>
-
       </ScrollView>
-
-      
-
     </View>
   );
 }
@@ -88,18 +78,10 @@ function BottomItem({ icon, label, active, onPress }) {
     <TouchableOpacity style={styles.bottomItem} onPress={onPress}>
       <Image
         source={icon}
-        style={[
-          styles.bottomIcon,
-          active && { tintColor: '#000' },
-        ]}
+        style={[styles.bottomIcon, active && { tintColor: '#000' }]}
         resizeMode="contain"
       />
-      <Text
-        style={[
-          styles.bottomText,
-          active && styles.bottomActive,
-        ]}
-      >
+      <Text style={[styles.bottomText, active && styles.bottomActive]}>
         {label}
       </Text>
     </TouchableOpacity>

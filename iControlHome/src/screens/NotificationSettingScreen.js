@@ -15,10 +15,7 @@ export default function NotificationSettingScreen({ navigation }) {
 
   return (
     <View
-      style={[
-        styles.container,
-        darkMode && { backgroundColor: '#121212' },
-      ]}
+      style={[styles.container, darkMode && { backgroundColor: '#121212' }]}
     >
       <StatusBar
         barStyle={darkMode ? 'light-content' : 'dark-content'}
@@ -26,12 +23,7 @@ export default function NotificationSettingScreen({ navigation }) {
       />
 
       {/* HEADER */}
-      <View
-        style={[
-          styles.header,
-          darkMode && { backgroundColor: '#1f1f1f' },
-        ]}
-      >
+      <View style={[styles.header, darkMode && { backgroundColor: '#1f1f1f' }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image
             source={require('../../public/img/back.png')}
@@ -39,12 +31,7 @@ export default function NotificationSettingScreen({ navigation }) {
           />
         </TouchableOpacity>
 
-        <Text
-          style={[
-            styles.headerTitle,
-            darkMode && { color: '#fff' },
-          ]}
-        >
+        <Text style={[styles.headerTitle, darkMode && { color: '#fff' }]}>
           Thông báo
         </Text>
 
@@ -53,19 +40,8 @@ export default function NotificationSettingScreen({ navigation }) {
 
       {/* BODY */}
       <View style={styles.body}>
-        <View
-          style={[
-            styles.settingItem,
-            darkMode && styles.darkItem,
-          ]}
-        >
-          <Text
-            style={[
-              styles.label,
-              darkMode && { color: '#fff' },
-            ]}
-          >
-            {/* shadhjah */}
+        <View style={[styles.settingItem, darkMode && styles.darkItem]}>
+          <Text style={[styles.label, darkMode && { color: '#fff' }]}>
             Bật thông báo
           </Text>
           <Switch
@@ -75,18 +51,8 @@ export default function NotificationSettingScreen({ navigation }) {
           />
         </View>
 
-        <View
-          style={[
-            styles.settingItem,
-            darkMode && styles.darkItem,
-          ]}
-        >
-          <Text
-            style={[
-              styles.label,
-              darkMode && { color: '#fff' },
-            ]}
-          >
+        <View style={[styles.settingItem, darkMode && styles.darkItem]}>
+          <Text style={[styles.label, darkMode && { color: '#fff' }]}>
             Chế độ tối
           </Text>
           <Switch
