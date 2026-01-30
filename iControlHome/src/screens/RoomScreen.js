@@ -13,7 +13,7 @@ import {
 export default function RoomScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-
+// hạdha
   return (
     <View style={styles.container}>
 

@@ -53,6 +53,7 @@ const LoginScreen = ({ navigation }) => {
       style={styles.bg}
       resizeMode="cover"
     >
+      {/* sssa */}
       <StatusBar
         translucent
         backgroundColor="transparent"

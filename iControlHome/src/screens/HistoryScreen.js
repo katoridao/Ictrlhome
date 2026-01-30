@@ -150,6 +150,7 @@ export default function HistoryScreen({ navigation }) {
     </View>
   );
 }
+// ahhajsd
 
 /* COMPONENT CON – KHÔNG ĐƯỢC DÙNG HOOK */
 function FilterItem({ label, active, onPress }) {

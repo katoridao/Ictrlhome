@@ -8,7 +8,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const phone = route.params?.phone;
-
+// àajfafa
   const handleChangePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ các trường");

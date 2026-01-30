@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e6f0ff',
     borderRadius: 20,
   },
-
+// adjahjdajsd
   changeAvatarText: {
     color: '#3b9cff',
     fontSize: 14,

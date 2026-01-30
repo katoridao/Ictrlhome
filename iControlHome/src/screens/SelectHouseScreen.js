@@ -18,7 +18,7 @@ export default function SelectHouseScreen({ navigation }) {
             style={{ width: 22, height: 22 }}
           />
         </TouchableOpacity>
-
+{/* hjsahdah */}
         <Text style={styles.headerTitle}>CHỌN NHÀ</Text>
 
         <TouchableOpacity>

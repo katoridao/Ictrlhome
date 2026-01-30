@@ -37,6 +37,7 @@ const WelcomeScreen = ({ navigation }) => {
     />
     <Text style={styles.title}>iCtrlHome</Text>
   </View>
+  {/* ahdhadhj */}
 </ImageBackground>
 
     </View>

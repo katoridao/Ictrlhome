@@ -25,7 +25,7 @@ export default function RegisterScreen({ navigation }) {
       Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp");
       return;
     }
-
+// ạkdjakdj
     try {
       const response = await axios.post('http://192.168.0.192:3000/api/register', { //thay bằng ipV4 của mọi người vào, mở CMD gõ ipconfig
         name: name,

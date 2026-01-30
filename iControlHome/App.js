@@ -30,6 +30,7 @@ export default function App() {
         <Stack.Screen name='SelectHouse' component={SelectHouseScreen}/>
         <Stack.Screen name='EditProfile' component={EditProfileScreen}/>
         <Stack.Screen name='NotificationSetting' component={NotificationSettingScreen}/>
+        {/* ậdhajdhajdh */}
 
         {/* Main App */}
         <Stack.Screen name="Main" component={MainTab} />

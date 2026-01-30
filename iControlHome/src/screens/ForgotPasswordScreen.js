@@ -19,7 +19,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       Alert.alert("Lỗi", "Vui lòng nhập địa chỉ email");
       return;
     }
-
+// ahadhahd
     try {
       const response = await axios.post('http://192.168.0.192:3000/api/forgot-password', {
         email: email.toLowerCase().trim()
