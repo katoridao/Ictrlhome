@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
-  ActivityIndicator,
   ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -111,6 +110,10 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.showText}>{showPassword ? 'Ẩn' : 'Hiện'}</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>TIẾP TỤC</Text>
+        </TouchableOpacity>
 
         <View style={styles.footer}>
           <Text

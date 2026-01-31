@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import Toast from 'react-native-toast-message';
 import api from '../database/api';
 
@@ -10,7 +17,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
 
   const phone = route.params?.phone;
-// àajfafa
+
   const handleChangePassword = async () => {
     const cleanOld = oldPassword.trim();
     const cleanNew = newPassword.trim();
@@ -20,7 +27,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
       Toast.show({
         type: 'error',
         text1: 'Thông báo',
-        text2: 'Vui lòng nhập đầy đủ các trường'
+        text2: 'Vui lòng nhập đầy đủ các trường',
       });
       return;
     }
@@ -29,7 +36,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
       Toast.show({
         type: 'error',
         text1: 'Lỗi',
-        text2: 'Xác nhận mật khẩu mới không khớp'
+        text2: 'Xác nhận mật khẩu mới không khớp',
       });
       return;
     }
@@ -38,7 +45,7 @@ const ChangePasswordScreen = ({ navigation, route }) => {
       Toast.show({
         type: 'error',
         text1: 'Lỗi',
-        text2: 'Mật khẩu mới phải có ít nhất 6 ký tự'
+        text2: 'Mật khẩu mới phải có ít nhất 6 ký tự',
       });
       return;
     }
@@ -48,22 +55,22 @@ const ChangePasswordScreen = ({ navigation, route }) => {
       const response = await api.post('/change-password', {
         phone,
         oldPassword: cleanOld,
-        newPassword: cleanNew
+        newPassword: cleanNew,
       });
 
       Toast.show({
         type: 'success',
         text1: 'Thành công',
-        text2: response.data.message || 'Đổi mật khẩu thành công'
+        text2: response.data.message || 'Đổi mật khẩu thành công',
       });
-      
+
       navigation.goBack();
     } catch (error) {
-      const msg = error.response?.data?.message || "Không thể đổi mật khẩu";
+      const msg = error.response?.data?.message || 'Không thể đổi mật khẩu';
       Toast.show({
         type: 'error',
         text1: 'Thất bại',
-        text2: msg
+        text2: msg,
       });
     } finally {
       setLoading(false);
@@ -74,35 +81,35 @@ const ChangePasswordScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <Text style={styles.headerText}>Thiết lập mật khẩu mới</Text>
 
-      <TextInput 
-        placeholder="Mật khẩu hiện tại" 
-        secureTextEntry 
-        style={styles.input} 
+      <TextInput
+        placeholder="Mật khẩu hiện tại"
+        secureTextEntry
+        style={styles.input}
         onChangeText={setOldPassword}
         placeholderTextColor="#999"
         autoCapitalize="none"
       />
-      
-      <TextInput 
-        placeholder="Mật khẩu mới" 
-        secureTextEntry 
-        style={styles.input} 
+
+      <TextInput
+        placeholder="Mật khẩu mới"
+        secureTextEntry
+        style={styles.input}
         onChangeText={setNewPassword}
         placeholderTextColor="#999"
         autoCapitalize="none"
       />
 
-      <TextInput 
-        placeholder="Xác nhận mật khẩu mới" 
-        secureTextEntry 
-        style={styles.input} 
+      <TextInput
+        placeholder="Xác nhận mật khẩu mới"
+        secureTextEntry
+        style={styles.input}
         onChangeText={setConfirmPassword}
         placeholderTextColor="#999"
         autoCapitalize="none"
       />
 
-      <TouchableOpacity 
-        style={[styles.button, loading && { backgroundColor: '#A5CFFF' }]} 
+      <TouchableOpacity
+        style={[styles.button, loading && { backgroundColor: '#A5CFFF' }]}
         onPress={handleChangePassword}
         disabled={loading}
       >
@@ -112,8 +119,11 @@ const ChangePasswordScreen = ({ navigation, route }) => {
           <Text style={styles.buttonText}>CẬP NHẬT</Text>
         )}
       </TouchableOpacity>
-      
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelButton}>
+
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={styles.cancelButton}
+      >
         <Text style={styles.cancelText}>Quay lại</Text>
       </TouchableOpacity>
     </View>
@@ -164,7 +174,7 @@ const styles = StyleSheet.create({
   cancelText: {
     color: '#999',
     fontSize: 14,
-  }
+  },
 });
 
 export default ChangePasswordScreen;

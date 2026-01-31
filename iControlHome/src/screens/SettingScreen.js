@@ -47,12 +47,6 @@ export default function SettingScreen({ navigation }) {
 
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image
-            source={require('../../public/img/back.png')}
-            style={styles.backIcon}
-          />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Cài đặt</Text>
         <View style={{ width: 22 }} />
       </View>
@@ -106,9 +100,7 @@ export default function SettingScreen({ navigation }) {
           <SettingItem
             icon={require('../../public/img/notification.png')}
             label="Thông báo"
-            onPress={() =>
-              Alert.alert('Thông báo', 'Tính năng đang phát triển')
-            }
+            onPress={() => navigation.navigate('NotificationSetting')}
           />
           <SettingItem
             icon={require('../../public/img/moon.png')}
@@ -121,6 +113,9 @@ export default function SettingScreen({ navigation }) {
             label="Ngôn ngữ"
             value="Vie/Eng"
             noBorder
+            onPress={() =>
+              Alert.alert('Thông báo', 'Tính năng đang phát triển')
+            }
           />
         </View>
 
@@ -164,18 +159,21 @@ function SettingItem({ icon, label, value, noBorder, onPress }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f2f2' },
   header: {
-    height: 80,
+    height: 70,
     backgroundColor: '#3b9cff',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 20,
   },
-  backIcon: { width: 22, height: 22, tintColor: '#fff' },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
+  },
   body: { padding: 16, paddingBottom: 40 },
   userBox: {
     backgroundColor: '#fff',

@@ -19,6 +19,11 @@ const WelcomeScreen = ({ navigation }) => {
 
   return (
     <View style={{ flex: 1 }}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
       <ImageBackground
         source={require('../../public/img/background.jpg')}
         style={{ flex: 1 }}
@@ -36,11 +41,9 @@ const WelcomeScreen = ({ navigation }) => {
 };
 
 export default WelcomeScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#CFE9FF',
   },
   content: {
     flex: 1,

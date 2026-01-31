@@ -11,7 +11,6 @@ import {
 export default function ScriptScreen({ navigation }) {
   return (
     <View style={styles.container}>
-
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.sortText}>Sắp xếp</Text>
@@ -36,8 +35,6 @@ export default function ScriptScreen({ navigation }) {
           title="Kịch bản mới"
         />
       </ScrollView>
-
-     
     </View>
   );
 }
@@ -75,17 +72,9 @@ function BottomItem({ icon, label, active, onPress }) {
     <TouchableOpacity style={styles.bottomItem} onPress={onPress}>
       <Image
         source={icon}
-        style={[
-          styles.bottomIcon,
-          active && { tintColor: '#000' },
-        ]}
+        style={[styles.bottomIcon, active && { tintColor: '#000' }]}
       />
-      <Text
-        style={[
-          styles.bottomText,
-          active && styles.bottomActive,
-        ]}
-      >
+      <Text style={[styles.bottomText, active && styles.bottomActive]}>
         {label}
       </Text>
     </TouchableOpacity>
