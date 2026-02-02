@@ -42,6 +42,7 @@ const LoginScreen = ({ navigation }) => {
       if (response.status === 200) {
         const user = response.data.user;
         await AsyncStorage.setItem('user_info', JSON.stringify(user));
+        await AsyncStorage.setItem('phone', user.phone); 
         
         Toast.show({
           type: 'success',
@@ -127,8 +128,6 @@ const LoginScreen = ({ navigation }) => {
   );
 };
 
-export default LoginScreen;
-
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 30, justifyContent: 'center', backgroundColor: '#F5F5F5' },
   logoBox: { alignItems: 'center', padding: 24, marginBottom: 30 },
@@ -143,3 +142,5 @@ const styles = StyleSheet.create({
   register: { color: '#3A8DFF', fontWeight: '600', marginBottom: 6 },
   forgot: { color: '#555', fontSize: 13 },
 });
+
+export default LoginScreen;
