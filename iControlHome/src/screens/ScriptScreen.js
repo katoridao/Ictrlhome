@@ -1,64 +1,60 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, StatusBar } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ScriptScreen({ navigation }) {
+  const { theme, styles: themeStyles } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeStyles.background }]}>
+      {/* StatusBar tự đổi theo theme để rõ pin/giờ */}
+      <StatusBar 
+        barStyle={theme === 'DARK' ? 'light-content' : 'dark-content'} 
+        backgroundColor={themeStyles.primary} 
+      />
+      
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
         <Text style={styles.sortText}>Sắp xếp</Text>
         <Text style={styles.headerTitle}>Kịch bản</Text>
         <TouchableOpacity>
-          <Image
-            source={require('../../public/img/add.png')}
-            style={{ width: 22, height: 22 }}
+          <Image 
+            source={require('../../public/img/add.png')} 
+            style={{ width: 22, height: 22, tintColor: '#fff' }} 
           />
         </TouchableOpacity>
       </View>
 
       {/* BODY */}
       <ScrollView contentContainerStyle={styles.body}>
-        <ScriptItem
-          icon={require('../../public/img/tv.png')}
-          title="Kịch bản 1"
-        />
-
-        <ScriptItem
-          icon={require('../../public/img/fan.png')}
-          title="Kịch bản mới"
-        />
+        <ScriptItem icon={require('../../public/img/tv.png')} title="Kịch bản 1" themeStyles={themeStyles} />
+        <ScriptItem icon={require('../../public/img/fan.png')} title="Kịch bản mới" themeStyles={themeStyles} />
       </ScrollView>
     </View>
   );
 }
 
-/* SCRIPT ITEM */
-function ScriptItem({ icon, title }) {
+function ScriptItem({ icon, title, themeStyles }) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: themeStyles.card }]}>
+      {/* KHÔNG CÓ tintColor: Giữ màu gốc của icon (như màu xanh của TV/Quạt) */}
       <Image source={icon} style={styles.scriptIcon} />
-
-      <Text style={styles.cardText}>{title}</Text>
-
+      
+      <Text style={[styles.cardText, { color: themeStyles.text }]}>{title}</Text>
+      
       <View style={styles.cardActions}>
         <TouchableOpacity>
-          <Image
-            source={require('../../public/img/clip.png')}
-            style={styles.actionIcon}
+          {/* Giữ màu gốc của icon clip (ghim) */}
+          <Image 
+            source={require('../../public/img/clip.png')} 
+            style={[styles.actionIcon, { tintColor: '#FF0000' }]}
           />
         </TouchableOpacity>
-
         <TouchableOpacity>
-          <Image
-            source={require('../../public/img/menu-dots.png')}
-            style={[styles.actionIcon, { marginLeft: 12 }]}
+          {/* Giữ màu gốc của icon menu-dots */}
+          <Image 
+            source={require('../../public/img/menu-dots.png')} 
+            style={[styles.actionIcon, { tintColor: '#FF0000' }]}
           />
         </TouchableOpacity>
       </View>
@@ -66,98 +62,32 @@ function ScriptItem({ icon, title }) {
   );
 }
 
-/* BOTTOM ITEM */
-function BottomItem({ icon, label, active, onPress }) {
-  return (
-    <TouchableOpacity style={styles.bottomItem} onPress={onPress}>
-      <Image
-        source={icon}
-        style={[styles.bottomIcon, active && { tintColor: '#000' }]}
-      />
-      <Text style={[styles.bottomText, active && styles.bottomActive]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-}
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#e6e6e6',
-  },
-
-  header: {
-    height: 70,
-    backgroundColor: '#3b9cff',
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+  container: { flex: 1 },
+  header: { 
+    height: 70, 
+    borderBottomLeftRadius: 16, 
+    borderBottomRightRadius: 16, 
+    paddingHorizontal: 16, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
     justifyContent: 'space-between',
+    elevation: 3 // Đổ bóng nhẹ cho header
   },
-
   sortText: { color: '#fff', fontSize: 14 },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
-
-  body: {
-    padding: 16,
-    paddingBottom: 90,
-  },
-
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 12,
-    flexDirection: 'row',
+  body: { padding: 16, paddingBottom: 90 },
+  card: { 
+    borderRadius: 14, 
+    paddingHorizontal: 16, 
+    paddingVertical: 14, 
+    marginBottom: 12, 
+    flexDirection: 'row', 
     alignItems: 'center',
+    elevation: 1 // Tạo độ nổi cho thẻ kịch bản
   },
-
-  scriptIcon: {
-    width: 22,
-    height: 22,
-    marginRight: 12,
-  },
-
-  cardText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
-  },
-
-  cardActions: {
-    flexDirection: 'row',
-  },
-
-  actionIcon: {
-    width: 20,
-    height: 20,
-  },
-
-  bottomTab: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-
-  bottomItem: { alignItems: 'center' },
-
-  bottomIcon: {
-    width: 22,
-    height: 22,
-    tintColor: '#666',
-    marginBottom: 2,
-  },
-
-  bottomText: { fontSize: 12, color: '#666' },
-
-  bottomActive: {
-    color: '#000',
-    fontWeight: '600',
-  },
+  scriptIcon: { width: 30, height: 30, marginRight: 12 }, // Tăng nhẹ kích thước icon cho rõ
+  cardText: { flex: 1, fontSize: 16, fontWeight: '500' },
+  cardActions: { flexDirection: 'row' },
+  actionIcon: { width: 20, height: 20 },
 });
