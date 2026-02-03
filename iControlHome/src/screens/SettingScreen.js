@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,23 +10,26 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function SettingScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const jsonValue = await AsyncStorage.getItem('user_info');
-        if (jsonValue !== null) {
-          setUserData(JSON.parse(jsonValue));
+  useFocusEffect(
+    useCallback(() => {
+      const loadUserData = async () => {
+        try {
+          const jsonValue = await AsyncStorage.getItem('user_info');
+          if (jsonValue !== null) {
+            setUserData(JSON.parse(jsonValue));
+          }
+        } catch (e) {
+          console.error(e);
         }
-      } catch (e) {
-        console.error('Lỗi lấy dữ liệu:', e);
-      }
-    };
-    loadUserData();
-  }, []);
+      };
+      loadUserData();
+    }, []),
+  );
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn thoát khỏi ứng dụng?', [
@@ -34,7 +37,7 @@ export default function SettingScreen({ navigation }) {
       {
         text: 'Đồng ý',
         onPress: async () => {
-          await AsyncStorage.removeItem('user_info');
+          await AsyncStorage.multiRemove(['user_info', 'phone']);
           navigation.replace('Login');
         },
       },
@@ -47,15 +50,27 @@ export default function SettingScreen({ navigation }) {
 
       {/* HEADER */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Image
+            source={require('../../public/img/back.png')}
+            style={styles.backIcon}
+          />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Cài đặt</Text>
         <View style={{ width: 22 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {/* USER INFO */}
+        {/* THÔNG TIN NGƯỜI DÙNG */}
         <TouchableOpacity
           style={styles.userBox}
-          onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.9}
+          onPress={() =>
+            navigation.navigate('Profile', {
+              phone: userData?.phone,
+              name: userData?.name,
+            })
+          }
         >
           <Image
             source={require('../../public/img/avatar.png')}
@@ -66,35 +81,19 @@ export default function SettingScreen({ navigation }) {
               {userData?.name || 'Đang tải...'}
             </Text>
             <Text style={styles.userEmail}>
-              {userData?.email || 'Chưa cập nhật'}
+              {userData?.phone || 'Chưa cập nhật'}
             </Text>
           </View>
-          <Text style={styles.roleText}>Chủ nhà</Text>
+          <View style={styles.badge}>
+            <Text style={styles.roleText}>Chủ nhà</Text>
+          </View>
           <Image
             source={require('../../public/img/arrow-right.png')}
             style={styles.arrow}
           />
         </TouchableOpacity>
 
-        {/* ACCOUNT */}
-        <Text style={styles.sectionTitle}>Tài khoản</Text>
-        <View style={styles.sectionBox}>
-          <SettingItem
-            icon={require('../../public/img/user.png')}
-            label="Chỉnh sửa thông tin"
-            onPress={() => navigation.navigate('EditProfile')}
-          />
-          <SettingItem
-            icon={require('../../public/img/lock.png')}
-            label="Đổi mật khẩu"
-            noBorder
-            onPress={() =>
-              navigation.navigate('ChangePassword', { phone: userData?.phone })
-            }
-          />
-        </View>
-
-        {/* APP */}
+        {/* ỨNG DỤNG */}
         <Text style={styles.sectionTitle}>Ứng dụng</Text>
         <View style={styles.sectionBox}>
           <SettingItem
@@ -119,7 +118,7 @@ export default function SettingScreen({ navigation }) {
           />
         </View>
 
-        {/* OTHER */}
+        {/* KHÁC*/}
         <Text style={styles.sectionTitle}>Khác</Text>
         <View style={styles.sectionBox}>
           <SettingItem
@@ -159,21 +158,18 @@ function SettingItem({ icon, label, value, noBorder, onPress }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f2f2' },
   header: {
-    height: 70,
+    height: 80,
     backgroundColor: '#3b9cff',
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 20,
   },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
-    flex: 1,
-  },
+  backIcon: { width: 22, height: 22, tintColor: '#fff' },
+  headerTitle: { color: '#fff', fontSize: 20, fontWeight: '700' },
   body: { padding: 16, paddingBottom: 40 },
   userBox: {
     backgroundColor: '#fff',
@@ -183,20 +179,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
   userName: { fontSize: 18, fontWeight: '700', color: '#333' },
   userEmail: { fontSize: 14, color: '#777' },
-  roleText: {
-    fontSize: 13,
-    color: '#3b9cff',
-    fontWeight: '600',
+  badge: {
+    backgroundColor: '#eef7ff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     marginRight: 6,
   },
+  roleText: { fontSize: 12, color: '#3b9cff', fontWeight: '600' },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '600',
@@ -209,6 +203,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 20,
     elevation: 1,
+    overflow: 'hidden',
   },
   item: {
     flexDirection: 'row',

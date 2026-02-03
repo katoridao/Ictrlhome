@@ -7,11 +7,14 @@ import WelcomeScreen from './src/screens/WelcomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+
 import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import SelectHouseScreen from './src/screens/SelectHouseScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import NotificationSettingScreen from './src/screens/NotificationSettingScreen';
+
 import MainTab from './src/navigation/MainTab';
+import ProfileSceen from './src/screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +29,7 @@ export default function App() {
           {/* Auth */}
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+
           <Stack.Screen
             name="ForgotPassword"
             component={ForgotPasswordScreen}
@@ -40,6 +44,11 @@ export default function App() {
             name="NotificationSetting"
             component={NotificationSettingScreen}
           />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+          />
+          <Stack.Screen name="Profile" component={ProfileSceen} />
 
           {/* Main App */}
           <Stack.Screen name="Main" component={MainTab} />

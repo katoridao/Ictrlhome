@@ -3,12 +3,44 @@ const router = express.Router();
 const User = require("../models/User");
 const bcrypt = require('bcryptjs');
 
-// ĐĂNG KÝ
+router.post("/update-profile", async (req, res) => {
+  try {
+    const { phone, fullName } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ message: "Thiếu số điện thoại định danh" });
+    }
+
+    if (!fullName || fullName.trim() === "") {
+      return res.status(400).json({ message: "Họ tên không được để trống" });
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
+      { phone: phone },
+      { name: fullName.trim() },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    res.status(200).json({ 
+      message: "Cập nhật thông tin thành công", 
+      user: {
+        name: updatedUser.name,
+        phone: updatedUser.phone
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+});
+
 router.post("/register", async (req, res) => {
   try {
     const { name, phone, password } = req.body;
 
-    // Kiểm tra trống
     if (!name || name.trim() === "") {
       return res.status(400).json({ message: "Họ tên không được bỏ trống" });
     }
@@ -19,13 +51,11 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Mật khẩu không được bỏ trống" });
     }
 
-    // Kiểm tra dấu cách
     const spaceRegex = /\s/;
     if (spaceRegex.test(phone) || spaceRegex.test(password)) {
       return res.status(400).json({ message: "Thông tin không được chứa dấu cách" });
     }
 
-    // Kiểm tra định dạng số điện thoại (Việt Nam)
     const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
     if (!phoneRegex.test(phone)) {
       return res.status(400).json({ message: "Số điện thoại không đúng định dạng (phải có 10 số)" });
@@ -35,7 +65,6 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Mật khẩu phải có ít nhất 6 ký tự" });
     }
 
-    // Kiểm tra số điện thoại đã tồn tại chưa
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
       return res.status(400).json({ message: "Số điện thoại này đã được đăng ký" });
@@ -57,7 +86,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// ĐĂNG NHẬP
 router.post("/login", async (req, res) => {
   try {
     const { phone, password } = req.body;
@@ -84,7 +112,6 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 });
-
 
 router.post("/forgot-password", async (req, res) => {
   try {
@@ -119,7 +146,6 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-// ĐỔI MẬT KHẨU
 router.post("/change-password", async (req, res) => {
   try {
     const { phone, oldPassword, newPassword } = req.body;
