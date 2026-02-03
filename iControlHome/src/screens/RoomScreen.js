@@ -130,7 +130,7 @@ function RoomItem({ name, onEdit }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#e6e6e6',
+    backgroundColor: '#f2f2f2',
   },
 
   header: {

@@ -183,7 +183,7 @@ function HistoryItem({ icon, title, status, user, time }) {
   );
 }
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#e6e6e6' },
+  container: { flex: 1, backgroundColor: '#f2f2f2' },
   header: {
     height: 70,
     backgroundColor: '#3b9cff',

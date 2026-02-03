@@ -31,10 +31,6 @@ export default function App() {
           <Stack.Screen name="Register" component={RegisterScreen} />
 
           <Stack.Screen
-            name="ForgotPassword"
-            component={ForgotPasswordScreen}
-          />
-          <Stack.Screen
             name="ChangePassword"
             component={ChangePasswordScreen}
           />

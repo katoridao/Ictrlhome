@@ -79,7 +79,7 @@ function TabItem({ iconKey, label, active, onPress }) {
   );
 }
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#e6e6e6' },
+  container: { flex: 1, backgroundColor: '#f2f2f2' },
   /* HEADER */ header: {
     backgroundColor: '#3b9cff',
     height: 70,
