@@ -8,6 +8,7 @@ import {
   Image,
   ImageBackground,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import api from '../database/api';
 
@@ -46,6 +47,11 @@ export default function RegisterScreen({ navigation }) {
       });
 
       if (response.status === 200 || response.status === 201) {
+        // Lưu thông tin đăng ký vào bộ nhớ tạm
+        const newUser = { name: name.trim(), phone: phone.trim() };
+        await AsyncStorage.setItem('user_info', JSON.stringify(newUser));
+        await AsyncStorage.setItem('phone', phone.trim());
+
         Toast.show({
           type: 'success',
           text1: 'Thành công',
@@ -56,11 +62,7 @@ export default function RegisterScreen({ navigation }) {
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || 'Lỗi kết nối server';
-      Toast.show({
-        type: 'error',
-        text1: 'Thất bại',
-        text2: errorMessage,
-      });
+      Toast.show({ type: 'error', text1: 'Thất bại', text2: errorMessage });
     }
   };
 

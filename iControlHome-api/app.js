@@ -43,3 +43,7 @@ app.use(function (err, req, res, next) {
 });
 
 module.exports = app;
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Server đang chạy tại: http://localhost:${PORT}`);
+});

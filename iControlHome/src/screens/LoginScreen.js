@@ -21,9 +21,7 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     const cleanPhone = phone.trim();
-    const cleanPassword = password.trim();
-
-    if (!cleanPhone || !cleanPassword) {
+    if (!cleanPhone || !password) {
       Toast.show({
         type: 'error',
         text1: 'Thông báo',
@@ -36,12 +34,13 @@ const LoginScreen = ({ navigation }) => {
     try {
       const response = await api.post('/login', {
         phone: cleanPhone,
-        password: cleanPassword,
+        password,
       });
-
       if (response.status === 200) {
         const user = response.data.user;
+        // Lưu dữ liệu người dùng chính thức vào user_info
         await AsyncStorage.setItem('user_info', JSON.stringify(user));
+        await AsyncStorage.setItem('phone', cleanPhone);
 
         await AsyncStorage.setItem('phone', user.phone);
 
@@ -56,11 +55,7 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || 'Lỗi kết nối server';
-      Toast.show({
-        type: 'error',
-        text1: 'Thất bại',
-        text2: errorMessage,
-      });
+      Toast.show({ type: 'error', text1: 'Thất bại', text2: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -79,7 +74,6 @@ const LoginScreen = ({ navigation }) => {
       />
       <View style={styles.overlay} />
       <View style={styles.container}>
-        {/* Logo */}
         <View style={styles.logoBox}>
           <Image
             source={require('../../public/img/logo.png')}
@@ -96,7 +90,6 @@ const LoginScreen = ({ navigation }) => {
             keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
-            autoCorrect={false}
           />
         </View>
         <View style={styles.input}>
@@ -113,11 +106,9 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.showText}>{showPassword ? 'Ẩn' : 'Hiện'}</Text>
           </TouchableOpacity>
         </View>
-
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>TIẾP TỤC</Text>
         </TouchableOpacity>
-
         <View style={styles.footer}>
           <Text
             style={styles.register}
