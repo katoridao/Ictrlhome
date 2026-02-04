@@ -66,7 +66,7 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <ImageBackground
-      source={require('../../public/img/background.png')} // 👈 ảnh nền của bạn
+      source={require('../../public/img/background.jpg')} // 👈 ảnh nền của bạn
       style={styles.container}
       resizeMode="cover"
     >
