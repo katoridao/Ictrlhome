@@ -86,6 +86,7 @@ const LoginScreen = ({ navigation }) => {
             style={styles.logo}
             resizeMode="contain"
           />
+          <Text style={styles.appName}>Đăng nhập</Text>
         </View>
         <View style={styles.input}>
           <TextInput
@@ -150,7 +151,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoBox: { alignItems: 'center', padding: 10, marginBottom: 10 },
-  logo: { width: 150, height: 150, marginBottom: 8 },
+  logo: { width: 150, height: 150 },
+  appName: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#333',
+  },
   input: {
     flexDirection: 'row',
     alignItems: 'center',

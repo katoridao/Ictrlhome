@@ -78,7 +78,7 @@ export default function RegisterScreen({ navigation }) {
             source={require('../../public/img/logo.png')}
             style={styles.logo}
           />
-          <Text style={styles.appName}>iCtrlHome</Text>
+          <Text style={styles.appName}>Đăng ký tài khoản</Text>
         </View>
 
         {/* FORM */}
@@ -169,13 +169,12 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 70,
-    height: 70,
+    width: 150,
+    height: 150,
     resizeMode: 'contain',
   },
 
   appName: {
-    marginTop: 8,
     fontSize: 22,
     fontWeight: '600',
     color: '#333',
@@ -239,7 +238,7 @@ const styles = StyleSheet.create({
   loginText: {
     color: '#3B82F6',
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 10,
   },
 
   forgotText: {

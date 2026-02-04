@@ -93,8 +93,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.appName}>iCtrlHome</Text>
-        <Text style={styles.subTitle}>Khôi phục mật khẩu</Text>
+        <Text style={styles.appName}>Khôi phục mật khẩu</Text>
       </View>
 
       <View style={styles.form}>
@@ -154,7 +153,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
   logoContainer: { alignItems: 'center', marginTop: 80 },
-  logo: { width: 80, height: 80, marginBottom: 10 },
+  logo: { width: 150, height: 150, marginBottom: 10 },
   appName: { fontSize: 22, fontWeight: '600', color: '#2D2D2D' },
   subTitle: { fontSize: 14, color: '#666', marginTop: 5 },
   form: { paddingHorizontal: 32, marginTop: 30 },
