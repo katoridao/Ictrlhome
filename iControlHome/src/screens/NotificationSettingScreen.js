@@ -67,7 +67,7 @@ export default function NotificationSettingScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f2f2' },
+  container: { flex: 1 },
 
   header: {
     height: 80,

@@ -85,9 +85,6 @@ export default function SettingScreen({ navigation }) {
               {userData?.phone || 'Chưa cập nhật'}
             </Text>
           </View>
-          <View style={styles.badge}>
-            <Text style={styles.roleText}>Chủ nhà</Text>
-          </View>
           <Image
             source={require('../../public/img/arrow-right.png')}
             style={[styles.arrow, { tintColor: themeStyles.subText }]}
@@ -189,22 +186,21 @@ const styles = StyleSheet.create({
   },
   body: { padding: 16, paddingBottom: 40 },
   userBox: {
-    borderRadius: 16,
-    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#fff',
     marginBottom: 24,
-    elevation: 2,
   },
-  avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 26,
+    marginRight: 14,
+  },
   userName: { fontSize: 18, fontWeight: '700' },
   userEmail: { fontSize: 14 },
-  roleText: {
-    fontSize: 13,
-    color: '#3b9cff',
-    fontWeight: '600',
-    marginRight: 6,
-  },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '600',
@@ -222,5 +218,9 @@ const styles = StyleSheet.create({
   itemIcon: { width: 22, height: 22, marginRight: 14, tintColor: '#3b9cff' },
   itemText: { flex: 1, fontSize: 16 },
   valueText: { fontSize: 14, color: '#999', marginRight: 6 },
-  arrow: { width: 14, height: 14, tintColor: '#ccc' },
+  arrow: {
+    width: 14,
+    height: 14,
+    tintColor: '#bbb',
+  },
 });
