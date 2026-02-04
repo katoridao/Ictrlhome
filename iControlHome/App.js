@@ -8,9 +8,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 
-import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import SelectHouseScreen from './src/screens/SelectHouseScreen';
-import EditProfileScreen from './src/screens/EditProfileScreen';
 import NotificationSettingScreen from './src/screens/NotificationSettingScreen';
 
 import MainTab from './src/navigation/MainTab';
@@ -30,12 +28,7 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
 
-          <Stack.Screen
-            name="ChangePassword"
-            component={ChangePasswordScreen}
-          />
           <Stack.Screen name="SelectHouse" component={SelectHouseScreen} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen
             name="NotificationSetting"
             component={NotificationSettingScreen}
