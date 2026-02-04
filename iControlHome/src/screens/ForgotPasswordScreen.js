@@ -86,6 +86,12 @@ export default function ForgotPasswordScreen({ navigation }) {
       style={styles.container}
       resizeMode="cover"
     >
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
+      <View style={styles.overlay} />
       <View style={styles.container}>
         <StatusBar
           barStyle="dark-content"
@@ -158,6 +164,10 @@ export default function ForgotPasswordScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.65)',
+  },
   container: { flex: 1 },
   logoContainer: { alignItems: 'center', marginTop: 80 },
   logo: { width: 150, height: 150, marginBottom: 10 },
