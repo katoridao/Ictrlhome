@@ -8,6 +8,7 @@ import {
   Image,
   StatusBar,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import api from '../database/api';
@@ -80,78 +81,84 @@ export default function ForgotPasswordScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
-      />
-
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('../../public/img/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
+    <ImageBackground
+      source={require('../../public/img/background.jpg')}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="transparent"
+          translucent
         />
-        <Text style={styles.appName}>Khôi phục mật khẩu</Text>
+
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../public/img/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.appName}>Khôi phục mật khẩu</Text>
+        </View>
+
+        <View style={styles.form}>
+          <TextInput
+            placeholder="Số điện thoại đã đăng ký"
+            placeholderTextColor="#888"
+            keyboardType="phone-pad"
+            style={styles.input}
+            value={phone}
+            onChangeText={setPhone}
+            autoCorrect={false}
+          />
+
+          <TextInput
+            placeholder="Mật khẩu mới"
+            placeholderTextColor="#888"
+            secureTextEntry
+            style={styles.input}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            autoCapitalize="none"
+          />
+
+          <TextInput
+            placeholder="Xác nhận mật khẩu mới"
+            placeholderTextColor="#888"
+            secureTextEntry
+            style={styles.input}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            autoCapitalize="none"
+          />
+
+          <TouchableOpacity
+            style={[styles.button, loading && { backgroundColor: '#A5B1FF' }]}
+            onPress={handleResetPassword}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>ĐẶT LẠI MẬT KHẨU</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backText}>Quay lại đăng nhập</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <View style={styles.form}>
-        <TextInput
-          placeholder="Số điện thoại đã đăng ký"
-          placeholderTextColor="#888"
-          keyboardType="phone-pad"
-          style={styles.input}
-          value={phone}
-          onChangeText={setPhone}
-          autoCorrect={false}
-        />
-
-        <TextInput
-          placeholder="Mật khẩu mới"
-          placeholderTextColor="#888"
-          secureTextEntry
-          style={styles.input}
-          value={newPassword}
-          onChangeText={setNewPassword}
-          autoCapitalize="none"
-        />
-
-        <TextInput
-          placeholder="Xác nhận mật khẩu mới"
-          placeholderTextColor="#888"
-          secureTextEntry
-          style={styles.input}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          autoCapitalize="none"
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && { backgroundColor: '#A5B1FF' }]}
-          onPress={handleResetPassword}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.buttonText}>ĐẶT LẠI MẬT KHẨU</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backText}>Quay lại đăng nhập</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1 },
   logoContainer: { alignItems: 'center', marginTop: 80 },
   logo: { width: 150, height: 150, marginBottom: 10 },
   appName: { fontSize: 22, fontWeight: '600', color: '#2D2D2D' },
