@@ -8,6 +8,7 @@ import {
   ScrollView,
   Modal,
   TextInput,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -77,24 +78,31 @@ export default function RoomScreen() {
 
       {/* MODAL */}
       <Modal transparent visible={modalVisible} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalBox, { backgroundColor: themeStyles.card }]}
-          >
-            <Text style={[styles.modalTitle, { color: themeStyles.text }]}>
-              {isEdit ? 'Sửa tên phòng' : 'Thêm phòng'}
-            </Text>
-            <TextInput
-              placeholder="Nhập tên phòng"
-              placeholderTextColor={themeStyles.subText}
-              style={[
-                styles.input,
-                { color: themeStyles.text, borderColor: themeStyles.border },
-              ]}
-            />
-            {/* ... Modal Actions ... */}
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+              <View
+                style={[styles.modalBox, { backgroundColor: themeStyles.card }]}
+              >
+                <Text style={[styles.modalTitle, { color: themeStyles.text }]}>
+                  {isEdit ? 'Sửa tên phòng' : 'Thêm phòng'}
+                </Text>
+                <TextInput
+                  placeholder="Nhập tên phòng"
+                  placeholderTextColor={themeStyles.subText}
+                  style={[
+                    styles.input,
+                    {
+                      color: themeStyles.text,
+                      borderColor: themeStyles.border,
+                    },
+                  ]}
+                />
+                {/* ... Modal Actions ... */}
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );

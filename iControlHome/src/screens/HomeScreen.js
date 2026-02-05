@@ -14,7 +14,7 @@ export default function HomeScreen({ navigation }) {
           style={styles.dropdown}
           onPress={() => navigation.navigate('SelectHouse')}
         >
-          <Text style={styles.dropdownText}>Nhà riêng</Text>
+          <Text style={styles.dropdownText}>Nhà chính</Text>
           <Image
             source={require('../../public/img/down.png')}
             style={{ width: 16, height: 16 }}
