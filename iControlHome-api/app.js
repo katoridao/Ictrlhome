@@ -8,6 +8,13 @@ var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 const db = require("./config/database");
 const apiRouter = require("./routes/api");
+const houseRoutes = require("./routes/house");
+const roomRoutes = require("./routes/room");
+const deviceRoutes = require("./routes/device");
+
+
+
+
 
 var app = express();
 
@@ -24,7 +31,12 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 db.connect();
+app.use("/api/houses", houseRoutes);
+app.use("/api/rooms", roomRoutes);
+app.use("/api/devices", deviceRoutes);
 app.use("/api", apiRouter);
+
+
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
