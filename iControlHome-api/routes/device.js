@@ -1,200 +1,141 @@
 const express = require("express");
 const router = express.Router();
-
 const Device = require("../models/Device");
-const Room = require("../models/Room");
+const History = require("../models/History");
 
-/**
- * THÊM THIẾT BỊ
- */
+// 1. Lấy danh sách thiết bị
+router.get("/", async (req, res) => {
+  try {
+    const { room_id } = req.query; 
+    let query = {};
+
+    // Xử lý logic lọc theo room_id
+    if (room_id === 'null') {
+      query = { room_id: null }; // Lấy thiết bị chưa gán phòng
+    } else if (room_id) {
+      query = { room_id: room_id }; // Lấy thiết bị của phòng cụ thể
+    }
+
+    const devices = await Device.find(query);
+    res.json({ devices }); // Trả về object { devices: [...] } để khớp với Frontend
+  } catch (error) {
+    console.error("Lỗi lấy danh sách thiết bị:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// 2. Tạo thiết bị mới
 router.post("/", async (req, res) => {
   try {
-    const { roomId, name, type, esp32Id } = req.body;
-
-    if (!roomId || !name || !type || !esp32Id) {
-      return res.status(400).json({
-        message: "Thiếu roomId, name, type hoặc esp32Id",
-      });
+    const { name, type, esp32Id, room_id } = req.body;
+    
+    if (!name || !type || !esp32Id) {
+      return res.status(400).json({ message: "Thiếu dữ liệu (name, type, esp32Id)" });
     }
-
-    const room = await Room.findById(roomId);
-    if (!room) {
-      return res.status(404).json({
-        message: "Room không tồn tại",
-      });
-    }
-
+    
     const device = await Device.create({
       name: name.trim(),
       type,
       esp32Id,
-      room_id: roomId, 
+      room_id: room_id || null, // Nếu không chọn phòng thì là null
       status: 0,
     });
-
-    res.status(201).json({
-      message: "Thêm thiết bị thành công",
-      device,
-    });
+    
+    res.status(201).json({ device });
   } catch (error) {
-    console.error("DEVICE CREATE ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
+    console.error("Lỗi tạo thiết bị:", error);
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-/**
- * LẤY DANH SÁCH THIẾT BỊ THEO ROOM
- */
-router.get("/", async (req, res) => {
-  try {
-    const { roomId } = req.query;
-
-    if (!roomId) {
-      return res.status(400).json({
-        message: "Thiếu roomId",
-      });
-    }
-
-    const devices = await Device.find({ room_id: roomId }); 
-
-    res.json({
-      message: "Lấy danh sách thiết bị thành công",
-      devices,
-    });
-  } catch (error) {
-    console.error("DEVICE LIST ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
-  }
-});
-
-/**
- * BẬT / TẮT THIẾT BỊ
- */
-router.put("/:id/status", async (req, res) => {
-  try {
-    const { status } = req.body;
-
-    if (status !== 0 && status !== 1) {
-      return res.status(400).json({
-        message: "Status chỉ được là 0 (tắt) hoặc 1 (bật)",
-      });
-    }
-
-    const device = await Device.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
-
-    if (!device) {
-      return res.status(404).json({
-        message: "Thiết bị không tồn tại",
-      });
-    }
-
-    res.json({
-      message: status === 1 ? "Thiết bị đang chạy" : "Thiết bị đã tắt",
-      device,
-    });
-  } catch (error) {
-    console.error("DEVICE STATUS ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
-  }
-});
-
-/**
- * SỬA THIẾT BỊ
- */
+// 3. Cập nhật thông tin thiết bị (Tên, Loại, Phòng, ESP ID)
+// QUAN TRỌNG: Route này cần thiết cho tính năng "Sửa thiết bị" ở AddDeviceModal
 router.put("/:id", async (req, res) => {
   try {
-    const { name, type, esp32Id } = req.body;
-
-    const device = await Device.findByIdAndUpdate(
+    const { name, type, esp32Id, room_id } = req.body;
+    
+    const updatedDevice = await Device.findByIdAndUpdate(
       req.params.id,
-      {
-        name,
+      { 
+        name: name ? name.trim() : undefined,
         type,
         esp32Id,
+        room_id // Cho phép cập nhật phòng ngay tại đây
       },
-      { new: true }
+      { new: true } // Trả về dữ liệu mới sau khi update
     );
 
-    if (!device) {
-      return res.status(404).json({
-        message: "Thiết bị không tồn tại",
-      });
+    if (!updatedDevice) {
+      return res.status(404).json({ message: "Không tìm thấy thiết bị" });
     }
 
-    res.json({
-      message: "Cập nhật thiết bị thành công",
-      device,
-    });
+    res.json({ device: updatedDevice });
   } catch (error) {
-    console.error("DEVICE UPDATE ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
+    console.error("Lỗi cập nhật thiết bị:", error);
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-/**
- * XOÁ THIẾT BỊ
- */
+// 4. Cập nhật trạng thái ON/OFF (Bật/Tắt)
+router.put("/:id/status", async (req, res) => {
+  try {
+    const { status, user_id, user_name } = req.body;
+    const device = await Device.findByIdAndUpdate(
+      req.params.id, 
+      { status: status }, 
+      { new: true }
+    );
+    
+    if (!device) return res.status(404).json({ message: "Không tìm thấy thiết bị" });
+    
+    // Ghi lại lịch sử hoạt động
+    try {
+      await History.create({
+        device_id: device._id,
+        device_name: device.name,
+        device_type: device.type,
+        action: status === 1 ? 'ON' : 'OFF',
+        user_id: user_id || null, // Nếu frontend gửi lên thông tin user
+        user_name: user_name || null
+      });
+    } catch (err) {
+      console.error("Lỗi ghi lịch sử:", err);
+    }
+
+    res.json({ device });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// 5. Gán thiết bị vào phòng (Dùng cho UnassignedDevicesScreen)
+router.put("/assign-room/:id", async (req, res) => {
+  try {
+    const { room_id } = req.body;
+    const updatedDevice = await Device.findByIdAndUpdate(
+      req.params.id,
+      { room_id: room_id },
+      { new: true }
+    );
+    
+    if (!updatedDevice) return res.status(404).json({ message: "Không tìm thấy thiết bị" });
+    
+    res.json({ message: "Đã thêm thiết bị vào phòng", device: updatedDevice });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// 6. Xóa thiết bị
 router.delete("/:id", async (req, res) => {
   try {
-    const device = await Device.findByIdAndDelete(req.params.id);
-
-    if (!device) {
-      return res.status(404).json({
-        message: "Thiết bị không tồn tại",
-      });
+    const deletedDevice = await Device.findByIdAndDelete(req.params.id);
+    if (!deletedDevice) {
+      return res.status(404).json({ message: "Không tìm thấy thiết bị để xóa" });
     }
-
-    res.json({
-      message: "Xoá thiết bị thành công",
-    });
+    res.json({ message: "Xóa thiết bị thành công" });
   } catch (error) {
-    console.error("DEVICE DELETE ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
-  }
-});
-
-/**
- * LẤY CHI TIẾT THIẾT BỊ
- */
-router.get("/:id", async (req, res) => {
-  try {
-    const device = await Device.findById(req.params.id);
-
-    if (!device) {
-      return res.status(404).json({
-        message: "Thiết bị không tồn tại",
-      });
-    }
-
-    res.json({
-      message: "Lấy chi tiết thiết bị thành công",
-      device,
-    });
-  } catch (error) {
-    console.error("DEVICE GET ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Lỗi server khi xóa" });
   }
 });
 
