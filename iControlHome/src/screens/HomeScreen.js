@@ -18,7 +18,7 @@ export default function HomeScreen({ navigation }) {
   const fetchDevices = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/devices', { params: { room_id: 'null' } });
+      const response = await api.get('/devices');
       const data = response.data;
 
       if (data && Array.isArray(data.devices)) {
@@ -31,7 +31,7 @@ export default function HomeScreen({ navigation }) {
     } catch (error) {
       console.error("Lỗi tải thiết bị:", error.message);
       const status = error.response ? error.response.status : 'Không phản hồi';
-      Alert.alert("Lỗi kết nối", `Mã lỗi: ${status}`);
+      Alert.alert("Lỗi kết nối", `Không thể tải dữ liệu thiết bị. Mã lỗi: ${status}`);
     } finally {
       setLoading(false);
     }
@@ -120,7 +120,7 @@ export default function HomeScreen({ navigation }) {
           <ActivityIndicator size="large" color={themeStyles.primary} style={styles.loader} />
         ) : devices.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: themeStyles.text }]}>Không có thiết bị mới</Text>
+            <Text style={[styles.emptyText, { color: themeStyles.text }]}>Chưa có thiết bị nào</Text>
             <TouchableOpacity style={[styles.addBtn, { backgroundColor: themeStyles.primary }]} onPress={() => navigation.navigate('AddDevice')}>
               <Text style={styles.addBtnText}>Thêm thiết bị</Text>
             </TouchableOpacity>
