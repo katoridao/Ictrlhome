@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const historySchema = new mongoose.Schema({
+const deviceLogSchema = new mongoose.Schema({
   device_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Device' },
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   device_name: String, 
@@ -8,6 +8,6 @@ const historySchema = new mongoose.Schema({
   user_name: String,  
   action: { type: String, enum: ['ON', 'OFF'] },
   createdAt: { type: Date, default: Date.now }
-});
+}, { collection: 'device_logs' });
 
-module.exports = mongoose.model('History', historySchema);
+module.exports = mongoose.model('DeviceLog', deviceLogSchema);

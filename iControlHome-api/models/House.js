@@ -11,6 +11,14 @@ const HouseSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    // Danh sách thành viên trong nhà
+    members: [
+      {
+        user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        role: { type: String, enum: ["OWNER", "USER"], default: "USER" },
+        joined_at: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,

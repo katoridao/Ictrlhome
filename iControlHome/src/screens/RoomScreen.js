@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Modal, TextInput, Alert, ActivityIndicator, TouchableWithoutFeedback } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
@@ -16,7 +17,10 @@ export default function RoomScreen({ navigation }) {
   const fetchRooms = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/rooms');
+      // Lấy house_id hiện tại để lọc phòng
+      const houseId = await AsyncStorage.getItem('current_house_id');
+      
+      const response = await api.get('/rooms', { params: { house_id: houseId } });
       const data = response.data;
       if (data && data.rooms) {
         setRooms(data.rooms);
@@ -38,9 +42,14 @@ export default function RoomScreen({ navigation }) {
       if (isEdit && selectedRoomId) {
         await api.put(`/rooms/${selectedRoomId}`, { name: roomName });
       } else {
+        const houseId = await AsyncStorage.getItem('current_house_id');
+        if (!houseId) {
+          Alert.alert("Lỗi", "Vui lòng chọn nhà trước khi tạo phòng.");
+          return;
+        }
         await api.post('/rooms', { 
           name: roomName, 
-          house_id: '69861203a27335ec14abeeae'
+          house_id: houseId
         });
       }
       setModalVisible(false);

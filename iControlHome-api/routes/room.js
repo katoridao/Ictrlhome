@@ -14,7 +14,8 @@ router.get("/", async (req, res) => {
       filter = { house_id: house_id };
     }
 
-    const rooms = await Room.find(filter);
+    // Populate để lấy thông tin tên nhà từ house_id
+    const rooms = await Room.find(filter).populate("house_id", "name");
     console.log(`Đã tìm thấy ${rooms.length} phòng cho house_id: ${house_id || 'Tất cả'}`);
     res.json({ rooms });
   } catch (error) {
@@ -52,10 +53,19 @@ router.post("/init", async (req, res) => {
 // Path: POST /api/rooms
 router.post("/", async (req, res) => {
   try {
-    const { house_id, name } = req.body; 
-    if (!house_id || !name) return res.status(400).json({ message: "Thiếu thông tin" });
+    const { house_id, user_id, name } = req.body; 
+    
+    let finalHouseId = house_id;
 
-    const room = await Room.create({ name: name.trim(), house_id: house_id });
+    // Tự động tìm house_id nếu chỉ gửi user_id
+    if (!finalHouseId && user_id) {
+      const house = await House.findOne({ owner_id: user_id });
+      if (house) finalHouseId = house._id;
+    }
+
+    if (!finalHouseId || !name) return res.status(400).json({ message: "Thiếu thông tin (house_id/user_id, name)" });
+
+    const room = await Room.create({ name: name.trim(), house_id: finalHouseId });
     res.status(201).json({ message: "Thêm phòng thành công", room });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });

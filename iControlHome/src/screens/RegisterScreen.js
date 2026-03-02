@@ -44,6 +44,7 @@ export default function RegisterScreen({ navigation }) {
         name: name.trim(),
         phone: phone.trim(),
         password,
+        house_name: 'NHÀ CHÍNH', // Đặt tên mặc định cho nhà đầu tiên
       });
 
       if (response.status === 200 || response.status === 201) {
@@ -51,6 +52,11 @@ export default function RegisterScreen({ navigation }) {
         const newUser = { name: name.trim(), phone: phone.trim() };
         await AsyncStorage.setItem('user_info', JSON.stringify(newUser));
         await AsyncStorage.setItem('phone', phone.trim());
+
+        if (response.data.house_id) {
+          await AsyncStorage.setItem('current_house_id', response.data.house_id);
+          await AsyncStorage.setItem('current_house_name', response.data.house_name || 'NHÀ CHÍNH');
+        }
 
         Toast.show({
           type: 'success',

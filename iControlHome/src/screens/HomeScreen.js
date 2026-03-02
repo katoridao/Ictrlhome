@@ -4,6 +4,7 @@ import {
   Image, FlatList, ActivityIndicator, Alert, Dimensions 
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
 import api from '../database/api';
 
@@ -13,12 +14,23 @@ export default function HomeScreen({ navigation }) {
   const { styles: themeStyles } = useTheme();
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentHouseName, setCurrentHouseName] = useState('Chọn nhà');
   const isFocused = useIsFocused();
 
   const fetchDevices = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/devices');
+
+      // Lấy nhà đang được chọn từ bộ nhớ
+      const houseId = await AsyncStorage.getItem('current_house_id');
+      const houseName = await AsyncStorage.getItem('current_house_name');
+
+      if (houseName) {
+        setCurrentHouseName(houseName);
+      }
+
+      // Gửi house_id lên server để lấy đúng thiết bị
+      const response = await api.get('/devices', { params: { house_id: houseId } });
       const data = response.data;
 
       if (data && Array.isArray(data.devices)) {
@@ -107,7 +119,7 @@ export default function HomeScreen({ navigation }) {
     <View style={[styles.container, { backgroundColor: themeStyles.background }]}>
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
         <TouchableOpacity style={styles.dropdown} onPress={() => navigation.navigate('SelectHouse')}>
-          <Text style={styles.dropdownText}>Nhà chính</Text>
+          <Text style={styles.dropdownText}>{currentHouseName}</Text>
           <Image source={require('../../public/img/down.png')} style={styles.smallIcon} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('AddDevice')}>

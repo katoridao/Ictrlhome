@@ -1,45 +1,106 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Image,
-  ScrollView,
   StatusBar,
   ActivityIndicator,
   FlatList,
+  RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
 
-export default function HistoryScreen({ navigation }) {
+// --- Constants ---
+const TIME_FILTERS = ['Hôm nay', '7 ngày trước', '30 ngày trước'];
+// Dựa trên các loại thiết bị trong AddDeviceModal.js để đảm bảo tính nhất quán
+const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt', 'Ổ cắm', 'Cảm biến'];
+
+
+export default function Device_logScreen({ navigation }) {
   const { theme, styles: themeStyles } = useTheme();
 
   const [openFilter, setOpenFilter] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const isFocused = useIsFocused();
 
   const [device, setDevice] = useState('Thiết bị');
-  const [action, setAction] = useState('Hành động');
   const [time, setTime] = useState('Hôm nay');
 
-  const fetchHistory = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Gọi API lấy lịch sử (Backend cần cài đặt route GET /history)
-      const response = await api.get('/history');
-      setHistoryData(response.data.history || []);
-    } catch (error) {
-      console.error("Lỗi tải lịch sử:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Hàm này chỉ tập trung vào việc lấy dữ liệu, không quản lý state
+  const fetchData = useCallback(async () => {
+    const houseId = await AsyncStorage.getItem('current_house_id');
+    if (!houseId) throw new Error('Chưa chọn nhà');
 
-  // Tải lại dữ liệu mỗi khi vào màn hình
-  useFocusEffect(useCallback(() => { fetchHistory(); }, []));
+    const params = { house_id: houseId };
+    if (device !== 'Thiết bị' && device !== 'Tất cả') {
+      // Chuyển đổi tên tiếng Việt sang value tiếng Anh để backend xử lý
+      const deviceTypeMap = { 'Đèn': 'light', 'Quạt': 'fan', 'Ổ cắm': 'socket', 'Cảm biến': 'sensor' };
+      params.device_type = deviceTypeMap[device] || device.toLowerCase();
+    }
+    if (time === 'Hôm nay') params.period = 'day';
+    else if (time === '7 ngày trước') params.period = 'week';
+    else if (time === '30 ngày trước') params.period = 'month';
+
+    // API endpoint đã được đổi tên từ /history -> /device-logs để đồng bộ với schema
+    const response = await api.get('/device-logs', { params });
+    
+    // --- DEBUG: Kiểm tra dữ liệu thực tế từ Server ---
+    console.log('Device Logs Response:', JSON.stringify(response.data, null, 2));
+
+    // Xử lý linh hoạt các trường hợp trả về từ Backend
+    if (Array.isArray(response.data)) {
+      return response.data; // Trường hợp BE trả về mảng trực tiếp: res.json([...])
+    }
+    // FIX: Backend trả về key 'device_log'
+    if (response.data && Array.isArray(response.data.device_log)) {
+      return response.data.device_log;
+    }
+    if (response.data && Array.isArray(response.data.logs)) {
+      return response.data.logs; // Trường hợp chuẩn: res.json({ logs: [...] })
+    }
+    // Fallback nếu dùng key khác hoặc lỗi
+    return response.data.data || response.data.result || [];
+  }, [device, time]);
+
+  // Effect này xử lý việc tải dữ liệu khi màn hình được focus hoặc khi bộ lọc thay đổi
+  useEffect(() => {
+    if (isFocused) {
+      const loadInitialData = async () => {
+        setLoading(true);
+        try {
+          const data = await fetchData();
+          setHistoryData(data);
+        } catch (error) {
+          console.error("Lỗi tải nhật ký:", error);
+          setHistoryData([]); // Reset dữ liệu khi có lỗi
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadInitialData();
+    }
+  }, [isFocused, fetchData]); // Chạy lại khi focus hoặc khi bộ lọc thay đổi
+
+  // Xử lý hành động "kéo để làm mới"
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const data = await fetchData();
+      setHistoryData(data);
+    } catch (error) {
+      console.error("Lỗi khi làm mới:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchData]);
 
   return (
     <View
@@ -52,7 +113,7 @@ export default function HistoryScreen({ navigation }) {
 
       {/* HEADER */}
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <Text style={styles.headerTitle}>Lịch sử hoạt động</Text>
+        <Text style={styles.headerTitle}>Nhật ký thiết bị</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -65,14 +126,6 @@ export default function HistoryScreen({ navigation }) {
             themeStyles={themeStyles}
             onPress={() =>
               setOpenFilter(openFilter === 'device' ? null : 'device')
-            }
-          />
-          <FilterItem
-            label={action}
-            active={openFilter === 'action'}
-            themeStyles={themeStyles}
-            onPress={() =>
-              setOpenFilter(openFilter === 'action' ? null : 'action')
             }
           />
           <FilterItem
@@ -95,7 +148,7 @@ export default function HistoryScreen({ navigation }) {
             ]}
           >
             {openFilter === 'device' &&
-              ['Tất cả', 'Quạt', 'Đèn', 'Điều hòa'].map(item => (
+              DEVICE_FILTERS.map(item => (
                 <DropdownOption
                   key={item}
                   label={item}
@@ -108,22 +161,8 @@ export default function HistoryScreen({ navigation }) {
                 />
               ))}
 
-            {openFilter === 'action' &&
-              ['Tất cả', 'Bật', 'Tắt'].map(item => (
-                <DropdownOption
-                  key={item}
-                  label={item}
-                  active={action === item}
-                  themeStyles={themeStyles}
-                  onPress={() => {
-                    setAction(item);
-                    setOpenFilter(null);
-                  }}
-                />
-              ))}
-
             {openFilter === 'time' &&
-              ['Hôm nay', '7 ngày trước', '30 ngày trước'].map(item => (
+              TIME_FILTERS.map(item => (
                 <DropdownOption
                   key={item}
                   label={item}
@@ -149,16 +188,23 @@ export default function HistoryScreen({ navigation }) {
           contentContainerStyle={styles.body}
           ListEmptyComponent={
             <Text style={{ textAlign: 'center', color: themeStyles.subText, marginTop: 20 }}>
-              Chưa có lịch sử hoạt động
+              Chưa có nhật ký hoạt động
             </Text>
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[themeStyles.primary]}
+            />
           }
           renderItem={({ item }) => (
             <HistoryItem
               type={item.device_type} 
-              title={item.device_name || 'Thiết bị đã xóa'}
-              status={item.action === 'ON' || item.action === 1 ? 'Bật' : 'Tắt'}
-              user={item.user_name || 'Người dùng'}
-              time={new Date(item.createdAt).toLocaleString('vi-VN')}
+              deviceName={item.device_name || 'Thiết bị đã xóa'}
+              userName={item.user_name || 'Người dùng'}
+              time={item.createdAt}
+              action={item.action}
               themeStyles={themeStyles}
             />
           )}
@@ -182,7 +228,6 @@ function FilterItem({ label, active, onPress, themeStyles }) {
       onPress={onPress}
     >
       <Text style={{ color: themeStyles.text, fontSize: 13 }}>{label}</Text>
-      {/* Đã bỏ tintColor để giữ màu gốc của down.png */}
       <Image
         source={require('../../public/img/down.png')}
         style={styles.filterIcon}
@@ -202,7 +247,7 @@ function DropdownOption({ label, active, onPress, themeStyles }) {
   );
 }
 
-function HistoryItem({ type, title, status, user, time, themeStyles }) {
+function HistoryItem({ type, deviceName, userName, time, action, themeStyles }) {
   const getIcon = (deviceType) => {
     switch (deviceType?.toLowerCase()) {
       case 'light': case 'đèn': return require('../../public/img/light.png');
@@ -211,19 +256,40 @@ function HistoryItem({ type, title, status, user, time, themeStyles }) {
     }
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return '--:-- --/--/----';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${hours}:${minutes} ${day}/${month}/${year}`;
+  };
+
   return (
     <View style={[styles.historyItem, { backgroundColor: themeStyles.card }]}>
-      {/* Đã bỏ tintColor để giữ màu gốc của icon thiết bị */}
       <Image source={getIcon(type)} style={styles.deviceIcon} />
       <View style={{ flex: 1 }}>
-        <Text style={[styles.itemTitle, { color: themeStyles.text }]}>
-          {title}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+           <Text style={[styles.itemTitle, { color: themeStyles.text }]}>{deviceName}</Text>
+           <Text style={{ color: themeStyles.subText, fontSize: 11 }}>
+             {formatDateTime(time)}
+           </Text>
+        </View>
+        
+        <Text style={{ color: themeStyles.subText, fontSize: 12, marginBottom: 6 }}>
+          Người dùng: {userName}
         </Text>
-        <Text style={{ color: themeStyles.subText, fontSize: 13 }}>
-          {status} · {user}
-        </Text>
+        
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+           <Text style={{ color: action === 'ON' ? '#4CAF50' : '#F44336', fontSize: 13, fontWeight: '600' }}>
+             {action === 'ON' ? '🟢 Đã Bật' : '🔴 Đã Tắt'}
+           </Text>
+        </View>
       </View>
-      <Text style={{ color: themeStyles.subText, fontSize: 12 }}>{time}</Text>
     </View>
   );
 }
