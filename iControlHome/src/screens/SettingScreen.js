@@ -40,7 +40,12 @@ export default function SettingScreen({ navigation }) {
       {
         text: 'Đồng ý',
         onPress: async () => {
-          await AsyncStorage.multiRemove(['user_info', 'phone']);
+          // Xóa tất cả thông tin liên quan đến người dùng cũ
+          await AsyncStorage.multiRemove([
+            'user_info', 
+            'phone', 
+            'current_house_id', 
+            'current_house_name']);
           navigation.replace('Login');
         },
       },
@@ -101,6 +106,13 @@ export default function SettingScreen({ navigation }) {
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('NotificationSetting')}
           />
+          
+          <SettingItem
+            icon={require('../../public/img/device_default.png')} // Bạn có thể thay icon khác
+            label="Cài đặt giá điện"
+            textColor={themeStyles.text}
+            onPress={() => navigation.navigate('ElectricityPriceScreen')}
+          />
 
           <SettingItem
             icon={require('../../public/img/moon.png')}
@@ -108,6 +120,13 @@ export default function SettingScreen({ navigation }) {
             value={theme === 'DARK' ? 'Tối' : 'Sáng'}
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('AppearanceScreen')}
+          />
+
+          <SettingItem
+            icon={require('../../public/img/device_default.png')} // Icon thống kê
+            label="Thống kê tiêu thụ"
+            textColor={themeStyles.text}
+            onPress={() => navigation.navigate('StatisticsScreen')}
           />
 
           <SettingItem

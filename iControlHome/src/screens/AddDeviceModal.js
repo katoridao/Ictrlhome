@@ -4,6 +4,7 @@ import {
   StyleSheet, ActivityIndicator, Alert, SafeAreaView, ScrollView, KeyboardAvoidingView, Platform 
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../database/api';
 
 const DEVICE_TYPES = [
@@ -26,12 +27,27 @@ const AddDeviceModal = ({ navigation, route }) => {
   const [name, setName] = useState(editDevice?.name || '');
   const [type, setType] = useState(editDevice?.type || 'light');
   const [esp32Id, setEsp32Id] = useState(editDevice?.esp32Id || '');
+  const [powerWatt, setPowerWatt] = useState(editDevice?.power_watt ? String(editDevice.power_watt) : '');
   const [loading, setLoading] = useState(false);
 
   // Tải danh sách phòng khi mở màn hình
   useEffect(() => {
-    const fetchRooms = async () => {
+    const checkHouseAndFetchRooms = async () => {
       try {
+        // 1. Kiểm tra xem đã chọn nhà chưa
+        const houseId = await AsyncStorage.getItem('current_house_id');
+        if (!houseId) {
+          Alert.alert(
+            "Chưa chọn nhà",
+            "Bạn cần chọn hoặc tạo nhà trước khi thêm thiết bị.",
+            [
+              { text: "Hủy", style: "cancel", onPress: () => navigation.goBack() },
+              { text: "Chọn Nhà", onPress: () => navigation.navigate('SelectHouse') }
+            ]
+          );
+          return;
+        }
+
         const response = await api.get('/rooms');
         const data = response.data;
         if (Array.isArray(data)) {
@@ -45,7 +61,7 @@ const AddDeviceModal = ({ navigation, route }) => {
         console.log("Lỗi tải danh sách phòng:", error);
       }
     };
-    fetchRooms();
+    checkHouseAndFetchRooms();
   }, []);
 
   const handleSave = async () => {
@@ -56,12 +72,33 @@ const AddDeviceModal = ({ navigation, route }) => {
 
     setLoading(true);
     try {
+      // Lấy user_id từ AsyncStorage
+      const userJson = await AsyncStorage.getItem('user_info');
+      const user = userJson ? JSON.parse(userJson) : {};
+      if (!user?._id) {
+        Alert.alert("Lỗi", "Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
+        setLoading(false);
+        return;
+      }
+
+      // Lấy house_id hiện tại
+      const houseId = await AsyncStorage.getItem('current_house_id');
+      if (!houseId) {
+        Alert.alert("Lỗi", "Vui lòng chọn nhà trước khi lưu.");
+        setLoading(false);
+        return;
+      }
+
       // Nếu là Sửa dùng PUT tới /devices/:id, nếu Thêm dùng POST tới /devices
       const payload = { 
         room_id: selectedRoomId, // Sử dụng ID phòng người dùng đã chọn (hoặc null)
         name: name.trim(), 
         type, 
-        esp32Id: esp32Id.trim() 
+        esp32Id: esp32Id.trim(),
+        power_watt: parseInt(powerWatt) || 0,
+        user_id: user._id,
+        house_id: houseId, // Gửi kèm house_id để đảm bảo thêm đúng nhà
+        status: 0 // FIX: Mặc định trạng thái là TẮT (0) để không bị tính điện năng ngay khi tạo
       };
 
       let response;
@@ -133,6 +170,15 @@ const AddDeviceModal = ({ navigation, route }) => {
               </TouchableOpacity>
             ))}
           </View>
+
+          <Text style={styles.label}>Công suất (W)</Text>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Ví dụ: 50" 
+            value={powerWatt} 
+            onChangeText={setPowerWatt} 
+            keyboardType="numeric"
+          />
 
           <Text style={styles.label}>ID ESP32</Text>
           <TextInput 

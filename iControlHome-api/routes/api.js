@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const bcrypt = require('bcryptjs');
+const House = require("../models/House");
+const Room = require("../models/Room");
 
 router.post("/update-profile", async (req, res) => {
   try {
@@ -80,6 +82,22 @@ router.post("/register", async (req, res) => {
     });
 
     await newUser.save();
+
+    // Tự động tạo House cho user mới
+    const newHouse = await House.create({
+      name: `Nhà của ${name.trim()}`,
+      owner_id: newUser._id,
+    });
+
+    // Tự động tạo 3 phòng mặc định
+    const defaultRooms = ["Phòng Khách", "Phòng Bếp", "Phòng Ngủ"];
+    await Room.insertMany(
+      defaultRooms.map((roomName) => ({
+        name: roomName,
+        house_id: newHouse._id,
+      }))
+    );
+
     res.status(200).json({ message: "Đăng ký thành công" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });

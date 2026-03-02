@@ -40,9 +40,25 @@ const LoginScreen = ({ navigation }) => {
         const user = response.data.user;
         // Lưu dữ liệu người dùng chính thức vào user_info
         await AsyncStorage.setItem('user_info', JSON.stringify(user));
-        await AsyncStorage.setItem('phone', cleanPhone);
-
         await AsyncStorage.setItem('phone', user.phone);
+
+        if (response.data.house_id) {
+          await AsyncStorage.setItem('current_house_id', response.data.house_id);
+          await AsyncStorage.setItem('current_house_name', response.data.house_name || 'NHÀ CHÍNH');
+        } else {
+          // LOGIC MỚI: Nếu API login không trả về house_id, tự động gọi API lấy danh sách nhà
+          try {
+            const houseRes = await api.get('/houses', { params: { phone: user.phone } });
+            const houses = houseRes.data.houses || [];
+            if (houses.length > 0) {
+              // Tự động chọn nhà đầu tiên trong danh sách
+              await AsyncStorage.setItem('current_house_id', houses[0]._id);
+              await AsyncStorage.setItem('current_house_name', houses[0].name);
+            }
+          } catch (err) {
+            console.log("Lỗi tự động chọn nhà:", err);
+          }
+        }
 
         Toast.show({
           type: 'success',

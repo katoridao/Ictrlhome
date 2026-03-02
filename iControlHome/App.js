@@ -25,6 +25,8 @@ import SelectHouseScreen from './src/screens/SelectHouseScreen';
 import NotificationSettingScreen from './src/screens/NotificationSettingScreen';
 import AppearanceScreen from './src/screens/AppearanceScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import StatisticsScreen from './src/screens/StatisticsScreen';
+import ElectricityPriceScreen from './src/screens/ElectricityPriceScreen';
 
 // Import Navigation - Tab
 import MainTab from './src/navigation/MainTab';
@@ -45,7 +47,7 @@ export default function App() {
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
 
-          {/* Luồng Chính (Tabs: Home, Room, Script, History, Setting) */}
+          {/* Luồng Chính (Tabs: Home, Room, Script, Device_log, Setting) */}
           <Stack.Screen name="Main" component={MainTab} />
 
           {/* Quản lý thiết bị */}
@@ -87,6 +89,8 @@ export default function App() {
             component={NotificationSettingScreen}
           />
           <Stack.Screen name="AppearanceScreen" component={AppearanceScreen} />
+          <Stack.Screen name="StatisticsScreen" component={StatisticsScreen} />
+          <Stack.Screen name="ElectricityPriceScreen" component={ElectricityPriceScreen} />
           
         </Stack.Navigator>
       </NavigationContainer>

@@ -20,8 +20,11 @@ export default function DeviceControlScreen({ route }) {
       const userInfo = await AsyncStorage.getItem('user_info');
       const user = userInfo ? JSON.parse(userInfo) : null;
 
-      // Gửi user_id kèm theo status
-      const payload = { status: newStatus, user_id: user ? user._id : null };
+      // Lấy house_id để Backend có thể ghi log và tính toán tiêu thụ cho nhà này ngay lập tức
+      const houseId = await AsyncStorage.getItem('current_house_id');
+
+      // Gửi user_id và house_id kèm theo status để Backend xử lý logic tính toán
+      const payload = { status: newStatus, user_id: user ? user._id : null, house_id: houseId };
       const response = await api.put(`/devices/${device._id}/status`, payload);
 
       if (response.status === 200) {
