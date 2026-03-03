@@ -89,7 +89,7 @@ router.post("/register", async (req, res) => {
       name: name.trim(),
       phone: phone.trim(),
       password: hashedPassword,
-      role: "OWNER",
+      role: "MEMBER",
       settings: {
         theme: "LIGHT",
         language: "VI",
