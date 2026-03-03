@@ -42,50 +42,71 @@ const ProfileScreen = ({ navigation, route }) => {
   }, []);
 
   const handleUpdateAll = async () => {
-    if (!fullName.trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Họ tên không được để trống',
-      });
-      return;
-    }
+  if (!fullName.trim()) {
+    Toast.show({
+      type: 'error',
+      text1: 'Lỗi',
+      text2: 'Họ tên không được để trống',
+    });
+    return;
+  }
 
+  try {
     setLoading(true);
-    try {
-      const response = await api.post('/update-profile', {
-        phone,
-        fullName: fullName.trim(),
-      });
-      if (response.status === 200) {
-        const updatedUser = response.data.user;
-        await AsyncStorage.setItem('user_info', JSON.stringify(updatedUser));
 
-        if (oldPassword && newPassword) {
-          if (newPassword !== confirmPassword)
-            throw new Error('Mật khẩu xác nhận không khớp');
-          await api.post('/change-password', {
-            phone,
-            oldPassword,
-            newPassword,
-          });
-        }
+    // 🔥 Cập nhật tên (khớp với backend)
+    const response = await api.post('/update-profile', {
+      phone,
+      name: fullName.trim(), // ✅ đổi fullName thành name
+    });
 
-        Toast.show({
-          type: 'success',
-          text1: 'Thành công',
-          text2: 'Thông tin đã được đồng bộ!',
-        });
-        setTimeout(() => navigation.goBack(), 1000);
+    const updatedUser = response.data.user;
+
+    // Cập nhật lại AsyncStorage
+    await AsyncStorage.setItem(
+      'user_info',
+      JSON.stringify(updatedUser)
+    );
+
+    // 🔥 Nếu có nhập đổi mật khẩu
+    if (oldPassword || newPassword || confirmPassword) {
+      if (!oldPassword || !newPassword || !confirmPassword) {
+        throw new Error('Vui lòng nhập đầy đủ thông tin mật khẩu');
       }
-    } catch (error) {
-      const msg =
-        error.response?.data?.message || error.message || 'Lỗi cập nhật';
-      Toast.show({ type: 'error', text1: 'Thất bại', text2: msg });
-    } finally {
-      setLoading(false);
+
+      if (newPassword !== confirmPassword) {
+        throw new Error('Mật khẩu xác nhận không khớp');
+      }
+
+      await api.post('/change-password', {
+        phone,
+        oldPassword,
+        newPassword,
+      });
     }
-  };
+
+    Toast.show({
+      type: 'success',
+      text1: 'Thành công',
+      text2: 'Thông tin đã được cập nhật!',
+    });
+
+    setTimeout(() => navigation.goBack(), 1000);
+  } catch (error) {
+    const msg =
+      error.response?.data?.message ||
+      error.message ||
+      'Lỗi cập nhật';
+
+    Toast.show({
+      type: 'error',
+      text1: 'Thất bại',
+      text2: msg,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ScrollView
