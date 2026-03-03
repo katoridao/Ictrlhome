@@ -3,19 +3,18 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
-var cors = require("cors"); 
+var cors = require("cors");
 
 // Import Database
 const db = require("./config/database");
 db.connect();
 
-// Import Routers
+// import route
 const houseRoutes = require("./routes/house");
 const roomRoutes = require("./routes/room");
 const deviceRoutes = require("./routes/device");
 const deviceLogRoutes = require("./routes/deviceLog");
-const statisticsRoutes = require("./routes/statistics");
-const electricitySettingsRouter = require("./routes/electricitySettings");
+const deviceUsageRoutes = require("./routes/deviceUsage");
 const apiRouter = require("./routes/api");
 
 var app = express();
@@ -32,19 +31,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- KHU VỰC API (Ưu tiên đưa lên trên) ---
-// Đồng bộ đường dẫn: Mọi thứ bắt đầu bằng /api
+// route api
 app.use("/api/houses", houseRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/devices", deviceRoutes);
 app.use("/api/device-logs", deviceLogRoutes);
-app.use("/api/statistics", statisticsRoutes);
-app.use("/api/electricity-settings", electricitySettingsRouter);
+app.use("/api/device-usages", deviceUsageRoutes);
 app.use("/api", apiRouter);
 
-// Catch 404 và chuyển tiếp đến error handler
 app.use(function (req, res, next) {
-  // Debug log: Nếu chạy đến đây là không có route nào ở trên khớp
   console.log(`[404 Error] Không tìm thấy: ${req.method} ${req.url}`);
   next(createError(404));
 });
@@ -54,7 +49,7 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.json({
     message: err.message,
-    error: req.app.get("env") === "development" ? err : {}
+    error: req.app.get("env") === "development" ? err : {},
   });
 });
 
