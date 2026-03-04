@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  StatusBar,
-  ImageBackground,
-  ActivityIndicator,
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  Image, StatusBar, ImageBackground, ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
@@ -29,41 +22,33 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-    
       const response = await api.post('/login', { phone: cleanPhone, password });
 
       if (response.status === 200) {
         const userData = response.data.user;
 
         const userMatched = {
+          _id: userData._id,   // FIX: lưu _id để các màn hình khác dùng
           phone: userData.phone,
-          name: userData.name || "", 
-          role: userData.role || "MEMBER", 
+          name: userData.name || '',
+          role: userData.role || 'MEMBER',
           settings: {
-            theme: userData.settings?.theme || "LIGHT", 
-            language: userData.settings?.language || "VI", 
-          }
+            theme: userData.settings?.theme || 'LIGHT',
+            language: userData.settings?.language || 'VI',
+          },
         };
 
+        // Lưu token để các request sau tự động đính kèm Authorization header
+        await AsyncStorage.setItem('token', response.data.token);
         await AsyncStorage.setItem('user_info', JSON.stringify(userMatched));
         await AsyncStorage.setItem('phone', userMatched.phone);
         await AsyncStorage.setItem('user_role', userMatched.role);
-      
-        if (response.data.house_id) {
-          await AsyncStorage.setItem('current_house_id', response.data.house_id);
-          await AsyncStorage.setItem('current_house_name', response.data.house_name || 'NHÀ CHÍNH');
-        } else {
-          try {
-            const houseRes = await api.get('/houses', { params: { phone: userMatched.phone } });
-            const houses = houseRes.data.houses || [];
-            if (houses.length > 0) {
-              await AsyncStorage.setItem('current_house_id', houses[0]._id);
-              await AsyncStorage.setItem('current_house_name', houses[0].name);
-            }
-          } catch (err) {
-            console.log("Lỗi tự động chọn nhà:", err);
-          }
-        }
+
+        // FIX: Luôn lưu house_id = "H001" vì backend đang hardcode H001
+        const houseId = response.data.house_id || 'H001';
+        const houseName = response.data.house_name || 'NHÀ CHÍNH';
+        await AsyncStorage.setItem('current_house_id', houseId);
+        await AsyncStorage.setItem('current_house_name', houseName);
 
         Toast.show({
           type: 'success',
@@ -119,8 +104,8 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          style={[styles.button, loading && { opacity: 0.7 }]} 
+        <TouchableOpacity
+          style={[styles.button, loading && { opacity: 0.7 }]}
           onPress={handleLogin}
           disabled={loading}
         >

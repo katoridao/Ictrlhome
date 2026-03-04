@@ -4,12 +4,16 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 var cors = require("cors");
+require("dotenv").config(); // Khuyến khích sử dụng dotenv để quản lý JWT_SECRET
 
 // Import Database
 const db = require("./config/database");
 db.connect();
 
-// import route
+// Import Middleware
+const { authenticate } = require("./middlewares/auth");
+
+// Import Routes
 const houseRoutes = require("./routes/house");
 const roomRoutes = require("./routes/room");
 const deviceRoutes = require("./routes/device");
@@ -23,7 +27,7 @@ var app = express();
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "hbs");
 
-// Middleware
+// Middleware cơ bản
 app.use(cors());
 app.use(logger("dev"));
 app.use(express.json());
@@ -31,14 +35,22 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-// route api
-app.use("/api/houses", houseRoutes);
-app.use("/api/rooms", roomRoutes);
-app.use("/api/devices", deviceRoutes);
-app.use("/api/device-logs", deviceLogRoutes);
-app.use("/api/device-usages", deviceUsageRoutes);
+/**
+ * PHÂN LUỒNG ROUTE
+ */
+
+// 1. Các route tài nguyên (Cần đăng nhập mới được truy cập)
+app.use("/api/houses", authenticate, houseRoutes);
+app.use("/api/rooms", authenticate, roomRoutes);
+app.use("/api/devices", authenticate, deviceRoutes);
+app.use("/api/device-logs", authenticate, deviceLogRoutes);
+app.use("/api/device-usages", authenticate, deviceUsageRoutes);
+
+// 2. Các route hệ thống (Bao gồm Login, Register không cần authenticate ở đây)
+// Lưu ý: Trong file routes/api.js, các hành động như update-profile sẽ tự gọi authenticate riêng.
 app.use("/api", apiRouter);
 
+// 404 handler
 app.use(function (req, res, next) {
   console.log(`[404 Error] Không tìm thấy: ${req.method} ${req.url}`);
   next(createError(404));

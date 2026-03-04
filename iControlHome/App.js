@@ -15,18 +15,19 @@ import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 // Import Screens - Device Management
 import AddDeviceModal from './src/screens/AddDeviceModal'; 
 import DeviceControlScreen from './src/screens/DeviceControlScreen'; 
-import UnassignedDevicesScreen from './src/screens/UnassignedDevicesScreen'; // Màn hình Kho thiết bị
 
 // Import Screens - Room Management
-import RoomDetailScreen from './src/screens/RoomDetailScreen'; // Màn hình Chi tiết phòng
+import RoomDetailScreen from './src/screens/RoomDetailScreen';
 
 // Import Screens - Settings & Profile
-import SelectHouseScreen from './src/screens/SelectHouseScreen';
 import NotificationSettingScreen from './src/screens/NotificationSettingScreen';
 import AppearanceScreen from './src/screens/AppearanceScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import StatisticsScreen from './src/screens/StatisticsScreen';
 import ElectricityPriceScreen from './src/screens/ElectricityPriceScreen';
+
+// Import Screens - Member Management & Permissions
+import { ManageMembersScreen, MemberPermissionScreen } from './src/screens/MemberManagement';
 
 // Import Navigation - Tab
 import MainTab from './src/navigation/MainTab';
@@ -58,17 +59,6 @@ export default function App() {
             component={DeviceControlScreen} 
             options={{ headerShown: true, title: 'Điều khiển thiết bị' }} 
           />
-          <Stack.Screen 
-            name="UnassignedDevices" 
-            component={UnassignedDevicesScreen} 
-            options={{ 
-              headerShown: true, 
-              title: 'Kho thiết bị',
-              headerStyle: { backgroundColor: '#2196F3' },
-              headerTintColor: '#fff' 
-            }} 
-          />
-
           {/* Quản lý phòng */}
           <Stack.Screen 
             name="RoomDetail" 
@@ -83,19 +73,38 @@ export default function App() {
 
           {/* Cài đặt & Cá nhân hóa */}
           <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="SelectHouse" component={SelectHouseScreen} />
-          <Stack.Screen
-            name="NotificationSetting"
-            component={NotificationSettingScreen}
-          />
+          <Stack.Screen name="NotificationSetting" component={NotificationSettingScreen} />
           <Stack.Screen name="AppearanceScreen" component={AppearanceScreen} />
           <Stack.Screen name="StatisticsScreen" component={StatisticsScreen} />
           <Stack.Screen name="ElectricityPriceScreen" component={ElectricityPriceScreen} />
+
+          {/* Quản lý Thành viên & Phân quyền */}
+          <Stack.Screen 
+            name="ManageMembers" 
+            component={ManageMembersScreen} 
+            options={{
+              headerShown: true,
+              title: 'Quản lý thành viên',
+              headerStyle: { backgroundColor: '#2196F3' },
+              headerTintColor: '#fff',
+              headerTitleAlign: 'center'
+            }}
+          />
+          <Stack.Screen 
+            name="MemberPermission" 
+            component={MemberPermissionScreen} 
+            options={{
+              headerShown: true,
+              title: 'Phân quyền thiết bị',
+              headerStyle: { backgroundColor: '#2196F3' },
+              headerTintColor: '#fff',
+              headerTitleAlign: 'center'
+            }}
+          />
           
         </Stack.Navigator>
       </NavigationContainer>
 
-      {/* Toast để hiển thị thông báo nhanh (Thành công/Lỗi) */}
       <Toast />
     </ThemeProvider>
   );
