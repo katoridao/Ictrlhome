@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 // update profile
 router.post("/update-profile", async (req, res) => {
@@ -133,8 +134,16 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Sai mật khẩu" });
     }
 
+    // Generate JWT token
+    const token = jwt.sign(
+      { _id: user._id, phone: user.phone },
+      process.env.JWT_SECRET || "smart_home_secret_key",
+      { expiresIn: "7d" },
+    );
+
     res.json({
       message: "Đăng nhập thành công",
+      token: token,
       user: {
         _id: user._id,
         name: user.name,
@@ -142,6 +151,8 @@ router.post("/login", async (req, res) => {
         role: user.role,
         settings: user.settings,
       },
+      house_id: "H001",
+      house_name: "NHÀ CHÍNH",
     });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });

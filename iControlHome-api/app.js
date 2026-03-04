@@ -4,7 +4,7 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 var cors = require("cors");
-require("dotenv").config(); // Khuyến khích sử dụng dotenv để quản lý JWT_SECRET
+require("dotenv").config();
 
 // Import Database
 const db = require("./config/database");

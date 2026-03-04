@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
-  Image, StatusBar, ImageBackground, ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  StatusBar,
+  ImageBackground,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
@@ -16,19 +23,26 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = async () => {
     const cleanPhone = phone.trim();
     if (!cleanPhone || !password) {
-      Toast.show({ type: 'error', text1: 'Thông báo', text2: 'Vui lòng nhập đầy đủ thông tin' });
+      Toast.show({
+        type: 'error',
+        text1: 'Thông báo',
+        text2: 'Vui lòng nhập đầy đủ thông tin',
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const response = await api.post('/login', { phone: cleanPhone, password });
+      const response = await api.post('/login', {
+        phone: cleanPhone,
+        password,
+      });
 
-      if (response.status === 200) {
+      if (response.status === 200 && response.data.token) {
         const userData = response.data.user;
 
         const userMatched = {
-          _id: userData._id,   // FIX: lưu _id để các màn hình khác dùng
+          _id: userData._id, // FIX: lưu _id để các màn hình khác dùng
           phone: userData.phone,
           name: userData.name || '',
           role: userData.role || 'MEMBER',
@@ -57,9 +71,21 @@ const LoginScreen = ({ navigation }) => {
         });
 
         navigation.replace('Main');
+      } else {
+        const errorMsg =
+          response.data?.message || 'Phản hồi từ server không hợp lệ';
+        console.error('Invalid response:', response.data);
+        Toast.show({ type: 'error', text1: 'Thất bại', text2: errorMsg });
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Lỗi kết nối server';
+      const errorMessage =
+        error.response?.data?.message || error.message || 'Lỗi kết nối server';
+      console.error('Login error:', {
+        message: errorMessage,
+        status: error.response?.status,
+        data: error.response?.data,
+        errorFull: error.message,
+      });
       Toast.show({ type: 'error', text1: 'Thất bại', text2: errorMessage });
     } finally {
       setLoading(false);
@@ -67,12 +93,24 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <ImageBackground source={require('../../public/img/background.jpg')} style={styles.bg} resizeMode="cover">
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+    <ImageBackground
+      source={require('../../public/img/background.jpg')}
+      style={styles.bg}
+      resizeMode="cover"
+    >
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
       <View style={styles.overlay} />
       <View style={styles.container}>
         <View style={styles.logoBox}>
-          <Image source={require('../../public/img/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Image
+            source={require('../../public/img/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.appName}>Đăng nhập</Text>
         </View>
 
@@ -109,12 +147,26 @@ const LoginScreen = ({ navigation }) => {
           onPress={handleLogin}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>TIẾP TỤC</Text>}
+          {loading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.buttonText}>TIẾP TỤC</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.register} onPress={() => navigation.navigate('Register')}>ĐĂNG KÝ TÀI KHOẢN</Text>
-          <Text style={styles.forgot} onPress={() => navigation.navigate('ForgotPassword')}>Quên mật khẩu</Text>
+          <Text
+            style={styles.register}
+            onPress={() => navigation.navigate('Register')}
+          >
+            ĐĂNG KÝ TÀI KHOẢN
+          </Text>
+          <Text
+            style={styles.forgot}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            Quên mật khẩu
+          </Text>
         </View>
       </View>
     </ImageBackground>
@@ -123,7 +175,10 @@ const LoginScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   bg: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.65)' },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.65)',
+  },
   container: { flex: 1, paddingHorizontal: 30, justifyContent: 'center' },
   logoBox: { alignItems: 'center', padding: 10, marginBottom: 10 },
   logo: { width: 150, height: 150 },
