@@ -20,65 +20,67 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleResetPassword = async () => {
-    const cleanPhone = phone.trim();
-    const cleanNew = newPassword.trim();
-    const cleanConfirm = confirmPassword.trim();
+  const cleanPhone = phone.trim();
+  const cleanNew = newPassword.trim();
+  const cleanConfirm = confirmPassword.trim();
 
-    if (!cleanPhone || !cleanNew || !cleanConfirm) {
-      Toast.show({
-        type: 'error',
-        text1: 'Thông báo',
-        text2: 'Vui lòng nhập đầy đủ thông tin',
-      });
-      return;
-    }
+  if (!cleanPhone || !cleanNew || !cleanConfirm) {
+    Toast.show({
+      type: 'error',
+      text1: 'Thông báo',
+      text2: 'Vui lòng nhập đầy đủ thông tin',
+    });
+    return;
+  }
 
-    if (cleanNew !== cleanConfirm) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu xác nhận không khớp',
-      });
-      return;
-    }
+  if (cleanNew !== cleanConfirm) {
+    Toast.show({
+      type: 'error',
+      text1: 'Lỗi',
+      text2: 'Mật khẩu xác nhận không khớp',
+    });
+    return;
+  }
 
-    if (cleanNew.length < 6) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Mật khẩu phải có ít nhất 6 ký tự',
-      });
-      return;
-    }
+  if (cleanNew.length < 6) {
+    Toast.show({
+      type: 'error',
+      text1: 'Lỗi',
+      text2: 'Mật khẩu phải có ít nhất 6 ký tự',
+    });
+    return;
+  }
 
+  try {
     setLoading(true);
-    try {
-      const response = await api.post('/forgot-password', {
-        phone: cleanPhone,
-        newPassword: cleanNew,
-        confirmPassword: cleanConfirm,
-      });
 
-      if (response.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Thành công',
-          text2: 'Mật khẩu đã được thay đổi thành công!',
-        });
-        navigation.navigate('Login');
-      }
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || 'Lỗi kết nối server';
-      Toast.show({
-        type: 'error',
-        text1: 'Thất bại',
-        text2: errorMessage,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    const response = await api.post('/forgot-password', {
+      phone: cleanPhone,
+      newPassword: cleanNew,
+      confirmPassword: cleanConfirm,
+    });
+
+    Toast.show({
+      type: 'success',
+      text1: 'Thành công',
+      text2: response.data.message || 'Đặt lại mật khẩu thành công',
+    });
+
+    navigation.navigate('Login');
+  } catch (error) {
+    console.log("RESET ERROR:", error?.response?.data || error.message);
+
+    Toast.show({
+      type: 'error',
+      text1: 'Thất bại',
+      text2:
+        error?.response?.data?.message ||
+        'Không thể kết nối đến server',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ImageBackground

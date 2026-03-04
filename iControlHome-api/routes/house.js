@@ -1,103 +1,62 @@
 const express = require("express");
 const router = express.Router();
 const House = require("../models/House");
-const User = require("../models/User");
+const DeviceUsage = require("../models/DeviceUsage");
 
-/**
- * Tạo nhà theo user
- */
-router.post("/init", async (req, res) => {
-  try {
-    const { phone } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({ message: "Thiếu số điện thoại" });
-    }
-
-    const user = await User.findOne({ phone });
-    if (!user) {
-      return res.status(404).json({ message: "User không tồn tại" });
-    }
-
-   
-    const existingHouse = await House.findOne({ owner_id: user._id });
-    if (existingHouse) {
-      return res.status(200).json({
-        message: "User đã có house",
-        house: existingHouse,
-      });
-    }
-
-    
-    const house = await House.create({
-      name: `Nhà của ${user.name}`,
-      owner_id: user._id,
-    });
-
-    res.status(201).json({
-      message: "Tạo house thành công",
-      house,
-    });
-  } catch (err) {
-    console.error("❌ HOUSE ERROR:", err);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: err.message,
-    });
-  }
-});
-
-/**
- * Lấy nhà theo số điện thoại
- */
 router.get("/", async (req, res) => {
   try {
-    const { phone } = req.query;
+    const house = await House.findById("H001")
+      .populate("owner_id", "name phone")
+      .populate("members", "name phone");
 
-    if (!phone) {
-      return res.status(400).json({ message: "Thiếu số điện thoại" });
+    if (!house) {
+      return res.status(404).json({ message: "House chưa được khởi tạo" });
     }
 
-    const user = await User.findOne({ phone });
-    if (!user) {
-      return res.status(404).json({ message: "User không tồn tại" });
-    }
-
-    
-    const houses = await House.find({ owner_id: user._id });
-
-    res.json({
-      message: "Lấy house thành công",
-      houses,
-    });
+    res.json(house);
   } catch (err) {
-    res.status(500).json({
-      message: "Lỗi server",
-      error: err.message,
-    });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-/**
- * Tìm nhà theo id
- */
-router.get("/:id", async (req, res) => {
+router.get("/statistics", async (req, res) => {
   try {
-    const house = await House.findById(req.params.id);
+    const { month, year } = req.query;
 
+    const house = await House.findById("H001");
     if (!house) {
       return res.status(404).json({ message: "House không tồn tại" });
     }
 
+    const now = new Date();
+    const currentMonth = month ? parseInt(month) : now.getMonth() + 1;
+    const currentYear = year ? parseInt(year) : now.getFullYear();
+
+    const startDate = new Date(currentYear, currentMonth - 1, 1);
+    const endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59);
+
+    const usages = await DeviceUsage.find({
+      start_time: { $gte: startDate, $lte: endDate },
+    });
+
+    const totalKwh = usages.reduce(
+      (acc, curr) => acc + (curr.energy_kwh || 0),
+      0,
+    );
+
+    const price = house.electricity.price_per_kwh || 0;
+
+    const totalCost = totalKwh * price;
+
     res.json({
-      message: "Lấy chi tiết house thành công",
-      house,
+      month: currentMonth,
+      year: currentYear,
+      total_kwh: Number(totalKwh.toFixed(2)),
+      total_cost: Math.round(totalCost),
+      price_per_kwh: price,
     });
   } catch (err) {
-    res.status(500).json({
-      message: "Lỗi server",
-      error: err.message,
-    });
+    res.status(500).json({ message: "Lỗi tính toán hóa đơn" });
   }
 });
 

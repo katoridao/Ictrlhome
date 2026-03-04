@@ -1,137 +1,169 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 
+// update profile
 router.post("/update-profile", async (req, res) => {
   try {
-    const { phone, fullName } = req.body;
+    const { phone, name } = req.body;
 
     if (!phone) {
-      return res.status(400).json({ message: "Thiếu số điện thoại định danh" });
+      return res.status(400).json({ message: "Thiếu số điện thoại" });
     }
 
-    if (!fullName || fullName.trim() === "") {
-      return res.status(400).json({ message: "Họ tên không được để trống" });
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Tên không được để trống" });
     }
 
     const updatedUser = await User.findOneAndUpdate(
-      { phone: phone },
-      { name: fullName.trim() },
-      { new: true }
+      { phone },
+      { name: name.trim() },
+      { new: true },
     );
 
     if (!updatedUser) {
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
     }
 
-    res.status(200).json({ 
-      message: "Cập nhật thông tin thành công", 
+    res.json({
+      message: "Cập nhật thành công",
       user: {
+        _id: updatedUser._id,
         name: updatedUser.name,
-        phone: updatedUser.phone
-      }
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        settings: updatedUser.settings,
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
+// update setting
+router.post("/update-settings", async (req, res) => {
+  try {
+    const { phone, theme, language } = req.body;
+
+    const user = await User.findOne({ phone });
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    if (theme) user.settings.theme = theme;
+    if (language) user.settings.language = language;
+
+    await user.save();
+
+    res.json({
+      message: "Cập nhật cài đặt thành công",
+      settings: user.settings,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// register
 router.post("/register", async (req, res) => {
   try {
     const { name, phone, password } = req.body;
 
-    if (!name || name.trim() === "") {
-      return res.status(400).json({ message: "Họ tên không được bỏ trống" });
-    }
-    if (!phone) {
-      return res.status(400).json({ message: "Số điện thoại không được bỏ trống" });
-    }
-    if (!password) {
-      return res.status(400).json({ message: "Mật khẩu không được bỏ trống" });
+    if (!name || !phone || !password) {
+      return res.status(400).json({ message: "Thiếu thông tin" });
     }
 
-    const spaceRegex = /\s/;
-    if (spaceRegex.test(phone) || spaceRegex.test(password)) {
-      return res.status(400).json({ message: "Thông tin không được chứa dấu cách" });
-    }
-
-    const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
-    if (!phoneRegex.test(phone)) {
-      return res.status(400).json({ message: "Số điện thoại không đúng định dạng (phải có 10 số)" });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Mật khẩu phải có ít nhất 6 ký tự" });
-    }
-
+    // kiểm tra trùng số điện thoại
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
-      return res.status(400).json({ message: "Số điện thoại này đã được đăng ký" });
+      return res.status(400).json({ message: "Số điện thoại đã tồn tại" });
     }
 
+    // hash mật khẩu
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // tạo user mới
     const newUser = new User({
       name: name.trim(),
-      phone,
+      phone: phone.trim(),
       password: hashedPassword,
+      role: "MEMBER",
+      settings: {
+        theme: "LIGHT",
+        language: "VI",
+      },
     });
 
     await newUser.save();
-    res.status(200).json({ message: "Đăng ký thành công" });
+
+    res.status(201).json({
+      message: "Đăng ký thành công",
+      user: {
+        _id: newUser._id,
+        name: newUser.name,
+        phone: newUser.phone,
+        role: newUser.role,
+        settings: newUser.settings,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
+// login
 router.post("/login", async (req, res) => {
   try {
     const { phone, password } = req.body;
 
     if (!phone || !password) {
-      return res.status(400).json({ message: "Vui lòng nhập đầy đủ số điện thoại và mật khẩu" });
+      return res.status(400).json({ message: "Thiếu thông tin" });
     }
 
     const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: "Số điện thoại không tồn tại" });
+      return res.status(404).json({ message: "Tài khoản không tồn tại" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Mật khẩu không chính xác" });
+      return res.status(400).json({ message: "Sai mật khẩu" });
     }
 
-    const userSafe = user.toObject();
-    delete userSafe.password;
-
-    res.status(200).json({ message: "Đăng nhập thành công", user: userSafe });
+    res.json({
+      message: "Đăng nhập thành công",
+      user: {
+        _id: user._id,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        settings: user.settings,
+      },
+    });
   } catch (err) {
-    res.status(500).json({ message: "Lỗi server", error: err.message });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
+// forgot pass
 router.post("/forgot-password", async (req, res) => {
   try {
     const { phone, newPassword, confirmPassword } = req.body;
 
     if (!phone || !newPassword || !confirmPassword) {
-      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin" });
+      return res.status(400).json({ message: "Thiếu thông tin" });
     }
 
     if (newPassword !== confirmPassword) {
-      return res.status(400).json({ message: "Mật khẩu xác nhận không khớp" });
+      return res.status(400).json({ message: "Mật khẩu không khớp" });
     }
 
     const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: "Số điện thoại này chưa được đăng ký" });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: "Mật khẩu phải có ít nhất 6 ký tự" });
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -140,28 +172,29 @@ router.post("/forgot-password", async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    res.status(200).json({ message: "Đặt lại mật khẩu thành công" });
+    res.json({ message: "Đặt lại mật khẩu thành công" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
+// change pass
 router.post("/change-password", async (req, res) => {
   try {
     const { phone, oldPassword, newPassword } = req.body;
 
     if (!phone || !oldPassword || !newPassword) {
-      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin" });
+      return res.status(400).json({ message: "Thiếu thông tin" });
     }
 
     const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: "Người dùng không tồn tại" });
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     }
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Mật khẩu cũ không chính xác" });
+      return res.status(400).json({ message: "Mật khẩu cũ sai" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -170,9 +203,9 @@ router.post("/change-password", async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    res.status(200).json({ message: "Đổi mật khẩu thành công" });
+    res.json({ message: "Đổi mật khẩu thành công" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 

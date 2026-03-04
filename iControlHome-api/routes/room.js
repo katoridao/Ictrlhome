@@ -1,72 +1,40 @@
 const express = require("express");
 const router = express.Router();
-
 const Room = require("../models/Room");
 const House = require("../models/House");
 
-/**
- * THÊM 3 PHÒNG MẶC ĐỊNH
- */
-router.post("/init", async (req, res) => {
+// 1. Lấy danh sách phòng
+router.get("/", async (req, res) => {
   try {
-    const { houseId } = req.body;
-
-    if (!houseId) {
-      return res.status(400).json({ message: "Thiếu houseId" });
-    }
-
-    const house = await House.findById(houseId);
+    const house = await House.findById("H001");
     if (!house) {
-      return res.status(404).json({ message: "House không tồn tại" });
+      return res.status(404).json({ message: "House chưa được khởi tạo" });
     }
 
-    
-    const existedRooms = await Room.find({ house_id: houseId });
-    if (existedRooms.length > 0) {
-      return res.status(200).json({
-        message: "House đã có phòng",
-        rooms: existedRooms,
-      });
-    }
-
-    const defaultRooms = ["Phòng khách", "Phòng bếp", "Phòng ngủ"];
-
-    const rooms = await Room.insertMany(
-      defaultRooms.map((name) => ({
-        name,
-        house_id: houseId, 
-      }))
-    );
-
-    res.status(201).json({
-      message: "Tạo phòng mặc định thành công",
-      rooms,
-    });
+    const rooms = await Room.find({ house_id: "H001" });
+    res.json({ rooms });
   } catch (error) {
-    console.error("ROOM INIT ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-/**
- * THÊM PHÒNG MỚI
- */
-router.post("/", async (req, res) => {
+// 2. Tạo một phòng mới
+router.post("/add", async (req, res) => {
   try {
-    const { houseId, name } = req.body;
+    const house = await House.findById("H001");
+    if (!house) {
+      return res.status(404).json({ message: "House chưa được khởi tạo" });
+    }
 
-    if (!houseId || !name) {
-      return res.status(400).json({
-        message: "Thiếu houseId hoặc tên phòng",
-      });
+    const { name } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: "Thiếu tên phòng" });
     }
 
     const room = await Room.create({
       name: name.trim(),
-      house_id: houseId, 
+      house_id: "H001",
     });
 
     res.status(201).json({
@@ -74,92 +42,43 @@ router.post("/", async (req, res) => {
       room,
     });
   } catch (error) {
-    console.error("ROOM CREATE ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-/**
- * SỬA PHÒNG
- */
-router.put("/:id", async (req, res) => {
+// 3. Cập nhật tên phòng (Bổ sung để khớp với RoomScreen.js)
+router.put("/edit/:id", async (req, res) => {
   try {
     const { name } = req.body;
+    if (!name)
+      return res.status(400).json({ message: "Tên phòng không được để trống" });
 
-    if (!name) {
-      return res.status(400).json({ message: "Tên phòng không được trống" });
-    }
-
-    const room = await Room.findByIdAndUpdate(
-      req.params.id,
+    const updatedRoom = await Room.findOneAndUpdate(
+      { _id: req.params.id },
       { name: name.trim() },
-      { new: true }
+      { new: true },
     );
 
-    if (!room) {
-      return res.status(404).json({ message: "Phòng không tồn tại" });
-    }
-
-    res.json({
-      message: "Cập nhật phòng thành công",
-      room,
-    });
+    if (!updatedRoom)
+      return res.status(404).json({ message: "Không tìm thấy phòng" });
+    res.json({ message: "Cập nhật thành công", room: updatedRoom });
   } catch (error) {
-    console.error("ROOM UPDATE ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-/**
- * XOÁ PHÒNG
- */
-router.delete("/:id", async (req, res) => {
+// 4. Xóa phòng
+router.delete("/del/:id", async (req, res) => {
   try {
-    const room = await Room.findByIdAndDelete(req.params.id);
-
-    if (!room) {
-      return res.status(404).json({ message: "Phòng không tồn tại" });
-    }
-
-    res.json({
-      message: "Xoá phòng thành công",
+    const deletedRoom = await Room.findOneAndDelete({
+      _id: req.params.id,
+      house_id: "H001",
     });
+    if (!deletedRoom)
+      return res.status(404).json({ message: "Không tìm thấy phòng để xóa" });
+    res.json({ message: "Xóa thành công" });
   } catch (error) {
-    console.error("ROOM DELETE ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
-  }
-});
-
-/**
- * LẤY CHI TIẾT PHÒNG
- */
-router.get("/:id", async (req, res) => {
-  try {
-    const room = await Room.findById(req.params.id);
-
-    if (!room) {
-      return res.status(404).json({ message: "Phòng không tồn tại" });
-    }
-
-    res.status(200).json({
-      message: "Lấy chi tiết phòng thành công",
-      room,
-    });
-  } catch (error) {
-    console.error("ROOM GET ERROR:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 

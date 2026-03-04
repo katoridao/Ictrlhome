@@ -5,7 +5,7 @@ import { Image } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import RoomScreen from '../screens/RoomScreen';
 import ScriptScreen from '../screens/ScriptScreen';
-import HistoryScreen from '../screens/HistoryScreen';
+import Device_logScreen from '../screens/Device_logScreen';
 import SettingScreen from '../screens/SettingScreen';
 
 const Tab = createBottomTabNavigator();
@@ -23,7 +23,7 @@ const icons = {
     normal: require('../../public/img/script.png'),
     active: require('../../public/img/scriptclicked.png'),
   },
-  History: {
+  Device_log: {
     normal: require('../../public/img/history.png'),
     active: require('../../public/img/historyclick.png'),
   },
@@ -58,7 +58,7 @@ export default function MainTab() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Room" component={RoomScreen} />
       <Tab.Screen name="Script" component={ScriptScreen} />
-      <Tab.Screen name="History" component={HistoryScreen} />
+      <Tab.Screen name="Device_log" component={Device_logScreen} />
       <Tab.Screen name="Setting" component={SettingScreen} />
     </Tab.Navigator>
   );
