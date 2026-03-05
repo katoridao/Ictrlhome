@@ -12,6 +12,7 @@ router.post("/start/:deviceId", async (req, res) => {
     const { deviceId } = req.params;
 
     const device = await Device.findById(deviceId);
+
     if (!device) {
       return res.status(404).json({ message: "Device not found" });
     }
@@ -24,10 +25,9 @@ router.post("/start/:deviceId", async (req, res) => {
       return res.status(400).json({ message: "Device already ON" });
     }
 
-    // kiểm tra session đang chạy
     const existed = await DeviceUsage.findOne({
       device_id: device._id,
-      end_time: { $exists: false },
+      end_time: null,
     });
 
     if (existed) {
@@ -36,14 +36,11 @@ router.post("/start/:deviceId", async (req, res) => {
       });
     }
 
-    // bật thiết bị
     device.status = true;
     await device.save();
 
-    // tạo usage mới
     const usage = await DeviceUsage.create({
       device_id: device._id,
-      house_id: device.house_id,
       start_time: new Date(),
     });
 
@@ -52,6 +49,7 @@ router.post("/start/:deviceId", async (req, res) => {
       usage,
     });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -61,59 +59,31 @@ router.post("/start/:deviceId", async (req, res) => {
 router.post("/stop/:deviceId", async (req, res) => {
   try {
     const { deviceId } = req.params;
+    console.log("Đang dừng thiết bị ID:", deviceId);
 
-    const device = await Device.findById(deviceId);
-
-    if (!device) {
-      return res.status(404).json({ message: "Device not found" });
-    }
-
-    if (device.house_id !== HOUSE_ID) {
-      return res.status(403).json({ message: "Does not belong to this house" });
-    }
-
-    if (!device.status) {
-      return res.status(400).json({ message: "Device already OFF" });
-    }
-
-    // tìm session đang chạy
     const usage = await DeviceUsage.findOne({
-      device_id: device._id,
-      end_time: { $exists: false },
+      device_id: deviceId, // Thử dùng trực tiếp deviceId từ params
+      end_time: null
     }).sort({ start_time: -1 });
 
     if (!usage) {
-      return res.status(400).json({
-        message: "Active session not found",
-      });
+      console.log("Không tìm thấy session nào đang mở cho thiết bị này!");
+      return res.status(400).json({ message: "No active session" });
     }
 
-    const endTime = new Date();
+    console.log("Đã tìm thấy session:", usage._id);
 
-    const durationMinutes = Math.max(
-      1,
-      Math.round((endTime - usage.start_time) / 60000)
-    );
+    usage.end_time = new Date();
+    usage.duration_minutes = 10; // Giả sử để test
+    usage.energy_kwh = 0.5;      // Giả sử để test
 
-    const energyKwh = Number(
-      ((device.power_watt * durationMinutes) / 60000).toFixed(4)
-    );
+    const savedUsage = await usage.save();
+    console.log("Kết quả sau khi lưu vào DB:", savedUsage);
 
-    usage.end_time = endTime;
-    usage.duration_minutes = durationMinutes;
-    usage.energy_kwh = energyKwh;
-
-    await usage.save();
-
-    device.status = false;
-    await device.save();
-
-    res.json({
-      message: "Device turned OFF",
-      usage,
-    });
+    res.json({ message: "Success", usage: savedUsage });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("LỖI RỒI:", err);
+    res.status(500).json({ message: err.message });
   }
 });
 

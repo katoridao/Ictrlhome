@@ -252,7 +252,7 @@ function HistoryItem({ type, deviceName, userName, time, action, themeStyles }) 
         return require('../../public/img/fan.png');
 
       default:
-        return require('../../public/img/device_default.png');
+        return require('../../public/img/socket.png');
 
     }
   };
