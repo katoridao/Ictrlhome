@@ -46,6 +46,10 @@ export default function SettingScreen({ navigation }) {
             'phone',
             'current_house_id',
             'current_house_name',
+            'token',
+            'saved_phone',
+            'saved_password',
+            'remember_me',
           ]);
           navigation.replace('Login');
         },
