@@ -60,31 +60,58 @@ export default function DeviceControlScreen({ route }) {
 
   const isOn = status === 1 || status === true;
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.deviceName}>{device.name}</Text>
-      <Text style={styles.deviceType}>{device.type.toUpperCase()}</Text>
+ 
+return (
+  <View style={styles.container}>
 
-      <TouchableOpacity
-        style={[styles.powerButton, { backgroundColor: isOn ? '#4CAF50' : '#F44336' }]}
-        onPress={toggleStatus}
-        disabled={loading || fetching}
-      >
-        {loading || fetching ? (
-          <ActivityIndicator color="#fff" size="large" />
-        ) : (
-          <MaterialCommunityIcons name="power" size={80} color="#fff" />
-        )}
-      </TouchableOpacity>
+    {/* Thông tin thiết bị */}
+    <View style={styles.infoContainer}>
 
-      <Text style={styles.statusLabelText}>
-        Trạng thái:{' '}
-        <Text style={{ color: isOn ? '#4CAF50' : '#F44336' }}>
-          {fetching ? 'Đang tải...' : isOn ? 'ĐANG BẬT' : 'ĐANG TẮT'}
-        </Text>
-      </Text>
+      <View style={styles.infoRow}>
+        <Text style={styles.label}>Tên thiết bị:</Text>
+        <Text style={styles.value}>{device.name}</Text>
+      </View>
+
+      <View style={styles.infoRow}>
+        <Text style={styles.label}>Loại thiết bị:</Text>
+        <Text style={styles.value}>{device.type}</Text>
+      </View>
+
+      <View style={styles.infoRow}>
+        <Text style={styles.label}>Mã ESP32:</Text>
+        <Text style={styles.value}>{device.esp32_id}</Text>
+      </View>
+
+      <View style={styles.infoRow}>
+        <Text style={styles.label}>Công suất:</Text>
+        <Text style={styles.value}>{device.power_watt} W</Text>
+      </View>
+
     </View>
-  );
+
+    {/* Nút bật tắt */}
+    <TouchableOpacity
+      style={[styles.powerButton, { backgroundColor: isOn ? '#4CAF50' : '#F44336' }]}
+      onPress={toggleStatus}
+      disabled={loading || fetching}
+    >
+      {loading || fetching ? (
+        <ActivityIndicator color="#fff" size="large" />
+      ) : (
+        <MaterialCommunityIcons name="power" size={80} color="#fff" />
+      )}
+    </TouchableOpacity>
+
+    {/* Trạng thái */}
+    <Text style={styles.statusLabelText}>
+      Trạng thái:{' '}
+      <Text style={{ color: isOn ? '#4CAF50' : '#F44336' }}>
+        {fetching ? 'Đang tải...' : isOn ? 'ĐANG BẬT' : 'ĐANG TẮT'}
+      </Text>
+    </Text>
+
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -99,4 +126,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 5,
   },
   statusLabelText: { marginTop: 40, fontSize: 20, fontWeight: '600', color: '#555' },
+  infoContainer: {
+  width: '90%',
+  borderRadius: 12,
+  padding: 15,
+  marginBottom: 40,
+},
+
+infoRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 10,
+},
+
+label: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#555',
+},
+
+value: {
+  fontSize: 16,
+  color: '#333',
+},
 });
