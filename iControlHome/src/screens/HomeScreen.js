@@ -414,6 +414,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
   houseName: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
   headerIcon: { width: 30, height: 30, tintColor: '#fff' },
