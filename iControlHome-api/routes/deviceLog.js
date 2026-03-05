@@ -2,13 +2,18 @@ const express = require("express");
 const router = express.Router();
 const Device = require("../models/Device");
 const DeviceLog = require("../models/DeviceLog");
+const { authenticate, checkHouseMembership } = require("../middlewares/auth");
 
-router.get("/", async (req, res) => {
+router.get("/", authenticate, checkHouseMembership, async (req, res) => {
   try {
+    // Chưa được thêm vào nhà → trả về mảng rỗng
+    if (!req.isHouseMember) {
+      return res.json({ logs: [] });
+    }
+
     const { period } = req.query;
     let filter = {};
 
-    // Lọc theo house
     const devices = await Device.find({ house_id: "H001" }).select("_id");
     const deviceIds = devices.map((d) => d._id);
     filter.device_id = { $in: deviceIds };
@@ -30,17 +35,10 @@ router.get("/", async (req, res) => {
       action: log.action,
       created_at: log.created_at,
       device: log.device_id
-        ? {
-            id: log.device_id._id,
-            name: log.device_id.name,
-            type: log.device_id.type,
-          }
+        ? { id: log.device_id._id, name: log.device_id.name, type: log.device_id.type }
         : null,
       user: log.user_id
-        ? {
-            id: log.user_id._id,
-            name: log.user_id.name,
-          }
+        ? { id: log.user_id._id, name: log.user_id.name }
         : null,
     }));
 
