@@ -4,6 +4,8 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const JWT_SECRET = process.env.JWT_SECRET || "smart_home_secret_key";
+
 // update profile
 router.post("/update-profile", async (req, res) => {
   try {
@@ -75,17 +77,14 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Thiếu thông tin" });
     }
 
-    // kiểm tra trùng số điện thoại
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
       return res.status(400).json({ message: "Số điện thoại đã tồn tại" });
     }
 
-    // hash mật khẩu
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // tạo user mới
     const newUser = new User({
       name: name.trim(),
       phone: phone.trim(),
@@ -115,7 +114,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// login
+// login — FIX: tạo và trả về JWT token
 router.post("/login", async (req, res) => {
   try {
     const { phone, password } = req.body;
@@ -134,16 +133,13 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Sai mật khẩu" });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { _id: user._id, phone: user.phone },
-      process.env.JWT_SECRET || "smart_home_secret_key",
-      { expiresIn: "7d" },
-    );
+    const token = jwt.sign({ _id: user._id, role: user.role }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     res.json({
       message: "Đăng nhập thành công",
-      token: token,
+      token,
       user: {
         _id: user._id,
         name: user.name,

@@ -2,14 +2,13 @@ const express = require("express");
 const router = express.Router();
 const Room = require("../models/Room");
 const House = require("../models/House");
+const { authenticate, isOwner } = require("../middlewares/auth");
 
 // 1. Lấy danh sách phòng
-router.get("/", async (req, res) => {
+router.get("/", authenticate, async (req, res) => {
   try {
     const house = await House.findById("H001");
-    if (!house) {
-      return res.status(404).json({ message: "House chưa được khởi tạo" });
-    }
+    if (!house) return res.status(404).json({ message: "House chưa được khởi tạo" });
 
     const rooms = await Room.find({ house_id: "H001" });
     res.json({ rooms });
@@ -18,67 +17,99 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 2. Tạo một phòng mới
-router.post("/add", async (req, res) => {
+// 2. Tạo phòng mới (Chỉ OWNER)
+router.post("/add", authenticate, isOwner, async (req, res) => {
   try {
-    const house = await House.findById("H001");
-    if (!house) {
-      return res.status(404).json({ message: "House chưa được khởi tạo" });
-    }
-
     const { name } = req.body;
+    if (!name) return res.status(400).json({ message: "Thiếu tên phòng" });
 
-    if (!name) {
-      return res.status(400).json({ message: "Thiếu tên phòng" });
-    }
-
-    const room = await Room.create({
-      name: name.trim(),
-      house_id: "H001",
-    });
-
-    res.status(201).json({
-      message: "Thêm phòng thành công",
-      room,
-    });
+    const room = await Room.create({ name: name.trim(), house_id: "H001" });
+    res.status(201).json({ message: "Thêm phòng thành công", room });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-// 3. Cập nhật tên phòng (Bổ sung để khớp với RoomScreen.js)
-router.put("/edit/:id", async (req, res) => {
+// 3. Cập nhật tên phòng (Chỉ OWNER)
+router.put("/edit/:id", authenticate, isOwner, async (req, res) => {
   try {
     const { name } = req.body;
-    if (!name)
-      return res.status(400).json({ message: "Tên phòng không được để trống" });
+    if (!name) return res.status(400).json({ message: "Tên phòng không được để trống" });
 
     const updatedRoom = await Room.findOneAndUpdate(
-      { _id: req.params.id },
+      { _id: req.params.id, house_id: "H001" },
       { name: name.trim() },
-      { new: true },
+      { new: true }
     );
 
-    if (!updatedRoom)
-      return res.status(404).json({ message: "Không tìm thấy phòng" });
+    if (!updatedRoom) return res.status(404).json({ message: "Không tìm thấy phòng" });
     res.json({ message: "Cập nhật thành công", room: updatedRoom });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-// 4. Xóa phòng
-router.delete("/del/:id", async (req, res) => {
+// 4. Xóa phòng (Chỉ OWNER)
+router.delete("/del/:id", authenticate, isOwner, async (req, res) => {
   try {
-    const deletedRoom = await Room.findOneAndDelete({
-      _id: req.params.id,
-      house_id: "H001",
-    });
-    if (!deletedRoom)
-      return res.status(404).json({ message: "Không tìm thấy phòng để xóa" });
+    const deletedRoom = await Room.findOneAndDelete({ _id: req.params.id, house_id: "H001" });
+    if (!deletedRoom) return res.status(404).json({ message: "Không tìm thấy phòng để xóa" });
     res.json({ message: "Xóa thành công" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// 5. Cấp quyền phòng cho Member (Chỉ OWNER)
+router.post("/assign-permission/:id", authenticate, isOwner, async (req, res) => {
+  try {
+    const { member_id, can_view, can_control } = req.body;
+    if (!member_id) return res.status(400).json({ message: "Thiếu member_id" });
+
+    const room = await Room.findById(req.params.id);
+    if (!room) return res.status(404).json({ message: "Không tìm thấy phòng" });
+
+    const existingIndex = room.permissions.findIndex(
+      (p) => p.user_id.toString() === member_id
+    );
+
+    if (existingIndex > -1) {
+      // Cập nhật quyền nếu đã tồn tại
+      room.permissions[existingIndex].can_view = can_view ?? room.permissions[existingIndex].can_view;
+      room.permissions[existingIndex].can_control = can_control ?? room.permissions[existingIndex].can_control;
+    } else {
+      // Thêm mới
+      room.permissions.push({
+        user_id: member_id,
+        can_view: can_view ?? true,
+        can_control: can_control ?? false,
+      });
+    }
+
+    await room.save();
+    res.json({ message: "Cấp quyền phòng thành công", room });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi cấp quyền phòng" });
+  }
+});
+
+// 6. Xóa quyền phòng của Member (Chỉ OWNER)
+router.delete("/remove-permission/:id", authenticate, isOwner, async (req, res) => {
+  try {
+    const { member_id } = req.body;
+    if (!member_id) return res.status(400).json({ message: "Thiếu member_id" });
+
+    const room = await Room.findById(req.params.id);
+    if (!room) return res.status(404).json({ message: "Không tìm thấy phòng" });
+
+    room.permissions = room.permissions.filter(
+      (p) => p.user_id.toString() !== member_id
+    );
+
+    await room.save();
+    res.json({ message: "Đã xóa quyền phòng", room });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi xóa quyền phòng" });
   }
 });
 
