@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    elevation: 3, // Đổ bóng nhẹ cho header
+    elevation: 3,
   },
   sortText: { color: '#fff', fontSize: 14 },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
@@ -104,9 +104,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 1, // Tạo độ nổi cho thẻ kịch bản
+    elevation: 1,
   },
-  scriptIcon: { width: 30, height: 30, marginRight: 12 }, // Tăng nhẹ kích thước icon cho rõ
+  scriptIcon: { width: 30, height: 30, marginRight: 12 },
   cardText: { flex: 1, fontSize: 16, fontWeight: '500' },
   cardActions: { flexDirection: 'row' },
   actionIcon: { width: 20, height: 20 },

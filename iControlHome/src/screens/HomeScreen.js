@@ -1,8 +1,18 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { 
-  View, Text, StyleSheet, TouchableOpacity, 
-  Image, FlatList, ActivityIndicator, Alert, Dimensions,
-  Modal, Animated, TouchableWithoutFeedback, PanResponder
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  FlatList,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Modal,
+  Animated,
+  TouchableWithoutFeedback,
+  PanResponder,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,19 +34,36 @@ export default function HomeScreen({ navigation }) {
   const sheetAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
-  const openSheet = (item) => {
+  const openSheet = item => {
     setSelectedDevice(item);
     setSheetVisible(true);
     Animated.parallel([
-      Animated.spring(sheetAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }),
-      Animated.timing(backdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      Animated.spring(sheetAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }),
+      Animated.timing(backdropAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
     ]).start();
   };
 
-  const closeSheet = (callback) => {
+  const closeSheet = callback => {
     Animated.parallel([
-      Animated.timing(sheetAnim, { toValue: SHEET_HEIGHT, duration: 220, useNativeDriver: true }),
-      Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(sheetAnim, {
+        toValue: SHEET_HEIGHT,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
     ]).start(() => {
       setSheetVisible(false);
       setSelectedDevice(null);
@@ -54,10 +81,15 @@ export default function HomeScreen({ navigation }) {
         if (gestureState.dy > 80) {
           closeSheet();
         } else {
-          Animated.spring(sheetAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
+          Animated.spring(sheetAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 65,
+            friction: 11,
+          }).start();
         }
       },
-    })
+    }),
   ).current;
 
   const fetchDevices = useCallback(async () => {
@@ -68,7 +100,7 @@ export default function HomeScreen({ navigation }) {
       const response = await api.get('/devices');
       setDevices(response.data.devices || []);
     } catch (error) {
-      console.error("Lỗi tải thiết bị:", error.message);
+      console.error('Lỗi tải thiết bị:', error.message);
     } finally {
       setLoading(false);
     }
@@ -78,29 +110,34 @@ export default function HomeScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       fetchDevices();
-    }, [fetchDevices])
+    }, [fetchDevices]),
   );
 
-  const handleDelete = async (deviceId) => {
+  const handleDelete = async deviceId => {
     try {
       await api.delete(`/devices/${deviceId}`);
-      Alert.alert("Thành công", "Đã xóa thiết bị!");
+      Alert.alert('Thành công', 'Đã xóa thiết bị!');
       fetchDevices();
     } catch (error) {
-      Alert.alert("Lỗi", "Bạn không có quyền thực hiện hành động này.");
+      Alert.alert('Lỗi', 'Bạn không có quyền thực hiện hành động này.');
     }
   };
 
-  const onLongPressDevice = (item) => {
+  const onLongPressDevice = item => {
     if (userRole !== 'OWNER') return;
     openSheet(item);
   };
 
-  const getDeviceIcon = (type) => {
+  const getDeviceIcon = type => {
     switch (type?.toLowerCase()) {
-      case 'light': case 'đèn': return require('../../public/img/light.png');
-      case 'fan': case 'quạt': return require('../../public/img/fan.png');
-      default: return require('../../public/img/device_default.png');
+      case 'light':
+      case 'đèn':
+        return require('../../public/img/light.png');
+      case 'fan':
+      case 'quạt':
+        return require('../../public/img/fan.png');
+      default:
+        return require('../../public/img/device_default.png');
     }
   };
 
@@ -124,26 +161,49 @@ export default function HomeScreen({ navigation }) {
         activeOpacity={hasPermission ? 0.85 : 1}
       >
         <View style={styles.cardHeader}>
-          <View style={[styles.iconBox, { backgroundColor: isActive ? '#E8F5E9' : '#F5F5F5' }]}>
+          <View
+            style={[
+              styles.iconBox,
+              { backgroundColor: isActive ? '#E8F5E9' : '#F5F5F5' },
+            ]}
+          >
             <Image
               source={getDeviceIcon(item.type)}
-              style={[styles.deviceImage, { tintColor: isActive ? '#4CAF50' : '#9E9E9E' }]}
+              style={[
+                styles.deviceImage,
+                { tintColor: isActive ? '#4CAF50' : '#9E9E9E' },
+              ]}
               resizeMode="contain"
             />
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: isActive ? '#4CAF50' : '#F44336' }]}>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: isActive ? '#4CAF50' : '#F44336' },
+            ]}
+          >
             <Text style={styles.statusText}>{isActive ? 'ON' : 'OFF'}</Text>
           </View>
         </View>
 
         <View style={styles.cardContent}>
-          <Text style={[styles.deviceName, { color: themeStyles.text }]} numberOfLines={1}>
+          <Text
+            style={[styles.deviceName, { color: themeStyles.text }]}
+            numberOfLines={1}
+          >
             {item.name}
           </Text>
           <View style={styles.roomRow}>
             <Text style={styles.roomDot}>{item.room_id ? '📍' : '📦'}</Text>
             <Text
-              style={[styles.roomLabel, { color: item.room_id ? (themeStyles.subText || '#888') : '#BDBDBD' }]}
+              style={[
+                styles.roomLabel,
+                {
+                  color: item.room_id
+                    ? themeStyles.subText || '#888'
+                    : '#BDBDBD',
+                },
+              ]}
               numberOfLines={1}
             >
               {item.room_id?.name || 'Chưa gắn phòng'}
@@ -155,10 +215,12 @@ export default function HomeScreen({ navigation }) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeStyles.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: themeStyles.background }]}
+    >
       {/* HEADER */}
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <Text style={styles.houseName}>🏠 Nhà của tôi</Text>
+        <Text style={styles.houseName}>Nhà của tôi</Text>
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {userRole === 'OWNER' && (
@@ -169,13 +231,25 @@ export default function HomeScreen({ navigation }) {
             >
               <Image
                 source={require('../../public/img/avatar.png')}
-                style={[styles.headerIcon, { borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                style={[
+                  styles.headerIcon,
+                  {
+                    borderRadius: 12,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                  },
+                ]}
               />
             </TouchableOpacity>
           )}
           {userRole === 'OWNER' && (
-            <TouchableOpacity onPress={() => navigation.navigate('AddDevice')} activeOpacity={0.7}>
-              <Image source={require('../../public/img/add.png')} style={styles.headerIcon} />
+            <TouchableOpacity
+              onPress={() => navigation.navigate('AddDevice')}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require('../../public/img/add.png')}
+                style={styles.headerIcon}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -184,15 +258,24 @@ export default function HomeScreen({ navigation }) {
       {/* BODY */}
       <View style={styles.body}>
         {loading ? (
-          <ActivityIndicator size="large" color={themeStyles.primary} style={styles.loader} />
+          <ActivityIndicator
+            size="large"
+            color={themeStyles.primary}
+            style={styles.loader}
+          />
         ) : devices.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: themeStyles.text }]}>
-              {userRole === 'OWNER' ? 'Chưa có thiết bị nào' : 'Chưa có thiết bị nào trong nhà'}
+              {userRole === 'OWNER'
+                ? 'Chưa có thiết bị nào'
+                : 'Chưa có thiết bị nào trong nhà'}
             </Text>
             {userRole === 'OWNER' && (
               <TouchableOpacity
-                style={[styles.addBtn, { backgroundColor: themeStyles.primary }]}
+                style={[
+                  styles.addBtn,
+                  { backgroundColor: themeStyles.primary },
+                ]}
                 onPress={() => navigation.navigate('AddDevice')}
               >
                 <Text style={styles.addBtnText}>Thêm ngay</Text>
@@ -202,7 +285,7 @@ export default function HomeScreen({ navigation }) {
         ) : (
           <FlatList
             data={devices}
-            keyExtractor={(item) => item._id}
+            keyExtractor={item => item._id}
             renderItem={renderDeviceItem}
             numColumns={2}
             columnWrapperStyle={styles.row}
@@ -225,7 +308,12 @@ export default function HomeScreen({ navigation }) {
           <Animated.View
             style={[
               styles.backdrop,
-              { opacity: backdropAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] }) }
+              {
+                opacity: backdropAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.5],
+                }),
+              },
             ]}
           />
         </TouchableWithoutFeedback>
@@ -240,7 +328,9 @@ export default function HomeScreen({ navigation }) {
 
           {selectedDevice && (
             <View style={styles.sheetDeviceInfo}>
-              <View style={[styles.sheetIconBox, { backgroundColor: '#E8F5E9' }]}>
+              <View
+                style={[styles.sheetIconBox, { backgroundColor: '#E8F5E9' }]}
+              >
                 <Image
                   source={getDeviceIcon(selectedDevice.type)}
                   style={[styles.sheetDeviceImage, { tintColor: '#4CAF50' }]}
@@ -248,8 +338,12 @@ export default function HomeScreen({ navigation }) {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.sheetDeviceName} numberOfLines={1}>{selectedDevice.name}</Text>
-                <Text style={styles.sheetDeviceType}>{selectedDevice.type || 'Thiết bị'}</Text>
+                <Text style={styles.sheetDeviceName} numberOfLines={1}>
+                  {selectedDevice.name}
+                </Text>
+                <Text style={styles.sheetDeviceType}>
+                  {selectedDevice.type || 'Thiết bị'}
+                </Text>
               </View>
             </View>
           )}
@@ -259,9 +353,15 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity
             style={styles.sheetAction}
             activeOpacity={0.7}
-            onPress={() => closeSheet(() => navigation.navigate('EditDevice', { device: selectedDevice }))}
+            onPress={() =>
+              closeSheet(() =>
+                navigation.navigate('EditDevice', { device: selectedDevice }),
+              )
+            }
           >
-            <View style={[styles.sheetActionIcon, { backgroundColor: '#EEF2FF' }]}>
+            <View
+              style={[styles.sheetActionIcon, { backgroundColor: '#EEF2FF' }]}
+            >
               <Text style={styles.sheetActionEmoji}>✏️</Text>
             </View>
             <Text style={styles.sheetActionText}>Chỉnh sửa thiết bị</Text>
@@ -274,21 +374,31 @@ export default function HomeScreen({ navigation }) {
             onPress={() => {
               closeSheet(() => {
                 Alert.alert(
-                  "Xác nhận xóa",
+                  'Xác nhận xóa',
                   `Bạn có chắc muốn xóa "${selectedDevice?.name}"?`,
                   [
-                    { text: "Hủy", style: "cancel" },
-                    { text: "Xóa", style: "destructive", onPress: () => handleDelete(selectedDevice?._id) }
-                  ]
+                    { text: 'Hủy', style: 'cancel' },
+                    {
+                      text: 'Xóa',
+                      style: 'destructive',
+                      onPress: () => handleDelete(selectedDevice?._id),
+                    },
+                  ],
                 );
               });
             }}
           >
-            <View style={[styles.sheetActionIcon, { backgroundColor: '#FFF0F0' }]}>
+            <View
+              style={[styles.sheetActionIcon, { backgroundColor: '#FFF0F0' }]}
+            >
               <Text style={styles.sheetActionEmoji}>🗑️</Text>
             </View>
-            <Text style={[styles.sheetActionText, { color: '#F44336' }]}>Xóa thiết bị</Text>
-            <Text style={[styles.sheetActionArrow, { color: '#F44336' }]}>›</Text>
+            <Text style={[styles.sheetActionText, { color: '#F44336' }]}>
+              Xóa thiết bị
+            </Text>
+            <Text style={[styles.sheetActionArrow, { color: '#F44336' }]}>
+              ›
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </Modal>
@@ -298,22 +408,33 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { height: 70, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  houseName: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  headerIcon: { width: 28, height: 28, tintColor: '#fff' },
+  header: {
+    height: 70,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  houseName: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
+  headerIcon: { width: 30, height: 30, tintColor: '#fff' },
   body: { flex: 1 },
   loader: { marginTop: 40 },
   listContainer: { padding: 12 },
   row: { justifyContent: 'space-between' },
   deviceCard: {
-    width: (width / 2) - 18,
+    width: width / 2 - 18,
     borderRadius: 20,
     padding: 15,
     marginBottom: 12,
     elevation: 3,
     overflow: 'hidden',
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
   iconBox: { padding: 10, borderRadius: 12 },
   deviceImage: { width: 35, height: 35 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
@@ -328,25 +449,87 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, marginBottom: 15 },
   addBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   addBtnText: { color: '#fff', fontWeight: 'bold' },
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000' },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000',
+  },
   sheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: SHEET_HEIGHT, backgroundColor: '#fff',
-    borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 20,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12, shadowRadius: 12, elevation: 20,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: SHEET_HEIGHT,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 20,
   },
   dragHandleWrapper: { alignItems: 'center', paddingTop: 10, paddingBottom: 4 },
-  dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DDD' },
-  sheetDeviceInfo: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 14 },
-  sheetIconBox: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#DDD',
+  },
+  sheetDeviceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 14,
+  },
+  sheetIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
   sheetDeviceImage: { width: 28, height: 28 },
-  sheetDeviceName: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
+  sheetDeviceName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
   sheetDeviceType: { fontSize: 13, color: '#888', textTransform: 'capitalize' },
-  sheetDivider: { height: 1, backgroundColor: '#F0F0F0', marginHorizontal: 20, marginBottom: 6 },
-  sheetAction: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 13, gap: 14 },
-  sheetActionIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  sheetDivider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginHorizontal: 20,
+    marginBottom: 6,
+  },
+  sheetAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    gap: 14,
+  },
+  sheetActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
   sheetActionEmoji: { fontSize: 18 },
-  sheetActionText: { flex: 1, fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
+  sheetActionText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
   sheetActionArrow: { fontSize: 22, color: '#CCC', fontWeight: '300' },
 });

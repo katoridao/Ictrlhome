@@ -288,14 +288,20 @@ const styles = StyleSheet.create({
 
   header: {
     height: 70,
-    justifyContent: 'center',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    elevation: 4,
   },
 
   headerTitle: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
   },
 
   filterWrapper: { padding: 16 },
