@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const Room = require("../models/Room");
-const House = require("../models/House");
-const { authenticate, isOwner } = require("../middlewares/auth");
+const { authenticate, isOwner, checkHouseMembership } = require("../middlewares/auth");
 
 // 1. Lấy danh sách phòng
-router.get("/", authenticate, async (req, res) => {
+router.get("/", authenticate, checkHouseMembership, async (req, res) => {
   try {
-    const house = await House.findById("H001");
-    if (!house) return res.status(404).json({ message: "House chưa được khởi tạo" });
+    if (!req.isHouseMember) {
+      return res.json({ rooms: [] });
+    }
 
     const rooms = await Room.find({ house_id: "H001" });
     res.json({ rooms });
@@ -18,7 +18,7 @@ router.get("/", authenticate, async (req, res) => {
 });
 
 // 2. Tạo phòng mới (Chỉ OWNER)
-router.post("/add", authenticate, isOwner, async (req, res) => {
+router.post("/", authenticate, isOwner, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ message: "Thiếu tên phòng" });
@@ -31,7 +31,7 @@ router.post("/add", authenticate, isOwner, async (req, res) => {
 });
 
 // 3. Cập nhật tên phòng (Chỉ OWNER)
-router.put("/edit/:id", authenticate, isOwner, async (req, res) => {
+router.put("/:id", authenticate, isOwner, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ message: "Tên phòng không được để trống" });
@@ -50,7 +50,7 @@ router.put("/edit/:id", authenticate, isOwner, async (req, res) => {
 });
 
 // 4. Xóa phòng (Chỉ OWNER)
-router.delete("/del/:id", authenticate, isOwner, async (req, res) => {
+router.delete("/:id", authenticate, isOwner, async (req, res) => {
   try {
     const deletedRoom = await Room.findOneAndDelete({ _id: req.params.id, house_id: "H001" });
     if (!deletedRoom) return res.status(404).json({ message: "Không tìm thấy phòng để xóa" });

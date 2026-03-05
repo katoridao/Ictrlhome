@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
-const BASE_URL = 'http://192.168.0.192:3001/api'; 
+const BASE_URL = 'http://10.0.3.2:3000/api'; 
 
 // 10.0.3.2 là IP "đặc quyền" của Genymotion để truy cập vào localhost của máy tính bạn
 //const BASE_URL = 'http://10.0.3.2:3000/api'; 
