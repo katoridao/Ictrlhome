@@ -34,6 +34,9 @@ import {
 // Import Navigation - Tab
 import MainTab from './src/navigation/MainTab';
 
+// === THÊM MÀN HÌNH TỰ ĐỘNG HÓA ===
+import MainAutomationScreen from './src/screens/MainAutomationScreen';
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -44,7 +47,7 @@ export default function App() {
           screenOptions={{ headerShown: false }}
           initialRouteName="Welcome"
         >
-          {/* Luồng khởi đầu */}
+          {/* 1. Luồng khởi đầu (Auth) */}
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
@@ -53,18 +56,24 @@ export default function App() {
             component={ForgotPasswordScreen}
           />
 
-          {/* Luồng Chính (Tabs: Home, Room, Script, Device_log, Setting) */}
+          {/* 2. Luồng Chính (Đã bao gồm các Tab: Home, Room, Script, Device_log, Setting) */}
           <Stack.Screen name="Main" component={MainTab} />
 
-          {/* Quản lý thiết bị */}
+          {/* 3. Quản lý thiết bị */}
           <Stack.Screen name="AddDevice" component={AddDeviceModal} />
           <Stack.Screen name="EditDevice" component={AddDeviceModal} />
           <Stack.Screen
             name="DeviceControl"
             component={DeviceControlScreen}
-            options={{ headerShown: true, title: 'Điều khiển thiết bị' }}
+            options={{ 
+              headerShown: true, 
+              title: 'Điều khiển thiết bị',
+              headerStyle: { backgroundColor: '#2196F3' },
+              headerTintColor: '#fff',
+            }}
           />
-          {/* Quản lý phòng */}
+
+          {/* 4. Quản lý phòng */}
           <Stack.Screen
             name="RoomDetail"
             component={RoomDetailScreen}
@@ -76,7 +85,7 @@ export default function App() {
             }}
           />
 
-          {/* Cài đặt & Cá nhân hóa */}
+          {/* 5. Cài đặt & Cá nhân hóa */}
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen
             name="NotificationSetting"
@@ -85,7 +94,20 @@ export default function App() {
           <Stack.Screen name="AppearanceScreen" component={AppearanceScreen} />
           <Stack.Screen name="StatisticsScreen" component={StatisticsScreen} />
 
-          {/* Quản lý Thành viên & Phân quyền */}
+          {/* 6. MÀN HÌNH TỰ ĐỘNG HÓA & THÔNG BÁO (Mới thêm) */}
+          <Stack.Screen 
+            name="Automation" 
+            component={MainAutomationScreen} 
+            options={{
+              headerShown: true,
+              title: 'Thiết lập Tự động hóa',
+              headerStyle: { backgroundColor: '#2196F3' },
+              headerTintColor: '#fff',
+              headerTitleAlign: 'center',
+            }}
+          />
+
+          {/* 7. Quản lý Thành viên & Phân quyền */}
           <Stack.Screen
             name="ManageMembers"
             component={ManageMembersScreen}
@@ -111,6 +133,7 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
 
+      {/* Hiển thị thông báo Toast toàn cục */}
       <Toast />
     </ThemeProvider>
   );

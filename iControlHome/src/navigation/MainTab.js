@@ -7,6 +7,7 @@ import RoomScreen from '../screens/RoomScreen';
 import ScriptScreen from '../screens/ScriptScreen';
 import Device_logScreen from '../screens/Device_logScreen';
 import SettingScreen from '../screens/SettingScreen';
+import MainAutomationScreen from '../screens/MainAutomationScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -60,6 +61,7 @@ export default function MainTab() {
       <Tab.Screen name="Script" component={ScriptScreen} />
       <Tab.Screen name="Device_log" component={Device_logScreen} />
       <Tab.Screen name="Setting" component={SettingScreen} />
+      
     </Tab.Navigator>
   );
 }
