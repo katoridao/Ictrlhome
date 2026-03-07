@@ -1,14 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const Room = require("../models/Room");
+const House = require("../models/House");
 const { authenticate, isOwner, checkHouseMembership } = require("../middlewares/auth");
 
 // 1. Lấy danh sách phòng
 router.get("/", authenticate, checkHouseMembership, async (req, res) => {
   try {
+    // Chưa được thêm vào nhà → trả về mảng rỗng
     if (!req.isHouseMember) {
       return res.json({ rooms: [] });
     }
+
+    const house = await House.findById("H001");
+    if (!house) return res.status(404).json({ message: "House chưa được khởi tạo" });
 
     const rooms = await Room.find({ house_id: "H001" });
     res.json({ rooms });
@@ -18,7 +23,7 @@ router.get("/", authenticate, checkHouseMembership, async (req, res) => {
 });
 
 // 2. Tạo phòng mới (Chỉ OWNER)
-router.post("/", authenticate, isOwner, async (req, res) => {
+router.post("/add", authenticate, isOwner, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ message: "Thiếu tên phòng" });
@@ -31,7 +36,7 @@ router.post("/", authenticate, isOwner, async (req, res) => {
 });
 
 // 3. Cập nhật tên phòng (Chỉ OWNER)
-router.put("/:id", authenticate, isOwner, async (req, res) => {
+router.put("/edit/:id", authenticate, isOwner, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ message: "Tên phòng không được để trống" });
@@ -50,7 +55,7 @@ router.put("/:id", authenticate, isOwner, async (req, res) => {
 });
 
 // 4. Xóa phòng (Chỉ OWNER)
-router.delete("/:id", authenticate, isOwner, async (req, res) => {
+router.delete("/del/:id", authenticate, isOwner, async (req, res) => {
   try {
     const deletedRoom = await Room.findOneAndDelete({ _id: req.params.id, house_id: "H001" });
     if (!deletedRoom) return res.status(404).json({ message: "Không tìm thấy phòng để xóa" });
@@ -74,11 +79,9 @@ router.post("/assign-permission/:id", authenticate, isOwner, async (req, res) =>
     );
 
     if (existingIndex > -1) {
-      // Cập nhật quyền nếu đã tồn tại
       room.permissions[existingIndex].can_view = can_view ?? room.permissions[existingIndex].can_view;
       room.permissions[existingIndex].can_control = can_control ?? room.permissions[existingIndex].can_control;
     } else {
-      // Thêm mới
       room.permissions.push({
         user_id: member_id,
         can_view: can_view ?? true,

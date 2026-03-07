@@ -4,6 +4,8 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 var cors = require("cors");
+var http = require("http");
+var { Server } = require("socket.io");
 require("dotenv").config();
 
 // Import Database
@@ -22,6 +24,28 @@ const deviceUsageRoutes = require("./routes/deviceUsage");
 const apiRouter = require("./routes/api");
 
 var app = express();
+
+// Tạo HTTP server từ app để Socket.IO dùng chung cổng
+const httpServer = http.createServer(app);
+
+// Khởi tạo Socket.IO
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+// Gắn io vào app để dùng trong các route
+app.set("io", io);
+
+io.on("connection", (socket) => {
+  console.log("[Socket] Client kết nối:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("[Socket] Client ngắt kết nối:", socket.id);
+  });
+});
 
 // View engine setup
 app.set("views", path.join(__dirname, "views"));
@@ -47,7 +71,6 @@ app.use("/api/device-logs", authenticate, deviceLogRoutes);
 app.use("/api/device-usages", authenticate, deviceUsageRoutes);
 
 // 2. Các route hệ thống (Bao gồm Login, Register không cần authenticate ở đây)
-// Lưu ý: Trong file routes/api.js, các hành động như update-profile sẽ tự gọi authenticate riêng.
 app.use("/api", apiRouter);
 
 // 404 handler
@@ -65,4 +88,5 @@ app.use(function (err, req, res, next) {
   });
 });
 
-module.exports = app;
+// Export httpServer thay vì app để lắng nghe được Socket.IO
+module.exports = { app, httpServer };
