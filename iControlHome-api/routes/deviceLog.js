@@ -5,17 +5,36 @@ const DeviceLog = require("../models/DeviceLog");
 
 router.get("/", async (req, res) => {
   try {
-    const { period } = req.query;
+    const { period, house_id } = req.query;
+
+    if (!house_id) {
+      return res.status(400).json({ message: "Thiếu house_id" });
+    }
+
     let filter = {};
 
-    // Lọc theo house
-    const devices = await Device.find({ house_id: "H001" }).select("_id");
+    // lấy danh sách device theo house
+    const devices = await Device.find({ house_id }).select("_id");
     const deviceIds = devices.map((d) => d._id);
+
     filter.device_id = { $in: deviceIds };
 
+    // lọc thời gian
     if (period === "day") {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
+      filter.created_at = { $gte: start };
+    }
+
+    if (period === "week") {
+      const start = new Date();
+      start.setDate(start.getDate() - 7);
+      filter.created_at = { $gte: start };
+    }
+
+    if (period === "month") {
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
       filter.created_at = { $gte: start };
     }
 
@@ -23,19 +42,35 @@ router.get("/", async (req, res) => {
       .sort({ created_at: -1 })
       .limit(50)
       .populate("user_id", "name")
-      .populate("device_id", "name type");
+      .populate({
+        path: "device_id",
+        select: "name type room_id",
+        populate: {
+          path: "room_id",
+          model: "Room",
+          select: "name",
+        },
+      });
 
     const result = logs.map((log) => ({
       _id: log._id,
       action: log.action,
       created_at: log.created_at,
+
       device: log.device_id
         ? {
             id: log.device_id._id,
             name: log.device_id.name,
             type: log.device_id.type,
+            room: log.device_id.room_id
+              ? {
+                  id: log.device_id.room_id._id,
+                  name: log.device_id.room_id.name,
+                }
+              : null,
           }
         : null,
+
       user: log.user_id
         ? {
             id: log.user_id._id,
@@ -45,7 +80,9 @@ router.get("/", async (req, res) => {
     }));
 
     res.json({ logs: result });
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Lỗi server" });
   }
 });
