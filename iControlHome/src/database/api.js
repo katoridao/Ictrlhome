@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://192.168.1.217:3000/api';
+const BASE_URL = 'http://10.0.3.2:3000/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -9,6 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  
 });
 
 // Tự động đính kèm token vào mỗi request

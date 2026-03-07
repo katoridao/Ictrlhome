@@ -1,151 +1,150 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  View, Text, StyleSheet, TouchableOpacity, 
-  Alert, TextInput, ScrollView, ActivityIndicator,
-  KeyboardAvoidingView, Platform, Switch // Thêm Switch ở đây
+  View, Text, StyleSheet, TouchableOpacity, Alert, 
+  TextInput, ScrollView, Switch, ActivityIndicator, Platform 
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; 
-import api from '../database/api'; 
+import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../database/api';
 
 const MainAutomationScreen = ({ navigation }) => {
-  const [notifications, setNotifications] = useState([]);
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
-  const [time, setTime] = useState('');
   const [name, setName] = useState('');
-  const [loading, setLoading] = useState(true);
-  
-  // 1. Thêm State để lưu trạng thái Bật hoặc Tắt
   const [status, setStatus] = useState(true); 
+  const [date, setDate] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
+  const [mode, setMode] = useState('date'); 
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    loadDevices();
   }, []);
 
-  const loadData = async () => {
+  const loadDevices = async () => {
     try {
-      const [notifRes, devRes] = await Promise.all([
-        api.get('/notifications'),
-        api.get('/devices')
-      ]);
-      setNotifications(notifRes.data.notifications || []); 
-      setDevices(devRes.data.devices || []); 
+      const res = await api.get('/devices');
+      // LOG DEBUG: Kiểm tra dữ liệu tại terminal máy tính
+      console.log("DEVICE DEBUG:", JSON.stringify(res.data.devices, null, 2));
+      
+      const devData = res.data.devices || [];
+      // HIỂN THỊ TẤT CẢ: Bỏ filter can_control để User thường cũng thấy thiết bị
+      setDevices(devData); 
     } catch (err) {
-      console.error("Lỗi tải dữ liệu", err);
+      console.error("Lỗi tải thiết bị:", err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const createAuto = async () => {
-    if (!selectedDevice || !time || !name) {
-      return Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin!");
+  const onDateTimeChange = (event, selectedDate) => {
+    if (event.type === 'dismissed') {
+      setShowPicker(false);
+      setMode('date');
+      return;
     }
-    try {
-      const houseId = await AsyncStorage.getItem('current_house_id');
+    const currentDate = selectedDate || date;
+    setDate(currentDate);
 
-      const payload = {
-        name: name,
-        time: time,
-        house_id: houseId, 
-        action: { 
-          device_id: selectedDevice, 
-          // 2. Truyền biến status động (true/false) thay vì để true cố định
-          status: status 
-        }
-      };
-
-      const response = await api.post('/automations', payload);
-      
-      if (response.status === 201 || response.status === 200) {
-        Alert.alert("Thành công", `Đã lưu kịch bản ${status ? 'Bật' : 'Tắt'}!`);
-        navigation.goBack();
+    if (Platform.OS === 'android') {
+      if (mode === 'date') {
+        setShowPicker(false); 
+        setTimeout(() => {
+          setMode('time');
+          setShowPicker(true);
+        }, 500); 
+      } else {
+        setShowPicker(false);
+        setMode('date');
       }
-    } catch (err) {
-      console.log("Lỗi gửi kịch bản:", err.response?.data || err.message);
-      Alert.alert("Lỗi", err.response?.data?.message || "Không thể lưu kịch bản");
+    } else {
+      setShowPicker(false);
     }
   };
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#2196F3" />
-      </View>
-    );
-  }
+  const createAuto = async () => {
+    if (!selectedDevice || !name.trim()) {
+      return Alert.alert("Lỗi", "Vui lòng nhập tên và chọn thiết bị");
+    }
+    try {
+      const houseId = await AsyncStorage.getItem('current_house_id');
+      const payload = {
+        name: name.trim(),
+        device_id: selectedDevice,
+        house_id: houseId || "H001", 
+        action: status ? "ON" : "OFF",
+        trigger_time: moment(date).format("YYYY-MM-DD HH:mm"), 
+        repeat_type: "ONCE", 
+        enabled: true
+      };
+      const response = await api.post('/automations', payload);
+      if (response.status === 201 || response.status === 200) {
+        Alert.alert("Thành công", `Đã đặt lịch lúc ${moment(date).format("HH:mm - DD/MM/YYYY")}`);
+        navigation.goBack();
+      }
+    } catch (err) {
+      Alert.alert("Lỗi", "Không thể lưu kịch bản");
+    }
+  };
+
+  if (loading) return <ActivityIndicator size="large" style={{flex:1}} />;
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <ScrollView>
-        <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Tạo kịch bản mới</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Tên kịch bản (VD: Tắt điện phòng khách)" />
-          <TextInput style={styles.input} value={time} onChangeText={setTime} placeholder="Giờ chạy (HH:mm - VD: 22:00)" keyboardType="numbers-and-punctuation" />
-          
-          <Text style={styles.label}>Chọn thiết bị ({devices.length}):</Text>
-          <View style={{ height: 60, marginBottom: 15 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {devices.length > 0 ? devices.map((dev) => (
-                <TouchableOpacity 
-                  key={dev._id}
-                  style={[styles.devCard, selectedDevice === dev._id && styles.activeCard]}
-                  onPress={() => setSelectedDevice(dev._id)}
-                >
-                  <Text style={[styles.devText, selectedDevice === dev._id && styles.activeText]}>{dev.name}</Text>
-                </TouchableOpacity>
-              )) : <Text style={{color: '#999', marginTop: 10}}>Không có thiết bị khả dụng</Text>}
-            </ScrollView>
-          </View>
+    <ScrollView style={styles.container}>
+      <Text style={styles.headerTitle}>Thiết lập kịch bản</Text>
+      <Text style={styles.label}>Tên kịch bản:</Text>
+      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="VD: Tắt quạt" />
 
-          {/* 3. THÊM PHẦN CHỌN BẬT HOẶC TẮT Ở ĐÂY */}
-          <View style={styles.switchSection}>
-            <Text style={styles.switchLabel}>Hành động khi đến giờ: <Text style={{color: status ? '#2196F3' : '#FF4444', fontWeight: 'bold'}}>{status ? 'BẬT' : 'TẮT'}</Text></Text>
-            <Switch
-              trackColor={{ false: "#767577", true: "#bbdefb" }}
-              thumbColor={status ? "#2196F3" : "#f4f3f4"}
-              onValueChange={() => setStatus(previousState => !previousState)}
-              value={status}
-            />
-          </View>
-
-          <TouchableOpacity style={styles.saveButton} onPress={createAuto}>
-            <Text style={styles.saveButtonText}>LƯU KỊCH BẢN</Text>
-          </TouchableOpacity>
+      <Text style={styles.label}>Chọn Ngày & Giờ:</Text>
+      <TouchableOpacity style={styles.timePickerBtn} onPress={() => { setMode('date'); setShowPicker(true); }}>
+        <View>
+          <Text>🗓 {moment(date).format("DD/MM/YYYY")}</Text>
+          <Text style={styles.timeText}>⏰ {moment(date).format("HH:mm")}</Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Text style={{color: '#2196F3', fontWeight: 'bold'}}>THAY ĐỔI</Text>
+      </TouchableOpacity>
+
+      {showPicker && (
+        <DateTimePicker key={mode} value={date} mode={mode} is24Hour={true} display="default" onChange={onDateTimeChange} />
+      )}
+
+      <Text style={styles.label}>Chọn thiết bị:</Text>
+      <View style={styles.deviceList}>
+        {devices.length > 0 ? devices.map((dev) => (
+          <TouchableOpacity 
+            key={dev._id} 
+            style={[styles.deviceItem, selectedDevice === dev._id && styles.deviceSelected]}
+            onPress={() => setSelectedDevice(dev._id)}
+          >
+            <Text style={{color: selectedDevice === dev._id ? '#FFF' : '#333'}}>{dev.name}</Text>
+          </TouchableOpacity>
+        )) : <Text style={{color: 'red'}}>Không có thiết bị.</Text>}
+      </View>
+
+      <View style={styles.switchRow}>
+        <Text>Hành động: {status ? "BẬT" : "TẮT"}</Text>
+        <Switch value={status} onValueChange={setStatus} />
+      </View>
+
+      <TouchableOpacity style={styles.saveBtn} onPress={createAuto}>
+        <Text style={{color: '#FFF', fontWeight: 'bold'}}>LƯU TỰ ĐỘNG HOÁ</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F5F7FA' },
-    formSection: { padding: 15, backgroundColor: '#FFF', elevation: 3 },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#2196F3', marginBottom: 10 },
-    label: { fontSize: 14, color: '#666', marginBottom: 5 },
-    input: { backgroundColor: '#F0F2F5', padding: 12, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: '#E0E0E0' },
-    devCard: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#FFF', marginRight: 10, borderRadius: 20, borderWidth: 1, borderColor: '#2196F3', justifyContent: 'center' },
-    activeCard: { backgroundColor: '#2196F3' },
-    devText: { color: '#2196F3', fontWeight: '500' },
-    activeText: { color: '#FFF' },
-    // Style mới cho phần Switch
-    switchSection: { 
-      flexDirection: 'row', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      backgroundColor: '#F8F9FA', 
-      padding: 15, 
-      borderRadius: 10, 
-      marginBottom: 20,
-      borderWidth: 1,
-      borderColor: '#ECEFF1'
-    },
-    switchLabel: { fontSize: 15, color: '#333' },
-    saveButton: { backgroundColor: '#2196F3', padding: 15, borderRadius: 10, alignItems: 'center' },
-    saveButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  container: { flex: 1, padding: 20 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold' },
+  label: { marginTop: 20, fontWeight: 'bold' },
+  input: { borderBottomWidth: 1, borderColor: '#ccc', padding: 8 },
+  timePickerBtn: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, backgroundColor: '#eee', borderRadius: 8, marginTop: 10 },
+  timeText: { fontSize: 22, fontWeight: 'bold' },
+  deviceList: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
+  deviceItem: { padding: 10, borderWidth: 1, borderRadius: 20, marginRight: 10, marginBottom: 10 },
+  deviceSelected: { backgroundColor: '#2196F3' },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
+  saveBtn: { backgroundColor: '#2196F3', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 20 }
 });
-
 export default MainAutomationScreen;
