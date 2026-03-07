@@ -175,6 +175,7 @@ export default function Device_logScreen() {
             <HistoryItem
               type={item.device?.type}
               deviceName={item.device?.name || 'Thiết bị đã xóa'}
+              roomName={item.device?.room?.name || 'Không rõ phòng'}
               userName={item.user?.name || 'Người dùng'}
               time={item.created_at}
               action={item.action}
@@ -216,6 +217,7 @@ function DropdownOption({ label, active, onPress, themeStyles }) {
 function HistoryItem({
   type,
   deviceName,
+  roomName,
   userName,
   time,
   action,
@@ -265,6 +267,10 @@ function HistoryItem({
             {formatDate(time)}
           </Text>
         </View>
+
+        <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
+          Phòng: {roomName}
+        </Text>
 
         <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
           Người dùng: {userName}
