@@ -202,3 +202,4 @@ const styles = StyleSheet.create({
   label: { fontSize: 15, fontWeight: '600', color: '#757575', letterSpacing: 0.5 },
   value: { fontSize: 15, fontWeight: '700', color: '#212121', textAlign: 'right', maxWidth: '60%' },
 });
+//

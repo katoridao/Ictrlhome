@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image, FlatList,
   ActivityIndicator, Alert, Dimensions, Modal, Animated,
@@ -146,8 +146,13 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  // Fetch 1 lần khi mount, socket tự cập nhật realtime về sau
-  useEffect(() => { fetchDevices(); }, []);
+  // ✅ FIX: Dùng useFocusEffect để fetch lại devices mỗi khi màn hình được focus
+  // Bao gồm cả khi back từ DeviceControlScreen → luôn có dữ liệu mới nhất
+  useFocusEffect(
+    useCallback(() => {
+      fetchDevices();
+    }, [fetchDevices])
+  );
 
   const handleDelete = async deviceId => {
     try {
