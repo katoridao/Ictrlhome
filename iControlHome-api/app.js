@@ -42,6 +42,22 @@ app.set("io", io);
 io.on("connection", (socket) => {
   console.log("[Socket] Client kết nối:", socket.id);
 
+  // ✅ Client join vào room theo house_id
+  // Từ đây trong device.js dùng io.to(house_id).emit(...)
+  // thay vì io.emit(...) để chỉ gửi đúng nhà, không broadcast thừa
+  socket.on("join_house", ({ house_id }) => {
+    if (!house_id) return;
+    socket.join(house_id);
+    console.log(`[Socket] ${socket.id} đã join house: ${house_id}`);
+  });
+
+  // ✅ Client rời room (khi logout hoặc chuyển nhà)
+  socket.on("leave_house", ({ house_id }) => {
+    if (!house_id) return;
+    socket.leave(house_id);
+    console.log(`[Socket] ${socket.id} đã leave house: ${house_id}`);
+  });
+
   socket.on("disconnect", () => {
     console.log("[Socket] Client ngắt kết nối:", socket.id);
   });
