@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../database/api';
 
@@ -36,6 +37,7 @@ const AddDeviceModal = ({ navigation, route }) => {
       try {
         const houseId = await AsyncStorage.getItem('current_house_id');
         if (!houseId) {
+          // Giữ lại: đây là confirm dialog cần người dùng chọn hành động
           Alert.alert(
             "Chưa chọn nhà",
             "Bạn cần chọn hoặc tạo nhà trước khi thêm thiết bị.",
@@ -58,20 +60,18 @@ const AddDeviceModal = ({ navigation, route }) => {
 
   const handleSave = async () => {
     if (!name.trim() || !esp32Id.trim()) {
-      Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin");
+      Toast.show({ type: 'error', text1: 'Thông báo', text2: 'Vui lòng nhập đầy đủ thông tin' });
       return;
     }
 
     setLoading(true);
     try {
       const houseId = await AsyncStorage.getItem('current_house_id') || 'H001';
-
-      // FIX: Không cần user._id — backend lấy user từ token qua authenticate middleware
       const payload = {
         room_id: selectedRoomId,
         name: name.trim(),
         type,
-        esp32_id: esp32Id.trim(), // FIX: đúng field name theo Device model
+        esp32_id: esp32Id.trim(),
         power_watt: parseInt(powerWatt) || 0,
         house_id: houseId,
         status: false,
@@ -85,12 +85,19 @@ const AddDeviceModal = ({ navigation, route }) => {
       }
 
       if (response.status === 200 || response.status === 201) {
-        Alert.alert("Thành công", isEditMode ? "Đã cập nhật thông tin!" : "Đã thêm thiết bị mới!");
+        Toast.show({
+          type: 'success',
+          text1: 'Thành công',
+          text2: isEditMode ? "Đã cập nhật thông tin!" : "Đã thêm thiết bị mới!",
+        });
         navigation.goBack();
       }
     } catch (error) {
-      const msg = error.response?.data?.message || "Lỗi server";
-      Alert.alert("Lỗi", msg);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: error.response?.data?.message || "Lỗi server",
+      });
     } finally {
       setLoading(false);
     }

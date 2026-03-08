@@ -9,16 +9,15 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import api from '../database/api';
+import { connectSocket, getSocket } from '../database/socket';
 
 export default function DeviceControlScreen({ route }) {
   const { device } = route.params;
-  // Khởi tạo từ route.params trước, sau đó fetch lại để đảm bảo status mới nhất
   const [status, setStatus] = useState(device.status);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  // Fetch lại device từ API khi màn hình mount
-  // Tránh hiển thị status cũ khi navigate từ màn hình đã bật/tắt hàng loạt
+  // Fetch trạng thái mới nhất khi mount
   useEffect(() => {
     const fetchLatestStatus = async () => {
       try {
@@ -27,7 +26,6 @@ export default function DeviceControlScreen({ route }) {
         const latest = devices.find(d => d._id === device._id);
         if (latest) setStatus(latest.status);
       } catch (error) {
-        // Nếu fetch thất bại thì dùng status từ route.params (đã set sẵn)
         console.warn('Không thể fetch trạng thái mới nhất:', error.message);
       } finally {
         setFetching(false);
@@ -35,6 +33,32 @@ export default function DeviceControlScreen({ route }) {
     };
     fetchLatestStatus();
   }, [device._id]);
+
+  // ─── SOCKET REALTIME ───────────────────────────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+
+    const setupSocket = async () => {
+      const socket = await connectSocket();
+
+      socket.on('device_status_changed', ({ device_id, status: newStatus }) => {
+        if (!mounted) return;
+        // Chỉ cập nhật nếu đúng thiết bị này
+        if (device_id === device._id) {
+          setStatus(newStatus);
+        }
+      });
+    };
+
+    setupSocket();
+
+    return () => {
+      mounted = false;
+      const socket = getSocket();
+      if (socket) socket.off('device_status_changed');
+    };
+  }, [device._id]);
+  // ──────────────────────────────────────────────────────────────────────────
 
   const toggleStatus = async () => {
     const newStatus = status === 1 || status === true ? 0 : 1;
@@ -76,17 +100,14 @@ export default function DeviceControlScreen({ route }) {
           <Text style={styles.label}>Tên thiết bị:</Text>
           <Text style={styles.value}>{device.name}</Text>
         </View>
-
         <View style={styles.infoRow}>
           <Text style={styles.label}>Loại thiết bị:</Text>
           <Text style={styles.value}>{device.type}</Text>
         </View>
-
         <View style={styles.infoRow}>
           <Text style={styles.label}>Mã ESP32:</Text>
           <Text style={styles.value}>{device.esp32_id}</Text>
         </View>
-
         <View style={styles.infoRow}>
           <Text style={styles.label}>Công suất:</Text>
           <Text style={styles.value}>{device.power_watt} W</Text>
@@ -95,10 +116,7 @@ export default function DeviceControlScreen({ route }) {
 
       {/* Nút bật tắt */}
       <TouchableOpacity
-        style={[
-          styles.powerButton,
-          { backgroundColor: isOn ? '#4CAF50' : '#F44336' },
-        ]}
+        style={[styles.powerButton, { backgroundColor: isOn ? '#4CAF50' : '#F44336' }]}
         onPress={toggleStatus}
         disabled={loading || fetching}
       >
@@ -127,18 +145,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#f8f9fa',
     paddingHorizontal: 20,
-  },
-  deviceName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  deviceType: {
-    fontSize: 16,
-    color: '#888',
-    marginBottom: 60,
-    letterSpacing: 2,
   },
   powerButton: {
     width: 180,
@@ -181,17 +187,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#757575',
-    letterSpacing: 0.5,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#212121',
-    textAlign: 'right',
-    maxWidth: '60%',
-  },
+  label: { fontSize: 15, fontWeight: '600', color: '#757575', letterSpacing: 0.5 },
+  value: { fontSize: 15, fontWeight: '700', color: '#212121', textAlign: 'right', maxWidth: '60%' },
 });
