@@ -16,7 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
 
 const TIME_FILTERS = ['Hôm nay', '7 ngày trước', '30 ngày trước'];
-const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt', 'Ổ cắm', 'Cảm biến'];
+const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt', 'Cảm biến'];
 
 export default function Device_logScreen() {
   const { theme, styles: themeStyles } = useTheme();
