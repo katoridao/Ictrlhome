@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const SOCKET_URL = 'http://192.168.1.110:3000';
 
 let socket = null;
-let isConnecting = false; // ✅ Tránh gọi connectSocket song song nhiều lần
+let isConnecting = false;
 
 export const getSocket = () => socket;
 
@@ -35,7 +35,6 @@ export const connectSocket = async () => {
   }
 
   const token = await AsyncStorage.getItem('token');
-  const houseId = await AsyncStorage.getItem('current_house_id');
 
   socket = io(SOCKET_URL, {
     transports: ['websocket'],
@@ -43,19 +42,35 @@ export const connectSocket = async () => {
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 2000,
-    reconnectionDelayMax: 10000, // ✅ Tối đa 10s giữa các lần thử lại
+    reconnectionDelayMax: 10000,
     timeout: 10000,
   });
 
   socket.on('connect', async () => {
+    // ✅ FIX 1: isConnecting = false phải đặt ở đây, không phải bên ngoài
+    // Trước đây đặt bên ngoài khiến nó reset quá sớm, trước khi socket thực sự connect
+    isConnecting = false;
     console.log('[Socket] Đã kết nối:', socket.id);
 
-    // ✅ Join vào room theo house_id để server có thể emit riêng cho từng nhà
-    // (cần bật tính năng này ở server — xem hướng dẫn bên dưới)
+    const currentHouseId = await AsyncStorage.getItem('current_house_id');
+    console.log('[Socket] current_house_id từ AsyncStorage:', currentHouseId);
+
+    if (currentHouseId) {
+      socket.emit('join_house', { house_id: currentHouseId });
+      console.log('[Socket] Đã emit join_house:', currentHouseId);
+    } else {
+      console.warn('[Socket] ⚠️ KHÔNG CÓ current_house_id — không thể join house!');
+    }
+  });
+
+  // ✅ FIX 2: Tự động rejoin room sau khi reconnect
+  // Khi mạng bị ngắt rồi kết nối lại, server không còn nhớ socket này ở room nào
+  socket.on('reconnect', async () => {
+    console.log('[Socket] Đã reconnect, đang rejoin house...');
     const currentHouseId = await AsyncStorage.getItem('current_house_id');
     if (currentHouseId) {
       socket.emit('join_house', { house_id: currentHouseId });
-      console.log('[Socket] Đã join house:', currentHouseId);
+      console.log('[Socket] Đã rejoin house sau reconnect:', currentHouseId);
     }
   });
 
@@ -72,20 +87,20 @@ export const connectSocket = async () => {
   });
 
   socket.on('connect_error', err => {
+    // ✅ FIX 3: Reset isConnecting khi lỗi, tránh bị kẹt mãi không tạo được socket mới
+    isConnecting = false;
     console.warn('[Socket] Lỗi kết nối:', err.message);
   });
 
-  // ✅ Server có thể emit event này khi token hết hạn
   socket.on('auth_error', () => {
     console.warn('[Socket] Token không hợp lệ, thử lấy token mới...');
     reconnectWithFreshToken();
   });
 
-  isConnecting = false;
+  // ✅ FIX 1 (tiếp): Đã xóa isConnecting = false ở đây
   return socket;
 };
 
-// ✅ Reconnect với token mới (khi token cũ hết hạn)
 const reconnectWithFreshToken = async () => {
   try {
     const freshToken = await AsyncStorage.getItem('token');
