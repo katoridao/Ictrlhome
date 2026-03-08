@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
+import { useFocusEffect } from '@react-navigation/native';
 import api from '../database/api';
 import { connectSocket, getSocket } from '../database/socket';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DeviceControlScreen({ route }) {
   const { device } = route.params;
@@ -34,31 +36,41 @@ export default function DeviceControlScreen({ route }) {
     fetchLatestStatus();
   }, [device._id]);
 
-  // ─── SOCKET REALTIME ───────────────────────────────────────────────────────
-  useEffect(() => {
-    let mounted = true;
+  // ✅ FIX: Dùng useFocusEffect thay vì useEffect([])
+  // Đảm bảo socket luôn join đúng room và listener không bị đăng ký nhiều lần
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
 
-    const setupSocket = async () => {
-      const socket = await connectSocket();
-
-      socket.on('device_status_changed', ({ device_id, status: newStatus }) => {
+      const onStatusChanged = ({ device_id, status: newStatus }) => {
         if (!mounted) return;
-        // Chỉ cập nhật nếu đúng thiết bị này
         if (device_id === device._id) {
           setStatus(newStatus);
         }
-      });
-    };
+      };
 
-    setupSocket();
+      const setupSocket = async () => {
+        const socket = await connectSocket();
 
-    return () => {
-      mounted = false;
-      const socket = getSocket();
-      if (socket) socket.off('device_status_changed');
-    };
-  }, [device._id]);
-  // ──────────────────────────────────────────────────────────────────────────
+        // ✅ FIX: Chủ động emit join_house khi màn hình focus
+        const currentHouseId = await AsyncStorage.getItem('current_house_id');
+        if (socket.connected && currentHouseId) {
+          socket.emit('join_house', { house_id: currentHouseId });
+        }
+
+        // ✅ FIX: Dùng .off().on() tránh đăng ký listener nhiều lần
+        socket.off('device_status_changed').on('device_status_changed', onStatusChanged);
+      };
+
+      setupSocket();
+
+      return () => {
+        mounted = false;
+        const socket = getSocket();
+        if (socket) socket.off('device_status_changed', onStatusChanged);
+      };
+    }, [device._id])
+  );
 
   const toggleStatus = async () => {
     const newStatus = status === 1 || status === true ? 0 : 1;

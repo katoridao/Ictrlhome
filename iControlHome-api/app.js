@@ -40,26 +40,33 @@ const io = new Server(httpServer, {
 app.set("io", io);
 
 io.on("connection", (socket) => {
-  console.log("[Socket] Client kết nối:", socket.id);
+  console.log(`[Socket] ✅ Client kết nối: ${socket.id}`);
 
-  // ✅ Client join vào room theo house_id
-  // Từ đây trong device.js dùng io.to(house_id).emit(...)
-  // thay vì io.emit(...) để chỉ gửi đúng nhà, không broadcast thừa
+  // DEBUG: log tất cả rooms hiện tại khi có client mới connect
+  const allRooms = [...io.sockets.adapter.rooms.keys()].filter(r => !r.startsWith('/'));
+  console.log(`[Socket] Tổng clients đang kết nối: ${io.sockets.sockets.size}`);
+  console.log(`[Socket] Các rooms hiện tại:`, [...io.sockets.adapter.rooms.entries()].map(([k,v]) => `${k}(${v.size})`).join(', ') || 'trống');
+
   socket.on("join_house", ({ house_id }) => {
-    if (!house_id) return;
+    if (!house_id) {
+      console.log(`[Socket] ❌ ${socket.id} gọi join_house nhưng house_id = null/undefined`);
+      return;
+    }
     socket.join(house_id);
-    console.log(`[Socket] ${socket.id} đã join house: ${house_id}`);
+    const roomSize = io.sockets.adapter.rooms.get(house_id)?.size || 0;
+    console.log(`[Socket] ✅ ${socket.id} đã join house: ${house_id} — tổng trong room: ${roomSize}`);
   });
 
-  // ✅ Client rời room (khi logout hoặc chuyển nhà)
   socket.on("leave_house", ({ house_id }) => {
     if (!house_id) return;
     socket.leave(house_id);
-    console.log(`[Socket] ${socket.id} đã leave house: ${house_id}`);
+    const roomSize = io.sockets.adapter.rooms.get(house_id)?.size || 0;
+    console.log(`[Socket] ${socket.id} đã leave house: ${house_id} — còn lại: ${roomSize}`);
   });
 
-  socket.on("disconnect", () => {
-    console.log("[Socket] Client ngắt kết nối:", socket.id);
+  socket.on("disconnect", (reason) => {
+    console.log(`[Socket] ❌ Client ngắt kết nối: ${socket.id} — lý do: ${reason}`);
+    console.log(`[Socket] Còn lại: ${io.sockets.sockets.size} clients`);
   });
 });
 

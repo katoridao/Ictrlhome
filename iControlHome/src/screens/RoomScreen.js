@@ -54,11 +54,13 @@ export default function RoomScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => { fetchRooms(); }, []));
 
-  useEffect(() => {
-    let mounted = true;
-    const setupSocket = async () => {
-      const socket = await connectSocket();
-      socket.on('device_status_changed', ({ device_id, status }) => {
+  // ✅ FIX: Dùng useFocusEffect thay vì useEffect([]) cho socket
+  // Đảm bảo join đúng room và listener không bị đăng ký nhiều lần
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+
+      const onStatusChanged = ({ device_id, status }) => {
         if (!mounted) return;
         setRooms(prev =>
           prev.map(room => {
@@ -71,15 +73,30 @@ export default function RoomScreen({ navigation }) {
             return { ...room, devices: updatedDevices, onCount };
           })
         );
-      });
-    };
-    setupSocket();
-    return () => {
-      mounted = false;
-      const socket = getSocket();
-      if (socket) socket.off('device_status_changed');
-    };
-  }, []);
+      };
+
+      const setupSocket = async () => {
+        const socket = await connectSocket();
+
+        // ✅ FIX: Chủ động emit join_house khi màn hình focus
+        const currentHouseId = await AsyncStorage.getItem('current_house_id');
+        if (socket.connected && currentHouseId) {
+          socket.emit('join_house', { house_id: currentHouseId });
+        }
+
+        // ✅ FIX: Dùng .off().on() tránh đăng ký listener nhiều lần
+        socket.off('device_status_changed').on('device_status_changed', onStatusChanged);
+      };
+
+      setupSocket();
+
+      return () => {
+        mounted = false;
+        const socket = getSocket();
+        if (socket) socket.off('device_status_changed', onStatusChanged);
+      };
+    }, [])
+  );
 
   const handleSave = async () => {
     if (!roomName.trim()) return;
@@ -103,7 +120,6 @@ export default function RoomScreen({ navigation }) {
   };
 
   const handleDelete = async id => {
-    // Giữ lại: đây là confirm dialog cần người dùng xác nhận
     Alert.alert('Xác nhận', 'Xóa phòng này?', [
       { text: 'Hủy', style: 'cancel' },
       {

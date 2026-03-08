@@ -175,14 +175,19 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
       action: status ? "ON" : "OFF",
     });
 
-    // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
+    // DEBUG
     const io = req.app.get("io");
+    console.log("[DEBUG] io exists:", !!io);
+    console.log("[DEBUG] device.house_id:", device.house_id);
     if (io) {
+      const room = io.sockets.adapter.rooms.get(device.house_id);
+      console.log("[DEBUG] clients in room:", room ? room.size : 0);
       io.to(device.house_id).emit("device_status_changed", {
         device_id: device._id.toString(),
         status: device.status,
         house_id: device.house_id,
       });
+      console.log("[DEBUG] emitted device_status_changed to", device.house_id);
     }
 
     res.json({ device });

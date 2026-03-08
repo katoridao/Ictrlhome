@@ -27,48 +27,63 @@ export default function HomeScreen({ navigation }) {
   const sheetAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    let mounted = true;
+  // ✅ FIX: Dùng useFocusEffect thay vì useEffect([])
+  // useEffect([]) chỉ chạy 1 lần khi mount — nếu lúc đó socket chưa join room thì mất luôn
+  // useFocusEffect chạy mỗi khi màn hình được focus → đảm bảo luôn join đúng room
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
 
-    // Dùng named functions để socket.off chỉ xóa đúng listener này
-    const onStatusChanged = ({ device_id, status }) => {
-      if (!mounted) return;
-      setDevices(prev => prev.map(d => d._id === device_id ? { ...d, status } : d));
-    };
-    const onDeviceAdded = ({ device }) => {
-      if (!mounted) return;
-      setDevices(prev => prev.some(d => d._id === device._id) ? prev : [...prev, device]);
-    };
-    const onDeviceUpdated = ({ device }) => {
-      if (!mounted) return;
-      setDevices(prev => prev.map(d => d._id === device._id ? { ...d, ...device } : d));
-    };
-    const onDeviceDeleted = ({ device_id }) => {
-      if (!mounted) return;
-      setDevices(prev => prev.filter(d => d._id !== device_id));
-    };
+      const onStatusChanged = ({ device_id, status }) => {
+        if (!mounted) return;
+        setDevices(prev => prev.map(d => d._id === device_id ? { ...d, status } : d));
+      };
+      const onDeviceAdded = ({ device }) => {
+        if (!mounted) return;
+        setDevices(prev => prev.some(d => d._id === device._id) ? prev : [...prev, device]);
+      };
+      const onDeviceUpdated = ({ device }) => {
+        if (!mounted) return;
+        setDevices(prev => prev.map(d => d._id === device._id ? { ...d, ...device } : d));
+      };
+      const onDeviceDeleted = ({ device_id }) => {
+        if (!mounted) return;
+        setDevices(prev => prev.filter(d => d._id !== device_id));
+      };
 
-    const setupSocket = async () => {
-      const socket = await connectSocket();
-      socket.on('device_status_changed', onStatusChanged);
-      socket.on('device_added', onDeviceAdded);
-      socket.on('device_updated', onDeviceUpdated);
-      socket.on('device_deleted', onDeviceDeleted);
-    };
+      const setupSocket = async () => {
+        const s = await connectSocket();
 
-    setupSocket();
+        // ✅ FIX: Chủ động emit join_house mỗi khi màn hình focus
+        // Phòng trường hợp socket đã connected nhưng chưa ở trong room
+        // (vd: reconnect sau mất mạng, hoặc navigate đi rồi quay lại)
+        const currentHouseId = await AsyncStorage.getItem('current_house_id');
+        if (s.connected && currentHouseId) {
+          s.emit('join_house', { house_id: currentHouseId });
+        }
 
-    return () => {
-      mounted = false;
-      const s = getSocket();
-      if (s) {
-        s.off('device_status_changed', onStatusChanged);
-        s.off('device_added', onDeviceAdded);
-        s.off('device_updated', onDeviceUpdated);
-        s.off('device_deleted', onDeviceDeleted);
-      }
-    };
-  }, []);
+        // ✅ FIX: Dùng .off().on() thay vì chỉ .on()
+        // Tránh listener bị đăng ký nhiều lần khi useFocusEffect chạy lại
+        s.off('device_status_changed').on('device_status_changed', onStatusChanged);
+        s.off('device_added').on('device_added', onDeviceAdded);
+        s.off('device_updated').on('device_updated', onDeviceUpdated);
+        s.off('device_deleted').on('device_deleted', onDeviceDeleted);
+      };
+
+      setupSocket();
+
+      return () => {
+        mounted = false;
+        const s = getSocket();
+        if (s) {
+          s.off('device_status_changed', onStatusChanged);
+          s.off('device_added', onDeviceAdded);
+          s.off('device_updated', onDeviceUpdated);
+          s.off('device_deleted', onDeviceDeleted);
+        }
+      };
+    }, [])
+  );
 
   const openSheet = item => {
     setSelectedDevice(item);
@@ -131,11 +146,9 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  // ✅ Chỉ fetch lần đầu khi focus — socket xử lý realtime về sau
-  // Chỉ fetch 1 lần khi mount, socket tự cập nhật realtime về sau
-  useEffect(() => { fetchDevices(); }, []); // eslint-disable-line
+  // Fetch 1 lần khi mount, socket tự cập nhật realtime về sau
+  useEffect(() => { fetchDevices(); }, []);
 
-  // ✅ Xóa: cập nhật state local ngay, không cần fetchDevices lại
   const handleDelete = async deviceId => {
     try {
       await api.delete(`/devices/${deviceId}`);
