@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ⚠️ Thay bằng IP server thực tế của bạn (cùng mạng WiFi)
-const SOCKET_URL = 'http://192.168.2.3:3000';
+const SOCKET_URL = 'http://192.168.1.110:3000';
 
 let socket = null;
 let isConnecting = false;
