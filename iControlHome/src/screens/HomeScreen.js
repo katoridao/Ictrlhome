@@ -27,20 +27,58 @@ export default function HomeScreen({ navigation }) {
   const sheetAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
+  // ✅ Lắng nghe tất cả socket events liên quan đến thiết bị
   useEffect(() => {
     let mounted = true;
+
     const setupSocket = async () => {
       const socket = await connectSocket();
+
+      // Bật/Tắt thiết bị (đã có sẵn)
       socket.on('device_status_changed', ({ device_id, status }) => {
         if (!mounted) return;
-        setDevices(prev => prev.map(d => d._id === device_id ? { ...d, status } : d));
+        setDevices(prev =>
+          prev.map(d => d._id === device_id ? { ...d, status } : d)
+        );
+      });
+
+      // ✅ Có thiết bị mới được thêm từ máy khác
+      socket.on('device_added', ({ device }) => {
+        if (!mounted) return;
+        setDevices(prev => {
+          // Tránh duplicate nếu chính máy này thêm
+          const exists = prev.some(d => d._id === device._id);
+          if (exists) return prev;
+          return [...prev, device];
+        });
+      });
+
+      // ✅ Thiết bị được sửa từ máy khác
+      socket.on('device_updated', ({ device }) => {
+        if (!mounted) return;
+        setDevices(prev =>
+          prev.map(d => d._id === device._id ? { ...d, ...device } : d)
+        );
+      });
+
+      // ✅ Thiết bị bị xóa từ máy khác
+      socket.on('device_deleted', ({ device_id }) => {
+        if (!mounted) return;
+        setDevices(prev => prev.filter(d => d._id !== device_id));
       });
     };
+
     setupSocket();
+
     return () => {
       mounted = false;
       const socket = getSocket();
-      if (socket) socket.off('device_status_changed');
+      if (socket) {
+        socket.off('device_status_changed');
+        socket.off('device_added');
+        socket.off('device_updated');
+        socket.off('device_deleted');
+      }
     };
   }, []);
 
@@ -105,13 +143,15 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
+  // ✅ Chỉ fetch lần đầu khi focus — socket xử lý realtime về sau
   useFocusEffect(useCallback(() => { fetchDevices(); }, [fetchDevices]));
 
+  // ✅ Xóa: cập nhật state local ngay, không cần fetchDevices lại
   const handleDelete = async deviceId => {
     try {
       await api.delete(`/devices/${deviceId}`);
+      // UI sẽ tự cập nhật qua socket event 'device_deleted'
       Toast.show({ type: 'success', text1: 'Thành công', text2: 'Đã xóa thiết bị!' });
-      fetchDevices();
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Bạn không có quyền thực hiện hành động này.' });
     }
@@ -277,7 +317,6 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.sheetActionArrow}>›</Text>
           </TouchableOpacity>
 
-          {/* Giữ lại confirm dialog xóa */}
           <TouchableOpacity
             style={styles.sheetAction}
             activeOpacity={0.7}
