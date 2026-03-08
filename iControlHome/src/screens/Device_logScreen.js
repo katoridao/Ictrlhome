@@ -30,6 +30,19 @@ export default function Device_logScreen() {
   const [device, setDevice] = useState('Tất cả');
   const [time, setTime] = useState('Hôm nay');
 
+  const getDeviceTypeValue = deviceName => {
+    switch (deviceName) {
+      case 'Đèn':
+        return 'light';
+      case 'Quạt':
+        return 'fan';
+      case 'Cảm biến':
+        return 'sensor';
+      default:
+        return 'Tất cả';
+    }
+  };
+
   const fetchData = useCallback(async () => {
     const houseId = await AsyncStorage.getItem('current_house_id');
     if (!houseId) throw new Error('Chưa chọn nhà');
@@ -40,10 +53,15 @@ export default function Device_logScreen() {
     if (time === '7 ngày trước') params.period = 'week';
     if (time === '30 ngày trước') params.period = 'month';
 
+    // thêm loại thiết bị vào params
+    if (device !== 'Tất cả') {
+      params.device_type = getDeviceTypeValue(device);
+    }
+
     const response = await api.get('/device-logs', { params });
 
     return response.data.logs || [];
-  }, [time]);
+  }, [time, device]);
 
   useEffect(() => {
     if (isFocused) {

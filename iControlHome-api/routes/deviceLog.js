@@ -6,7 +6,7 @@ const { authenticate, checkHouseMembership } = require("../middlewares/auth");
 
 router.get("/", authenticate, checkHouseMembership, async (req, res) => {
   try {
-    const { period, house_id } = req.query;
+    const { period, house_id, device_type } = req.query;
 
     if (!house_id) {
       return res.status(400).json({ message: "Thiếu house_id" });
@@ -15,7 +15,14 @@ router.get("/", authenticate, checkHouseMembership, async (req, res) => {
     let filter = {};
 
     // lấy danh sách device theo house
-    const devices = await Device.find({ house_id }).select("_id");
+    let deviceFilter = { house_id };
+
+    // lọc theo loại thiết bị nếu có
+    if (device_type && device_type !== "Tất cả") {
+      deviceFilter.type = device_type;
+    }
+
+    const devices = await Device.find(deviceFilter).select("_id");
     const deviceIds = devices.map((d) => d._id);
 
     filter.device_id = { $in: deviceIds };
