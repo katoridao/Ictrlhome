@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ⚠️ Thay bằng IP server thực tế của bạn (cùng mạng WiFi)
-const SOCKET_URL = 'http://192.168.1.x:3000';
+const SOCKET_URL = 'http://192.168.1.110:3000';
 
 let socket = null;
 
@@ -25,11 +25,11 @@ export const connectSocket = async () => {
     console.log('[Socket] Đã kết nối:', socket.id);
   });
 
-  socket.on('disconnect', (reason) => {
+  socket.on('disconnect', reason => {
     console.log('[Socket] Ngắt kết nối:', reason);
   });
 
-  socket.on('connect_error', (err) => {
+  socket.on('connect_error', err => {
     console.warn('[Socket] Lỗi kết nối:', err.message);
   });
 
