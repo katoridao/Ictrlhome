@@ -26,6 +26,13 @@ const HouseSchema = new mongoose.Schema(
       },
     ],
 
+    // Mật khẩu tham gia nhà — member nhập để xin vào nhà
+    // Mặc định "123456", OWNER có thể đổi sau
+    join_password: {
+      type: String,
+      default: "123456",
+    },
+
     electricity: {
       price_per_kwh: {
         type: Number,

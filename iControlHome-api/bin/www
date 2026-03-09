@@ -4,9 +4,8 @@
  * Module dependencies.
  */
 
-var app = require("../app");
+var { app, httpServer } = require("../app");
 var debug = require("debug")("ictrlhome-api:server");
-var http = require("http");
 
 /**
  * Get port from environment and store in Express.
@@ -16,10 +15,10 @@ var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
 
 /**
- * Create HTTP server.
+ * Use the HTTP server created in app.js (includes Socket.IO).
  */
 
-var server = http.createServer(app);
+var server = httpServer;
 
 /**
  * Listen on provided port, on all network interfaces.

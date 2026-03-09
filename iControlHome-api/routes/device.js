@@ -7,11 +7,8 @@ const Room = require("../models/Room");
 const { authenticate, isOwner, canControlDevice, checkHouseMembership } = require("../middlewares/auth");
 
 // Helper: kiểm tra can_control cho MEMBER
-// Ưu tiên: quyền phòng > quyền thiết bị đơn lẻ (nhất quán với auth.js)
 const resolveCanControl = async (userId, device) => {
-  // Ưu tiên 1: quyền theo PHÒNG (nếu thiết bị đã gắn phòng)
   if (device.room_id) {
-    // room_id có thể đã populate (object) hoặc chưa (ObjectId)
     const roomId = device.room_id._id || device.room_id;
     const room = await Room.findById(roomId);
     if (room) {
@@ -21,8 +18,6 @@ const resolveCanControl = async (userId, device) => {
       if (roomPerm?.can_control) return true;
     }
   }
-
-  // Ưu tiên 2: quyền theo THIẾT BỊ đơn lẻ
   const devicePerm = device.permissions.find(
     p => p.user_id.toString() === userId.toString()
   );
@@ -30,8 +25,6 @@ const resolveCanControl = async (userId, device) => {
 };
 
 // 1. Lấy danh sách thiết bị
-// OWNER : thấy + điều khiển tất cả
-// MEMBER: thấy tất cả (blur nếu chưa có quyền), can_control = true/false
 router.get("/", authenticate, checkHouseMembership, async (req, res) => {
   try {
     if (!req.isHouseMember) {
@@ -47,18 +40,14 @@ router.get("/", authenticate, checkHouseMembership, async (req, res) => {
       query.room_id = room_id === "null" ? null : room_id;
     }
 
-    // populate "name" và "permissions" của phòng để resolveCanControl dùng luôn
     const allDevices = await Device.find(query).populate("room_id", "name permissions");
 
-    // OWNER thấy tất cả, luôn có quyền điều khiển
     if (role === "OWNER") {
       return res.json({
         devices: allDevices.map(d => ({ ...d.toObject(), can_control: true })),
       });
     }
 
-    // MEMBER: trả về TẤT CẢ thiết bị
-    // can_control = true nếu có quyền qua phòng HOẶC quyền thiết bị đơn lẻ
     const devicesWithPermission = await Promise.all(
       allDevices.map(async device => {
         const can_control = await resolveCanControl(userId, device);
@@ -91,7 +80,19 @@ router.post("/", authenticate, isOwner, async (req, res) => {
       status: false,
     });
 
-    res.status(201).json({ device });
+    // ✅ Populate room_id để client hiển thị tên phòng ngay
+    const populated = await Device.findById(device._id).populate("room_id", "name permissions");
+
+    // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
+    const io = req.app.get("io");
+    if (io) {
+      io.to("H001").emit("device_added", {
+        device: { ...populated.toObject(), can_control: true },
+        house_id: "H001",
+      });
+    }
+
+    res.status(201).json({ device: populated });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
   }
@@ -106,10 +107,19 @@ router.put("/:id", authenticate, isOwner, async (req, res) => {
       { _id: req.params.id, house_id: "H001" },
       { name: name?.trim(), type, esp32_id, room_id, power_watt },
       { new: true }
-    );
+    ).populate("room_id", "name permissions");
 
     if (!updatedDevice) {
       return res.status(404).json({ message: "Không tìm thấy thiết bị" });
+    }
+
+    // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
+    const io = req.app.get("io");
+    if (io) {
+      io.to("H001").emit("device_updated", {
+        device: { ...updatedDevice.toObject(), can_control: true },
+        house_id: "H001",
+      });
     }
 
     res.json({ device: updatedDevice });
@@ -118,7 +128,7 @@ router.put("/:id", authenticate, isOwner, async (req, res) => {
   }
 });
 
-// 4. Bật/Tắt thiết bị (OWNER hoặc MEMBER có quyền phòng/thiết bị)
+// 4. Bật/Tắt thiết bị — emit socket event sau khi update
 router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
   try {
     const { status } = req.body;
@@ -165,6 +175,21 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
       action: status ? "ON" : "OFF",
     });
 
+    // DEBUG
+    const io = req.app.get("io");
+    console.log("[DEBUG] io exists:", !!io);
+    console.log("[DEBUG] device.house_id:", device.house_id);
+    if (io) {
+      const room = io.sockets.adapter.rooms.get(device.house_id);
+      console.log("[DEBUG] clients in room:", room ? room.size : 0);
+      io.to(device.house_id).emit("device_status_changed", {
+        device_id: device._id.toString(),
+        status: device.status,
+        house_id: device.house_id,
+      });
+      console.log("[DEBUG] emitted device_status_changed to", device.house_id);
+    }
+
     res.json({ device });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
@@ -179,8 +204,19 @@ router.put("/assign-room/:id", authenticate, isOwner, async (req, res) => {
       { _id: req.params.id, house_id: "H001" },
       { room_id },
       { new: true }
-    );
+    ).populate("room_id", "name permissions");
+
     if (!updatedDevice) return res.status(404).json({ message: "Không tìm thấy thiết bị" });
+
+    // ✅ Emit realtime khi gán phòng — chỉ gửi đến cùng nhà
+    const io = req.app.get("io");
+    if (io) {
+      io.to("H001").emit("device_updated", {
+        device: { ...updatedDevice.toObject(), can_control: true },
+        house_id: "H001",
+      });
+    }
+
     res.json({ device: updatedDevice });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
@@ -197,6 +233,16 @@ router.delete("/:id", authenticate, isOwner, async (req, res) => {
     if (!deletedDevice) {
       return res.status(404).json({ message: "Không tìm thấy thiết bị" });
     }
+
+    // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
+    const io = req.app.get("io");
+    if (io) {
+      io.to("H001").emit("device_deleted", {
+        device_id: deletedDevice._id.toString(),
+        house_id: "H001",
+      });
+    }
+
     res.json({ message: "Xóa thiết bị thành công" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server khi xóa" });

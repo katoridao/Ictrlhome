@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
 
@@ -26,7 +27,7 @@ export const ManageMembersScreen = ({ navigation }) => {
       const response = await api.get(`/houses/${houseId}`);
       setMembers(response.data.members || []);
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể tải danh sách thành viên.');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể tải danh sách thành viên.' });
     } finally {
       setLoading(false);
     }
@@ -36,21 +37,25 @@ export const ManageMembersScreen = ({ navigation }) => {
 
   const handleAddMember = async () => {
     const cleanPhone = phone.trim();
-    if (!cleanPhone) { Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại'); return; }
+    if (!cleanPhone) {
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Vui lòng nhập số điện thoại' });
+      return;
+    }
     setAdding(true);
     try {
       const response = await api.post('/houses/add-member', { phone: cleanPhone });
-      Alert.alert('Thành công', response.data.message);
+      Toast.show({ type: 'success', text1: 'Thành công', text2: response.data.message });
       setPhone('');
       setMembers(response.data.house.members || []);
     } catch (error) {
-      Alert.alert('Lỗi', error.response?.data?.message || 'Không thể thêm thành viên');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: error.response?.data?.message || 'Không thể thêm thành viên' });
     } finally {
       setAdding(false);
     }
   };
 
   const handleRemoveMember = (member) => {
+    // Giữ lại: đây là confirm dialog cần người dùng xác nhận
     Alert.alert('Xóa thành viên', `Bạn có chắc muốn xóa ${member.name || member.phone}?`, [
       { text: 'Hủy', style: 'cancel' },
       {
@@ -58,8 +63,9 @@ export const ManageMembersScreen = ({ navigation }) => {
           try {
             const response = await api.delete('/houses/remove-member', { data: { member_id: member._id } });
             setMembers(response.data.house.members || []);
+            Toast.show({ type: 'success', text1: 'Đã xóa', text2: `${member.name || member.phone} đã bị xóa khỏi nhà.` });
           } catch (error) {
-            Alert.alert('Lỗi', error.response?.data?.message || 'Không thể xóa');
+            Toast.show({ type: 'error', text1: 'Lỗi', text2: error.response?.data?.message || 'Không thể xóa' });
           }
         }
       }
@@ -131,7 +137,7 @@ export const ManageMembersScreen = ({ navigation }) => {
 export const MemberPermissionScreen = ({ route }) => {
   const { member } = route.params;
   const { styles: themeStyles } = useTheme();
-  const [sections, setSections] = useState([]); // [{title, roomId, type, data}]
+  const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
@@ -139,8 +145,6 @@ export const MemberPermissionScreen = ({ route }) => {
     try {
       setLoading(true);
       const houseId = await AsyncStorage.getItem('current_house_id') || 'H001';
-
-      // Lấy danh sách phòng và thiết bị song song
       const [roomsRes, devicesRes] = await Promise.all([
         api.get('/rooms'),
         api.get('/devices', { params: { house_id: houseId } }),
@@ -148,29 +152,20 @@ export const MemberPermissionScreen = ({ route }) => {
 
       const rooms = roomsRes.data.rooms || [];
       const allDevices = devicesRes.data.devices || [];
-
-      // Xây dựng sections:
-      // Section 1..N: Mỗi phòng + các thiết bị trong phòng đó
-      // Section cuối: Thiết bị chưa gán phòng (chỉ cấp quyền đơn lẻ)
       const builtSections = [];
 
-      // Các phòng
       for (const room of rooms) {
         const roomPerm = room.permissions?.find(
           (p) => p.user_id === member._id || p.user_id?.toString() === member._id
         );
-
         const devicesInRoom = allDevices.filter(
           (d) => d.room_id?.toString() === room._id?.toString()
         );
-
         builtSections.push({
           roomId: room._id,
           title: room.name,
           type: 'room',
-          roomPerm: {
-            can_control: roomPerm?.can_control ?? false,
-          },
+          roomPerm: { can_control: roomPerm?.can_control ?? false },
           data: devicesInRoom.map((d) => {
             const dp = d.permissions?.find(
               (p) => p.user_id === member._id || p.user_id?.toString() === member._id
@@ -180,7 +175,6 @@ export const MemberPermissionScreen = ({ route }) => {
         });
       }
 
-      // Thiết bị chưa gán phòng
       const unassigned = allDevices.filter((d) => !d.room_id);
       if (unassigned.length > 0) {
         builtSections.push({
@@ -207,7 +201,6 @@ export const MemberPermissionScreen = ({ route }) => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Toggle quyền PHÒNG
   const toggleRoomPermission = async (roomId, field, currentValue) => {
     const key = `room_${roomId}_${field}`;
     setUpdatingId(key);
@@ -217,19 +210,17 @@ export const MemberPermissionScreen = ({ route }) => {
         member_id: member._id,
         [field]: newValue,
       });
-
       setSections((prev) => prev.map((s) => {
         if (s.roomId?.toString() !== roomId?.toString()) return s;
         return { ...s, roomPerm: { ...s.roomPerm, [field]: newValue } };
       }));
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể cập nhật quyền phòng');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể cập nhật quyền phòng' });
     } finally {
       setUpdatingId(null);
     }
   };
 
-  // Toggle quyền THIẾT BỊ đơn lẻ
   const toggleDevicePermission = async (deviceId, currentValue) => {
     setUpdatingId(deviceId);
     try {
@@ -238,17 +229,14 @@ export const MemberPermissionScreen = ({ route }) => {
         member_id: member._id,
         can_control: newValue,
       });
-
       setSections((prev) => prev.map((s) => ({
         ...s,
         data: s.data.map((d) =>
-          d._id === deviceId
-            ? { ...d, devicePerm: { can_control: newValue } }
-            : d
+          d._id === deviceId ? { ...d, devicePerm: { can_control: newValue } } : d
         ),
       })));
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể cập nhật quyền thiết bị');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể cập nhật quyền thiết bị' });
     } finally {
       setUpdatingId(null);
     }
@@ -263,8 +251,6 @@ export const MemberPermissionScreen = ({ route }) => {
         />
         <Text style={[styles.sectionHeaderText, { color: themeStyles.text }]}>{section.title}</Text>
       </View>
-
-      {/* Toggle quyền phòng (chỉ hiện với phòng thực) */}
       {section.type === 'room' && section.roomPerm !== null && (
         <View style={styles.roomToggles}>
           <View style={styles.toggleGroup}>
@@ -291,13 +277,9 @@ export const MemberPermissionScreen = ({ route }) => {
         <Text style={[styles.deviceName, { color: themeStyles.text }]}>{item.name}</Text>
         <Text style={{ color: themeStyles.subText, fontSize: 11 }}>
           {item.type ? item.type.toUpperCase() : 'UNKNOWN'}
-          {section.type === 'room' && section.roomPerm?.can_control
-            ? '  •  Có quyền từ phòng'
-            : ''}
+          {section.type === 'room' && section.roomPerm?.can_control ? '  •  Có quyền từ phòng' : ''}
         </Text>
       </View>
-
-      {/* Quyền thiết bị đơn lẻ — luôn hiện để override */}
       <View style={styles.toggleGroup}>
         <Text style={[styles.toggleLabel, { color: themeStyles.subText }]}>Riêng lẻ</Text>
         {updatingId === item._id ? (
@@ -334,7 +316,6 @@ export const MemberPermissionScreen = ({ route }) => {
         </View>
       </View>
 
-      {/* Ghi chú hướng dẫn */}
       <View style={[styles.noteBox, { backgroundColor: themeStyles.card }]}>
         <MaterialCommunityIcons name="information-outline" size={16} color={themeStyles.primary} />
         <Text style={[styles.noteText, { color: themeStyles.subText }]}>

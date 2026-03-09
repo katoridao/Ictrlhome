@@ -16,7 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
 
 const TIME_FILTERS = ['Hôm nay', '7 ngày trước', '30 ngày trước'];
-const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt', 'Ổ cắm', 'Cảm biến'];
+const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt', 'Cảm biến'];
 
 export default function Device_logScreen() {
   const { theme, styles: themeStyles } = useTheme();
@@ -30,6 +30,19 @@ export default function Device_logScreen() {
   const [device, setDevice] = useState('Tất cả');
   const [time, setTime] = useState('Hôm nay');
 
+  const getDeviceTypeValue = deviceName => {
+    switch (deviceName) {
+      case 'Đèn':
+        return 'light';
+      case 'Quạt':
+        return 'fan';
+      case 'Cảm biến':
+        return 'sensor';
+      default:
+        return 'Tất cả';
+    }
+  };
+
   const fetchData = useCallback(async () => {
     const houseId = await AsyncStorage.getItem('current_house_id');
     if (!houseId) throw new Error('Chưa chọn nhà');
@@ -40,10 +53,15 @@ export default function Device_logScreen() {
     if (time === '7 ngày trước') params.period = 'week';
     if (time === '30 ngày trước') params.period = 'month';
 
+    // thêm loại thiết bị vào params
+    if (device !== 'Tất cả') {
+      params.device_type = getDeviceTypeValue(device);
+    }
+
     const response = await api.get('/device-logs', { params });
 
     return response.data.logs || [];
-  }, [time]);
+  }, [time, device]);
 
   useEffect(() => {
     if (isFocused) {
@@ -175,6 +193,7 @@ export default function Device_logScreen() {
             <HistoryItem
               type={item.device?.type}
               deviceName={item.device?.name || 'Thiết bị đã xóa'}
+              roomName={item.device?.room?.name || 'Không rõ phòng'}
               userName={item.user?.name || 'Người dùng'}
               time={item.created_at}
               action={item.action}
@@ -216,6 +235,7 @@ function DropdownOption({ label, active, onPress, themeStyles }) {
 function HistoryItem({
   type,
   deviceName,
+  roomName,
   userName,
   time,
   action,
@@ -265,6 +285,10 @@ function HistoryItem({
             {formatDate(time)}
           </Text>
         </View>
+
+        <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
+          Phòng: {roomName}
+        </Text>
 
         <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
           Người dùng: {userName}

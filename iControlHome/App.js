@@ -24,17 +24,15 @@ import NotificationSettingScreen from './src/screens/NotificationSettingScreen';
 import AppearanceScreen from './src/screens/AppearanceScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import StatisticsScreen from './src/screens/StatisticsScreen';
+import JoinHouseScreen from './src/screens/JoinHouseScreen';
 
 // Import Screens - Member Management & Permissions
-import {
-  ManageMembersScreen,
-  MemberPermissionScreen,
-} from './src/screens/MemberManagement';
+import { ManageMembersScreen, MemberPermissionScreen } from './src/screens/MemberManagement';
 
 // Import Navigation - Tab
 import MainTab from './src/navigation/MainTab';
 
-// === THÊM MÀN HÌNH TỰ ĐỘNG HÓA ===
+// Automation Screen
 import MainAutomationScreen from './src/screens/MainAutomationScreen';
 
 const Stack = createNativeStackNavigator();
@@ -47,33 +45,31 @@ export default function App() {
           screenOptions={{ headerShown: false }}
           initialRouteName="Welcome"
         >
-          {/* 1. Luồng khởi đầu (Auth) */}
+
+          {/* Auth */}
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen
-            name="ForgotPassword"
-            component={ForgotPasswordScreen}
-          />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
 
-          {/* 2. Luồng Chính (Đã bao gồm các Tab: Home, Room, Script, Device_log, Setting) */}
+          {/* Main Tab */}
           <Stack.Screen name="Main" component={MainTab} />
 
-          {/* 3. Quản lý thiết bị */}
+          {/* Device */}
           <Stack.Screen name="AddDevice" component={AddDeviceModal} />
           <Stack.Screen name="EditDevice" component={AddDeviceModal} />
           <Stack.Screen
             name="DeviceControl"
             component={DeviceControlScreen}
-            options={{ 
-              headerShown: true, 
+            options={{
+              headerShown: true,
               title: 'Điều khiển thiết bị',
               headerStyle: { backgroundColor: '#2196F3' },
-              headerTintColor: '#fff',
+              headerTintColor: '#fff'
             }}
           />
 
-          {/* 4. Quản lý phòng */}
+          {/* Room */}
           <Stack.Screen
             name="RoomDetail"
             component={RoomDetailScreen}
@@ -81,33 +77,31 @@ export default function App() {
               headerShown: true,
               title: 'Chi tiết phòng',
               headerStyle: { backgroundColor: '#2196F3' },
-              headerTintColor: '#fff',
+              headerTintColor: '#fff'
             }}
           />
 
-          {/* 5. Cài đặt & Cá nhân hóa */}
+          {/* Settings */}
           <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen
-            name="NotificationSetting"
-            component={NotificationSettingScreen}
-          />
+          <Stack.Screen name="NotificationSetting" component={NotificationSettingScreen} />
           <Stack.Screen name="AppearanceScreen" component={AppearanceScreen} />
           <Stack.Screen name="StatisticsScreen" component={StatisticsScreen} />
+          <Stack.Screen name="JoinHouse" component={JoinHouseScreen} />
 
-          {/* 6. MÀN HÌNH TỰ ĐỘNG HÓA & THÔNG BÁO (Mới thêm) */}
-          <Stack.Screen 
-            name="Automation" 
-            component={MainAutomationScreen} 
+          {/* Automation */}
+          <Stack.Screen
+            name="Automation"
+            component={MainAutomationScreen}
             options={{
               headerShown: true,
               title: 'Thiết lập Tự động hóa',
               headerStyle: { backgroundColor: '#2196F3' },
               headerTintColor: '#fff',
-              headerTitleAlign: 'center',
+              headerTitleAlign: 'center'
             }}
           />
 
-          {/* 7. Quản lý Thành viên & Phân quyền */}
+          {/* Member Management */}
           <Stack.Screen
             name="ManageMembers"
             component={ManageMembersScreen}
@@ -116,9 +110,10 @@ export default function App() {
               title: 'Quản lý thành viên',
               headerStyle: { backgroundColor: '#2196F3' },
               headerTintColor: '#fff',
-              headerTitleAlign: 'center',
+              headerTitleAlign: 'center'
             }}
           />
+
           <Stack.Screen
             name="MemberPermission"
             component={MemberPermissionScreen}
@@ -127,13 +122,13 @@ export default function App() {
               title: 'Phân quyền thiết bị',
               headerStyle: { backgroundColor: '#2196F3' },
               headerTintColor: '#fff',
-              headerTitleAlign: 'center',
+              headerTitleAlign: 'center'
             }}
           />
+
         </Stack.Navigator>
       </NavigationContainer>
 
-      {/* Hiển thị thông báo Toast toàn cục */}
       <Toast />
     </ThemeProvider>
   );
