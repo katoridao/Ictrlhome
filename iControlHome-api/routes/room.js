@@ -149,13 +149,15 @@ router.post(
       // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
       const io = req.app.get("io");
       if (io) {
-        console.log("[Room Permission] Emit permission_updated to H001");
-        io.to("H001").emit("permission_updated", {
+        console.log(
+          `[Room Permission] Emit permission_updated to ${room.house_id}`,
+        );
+        io.to(room.house_id.toString()).emit("permission_updated", {
           room_id: room._id.toString(),
           user_id: member_id,
           can_view: can_view ?? true,
           can_control: can_control ?? false,
-          house_id: "H001",
+          house_id: room.house_id,
         });
       }
 
@@ -191,11 +193,13 @@ router.delete(
       // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
       const io = req.app.get("io");
       if (io) {
-        console.log("[Room Permission] Emit permission_removed to H001");
-        io.to("H001").emit("permission_removed", {
+        console.log(
+          `[Room Permission] Emit permission_removed to ${room.house_id}`,
+        );
+        io.to(room.house_id.toString()).emit("permission_removed", {
           room_id: room._id.toString(),
           user_id: member_id,
-          house_id: "H001",
+          house_id: room.house_id,
         });
       }
 
