@@ -64,6 +64,15 @@ export default function HomeScreen({ navigation }) {
         if (!mounted) return;
         setDevices(prev => prev.filter(d => d._id !== device_id));
       };
+      const onPermissionUpdated = () => {
+        if (!mounted) return;
+        fetchDevices();
+      };
+
+      const onPermissionRemoved = () => {
+        if (!mounted) return;
+        fetchDevices();
+      };
 
       const setupSocket = async () => {
         try {
@@ -76,6 +85,13 @@ export default function HomeScreen({ navigation }) {
           socket.off('device_added').on('device_added', onDeviceAdded);
           socket.off('device_updated').on('device_updated', onDeviceUpdated);
           socket.off('device_deleted').on('device_deleted', onDeviceDeleted);
+          socket
+            .off('permission_updated')
+            .on('permission_updated', onPermissionUpdated);
+
+          socket
+            .off('permission_removed')
+            .on('permission_removed', onPermissionRemoved);
 
           console.log('[HomeScreen] Socket listeners registered');
         } catch (err) {
@@ -94,6 +110,8 @@ export default function HomeScreen({ navigation }) {
           socket.off('device_added');
           socket.off('device_updated');
           socket.off('device_deleted');
+          socket.off('permission_updated');
+          socket.off('permission_removed');
         }
       };
     }, []),
