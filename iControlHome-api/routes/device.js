@@ -352,12 +352,14 @@ router.post(
       // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
       const io = req.app.get("io");
       if (io) {
-        console.log("[Device Permission] Emit permission_updated to H001");
-        io.to("H001").emit("permission_updated", {
+        console.log(
+          `[Device Permission] Emit permission_updated to ${device.house_id}`,
+        );
+        io.to(device.house_id.toString()).emit("permission_updated", {
           device_id: device._id.toString(),
           user_id: member_id,
           can_control,
-          house_id: "H001",
+          house_id: device.house_id,
         });
       }
 

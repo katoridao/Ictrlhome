@@ -354,6 +354,111 @@ export const MemberPermissionScreen = ({ route }) => {
     fetchData();
   }, [fetchData]);
 
+  // ✅ Socket setup for real-time permission updates
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+
+      const onPermissionUpdated = ({
+        device_id,
+        room_id,
+        user_id,
+        can_control,
+        can_view,
+      }) => {
+        if (!mounted || user_id !== member._id) return;
+        console.log('[MemberPermission] Permission updated:', {
+          device_id,
+          room_id,
+          user_id,
+        });
+
+        setSections(prev =>
+          prev.map(section => {
+            // Update device permission
+            if (device_id) {
+              return {
+                ...section,
+                data: section.data.map(d =>
+                  d._id === device_id
+                    ? { ...d, devicePerm: { can_control } }
+                    : d,
+                ),
+              };
+            }
+            // Update room permission
+            if (room_id && section.roomId?.toString() === room_id) {
+              return {
+                ...section,
+                roomPerm: { can_control: can_control ?? can_view ?? false },
+              };
+            }
+            return section;
+          }),
+        );
+      };
+
+      const onPermissionRemoved = ({ device_id, room_id, user_id }) => {
+        if (!mounted || user_id !== member._id) return;
+        console.log('[MemberPermission] Permission removed:', {
+          device_id,
+          room_id,
+          user_id,
+        });
+
+        setSections(prev =>
+          prev.map(section => {
+            // Remove device permission
+            if (device_id) {
+              return {
+                ...section,
+                data: section.data.map(d =>
+                  d._id === device_id
+                    ? { ...d, devicePerm: { can_control: false } }
+                    : d,
+                ),
+              };
+            }
+            // Remove room permission
+            if (room_id && section.roomId?.toString() === room_id) {
+              return {
+                ...section,
+                roomPerm: { can_control: false },
+              };
+            }
+            return section;
+          }),
+        );
+      };
+
+      const setupSocket = async () => {
+        try {
+          const socket = await connectSocket();
+          socket
+            .off('permission_updated')
+            .on('permission_updated', onPermissionUpdated);
+          socket
+            .off('permission_removed')
+            .on('permission_removed', onPermissionRemoved);
+          console.log('[MemberPermission] Socket listeners registered');
+        } catch (err) {
+          console.error('[MemberPermission] Socket setup error:', err);
+        }
+      };
+
+      setupSocket();
+
+      return () => {
+        mounted = false;
+        const socket = getSocket();
+        if (socket) {
+          socket.off('permission_updated');
+          socket.off('permission_removed');
+        }
+      };
+    }, [member._id]),
+  );
+
   const toggleRoomPermission = async (roomId, field, currentValue) => {
     const key = `room_${roomId}_${field}`;
     setUpdatingId(key);

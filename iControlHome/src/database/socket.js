@@ -1,8 +1,8 @@
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ⚠️ Thay bằng IP server thực tế của bạn (cùng mạng WiFi)
-const SOCKET_URL = 'https://postperforated-inwrought-susy.ngrok-free.dev/';
+// ⚠️ NGROK PUBLIC URL - Update với URL từ ngrok dashboard
+const SOCKET_URL = 'https://postperforated-inwrought-susy.ngrok-free.dev'; // ← Thay bằng URL của cậu
 
 let socket = null;
 let isConnecting = false;
