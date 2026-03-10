@@ -1,7 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image,
-  ScrollView, StatusBar, Alert,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  StatusBar,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,8 +43,14 @@ export default function SettingScreen({ navigation }) {
         text: 'Đồng ý',
         onPress: async () => {
           await AsyncStorage.multiRemove([
-            'user_info', 'phone', 'current_house_id', 'current_house_name',
-            'token', 'saved_phone', 'saved_password', 'remember_me',
+            'user_info',
+            'phone',
+            'current_house_id',
+            'current_house_name',
+            'token',
+            'saved_phone',
+            'saved_password',
+            'remember_me',
           ]);
           navigation.replace('Login');
         },
@@ -47,7 +59,9 @@ export default function SettingScreen({ navigation }) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeStyles.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: themeStyles.background }]}
+    >
       <StatusBar
         barStyle={theme === 'DARK' ? 'light-content' : 'dark-content'}
         backgroundColor={themeStyles.primary}
@@ -62,14 +76,24 @@ export default function SettingScreen({ navigation }) {
         <TouchableOpacity
           style={styles.userBox}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate('Profile', { phone: userData?.phone, name: userData?.name })}
+          onPress={() =>
+            navigation.navigate('Profile', {
+              phone: userData?.phone,
+              name: userData?.name,
+            })
+          }
         >
-          <Image source={require('../../public/img/avatar.png')} style={styles.avatar} />
+          <Image
+            source={require('../../public/img/avatar.png')}
+            style={styles.avatar}
+          />
           <View style={{ flex: 1 }}>
             <Text style={[styles.userName, { color: themeStyles.text }]}>
               {userData?.name || 'Đang tải...'}
             </Text>
-            <Text style={styles.userEmail}>{userData?.phone || 'Chưa cập nhật'}</Text>
+            <Text style={styles.userEmail}>
+              {userData?.phone || 'Chưa cập nhật'}
+            </Text>
           </View>
           <Image
             source={require('../../public/img/arrow-right.png')}
@@ -78,7 +102,9 @@ export default function SettingScreen({ navigation }) {
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Ứng dụng</Text>
-        <View style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}>
+        <View
+          style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}
+        >
           <SettingItem
             icon={require('../../public/img/notification.png')}
             label="Thông báo"
@@ -93,7 +119,7 @@ export default function SettingScreen({ navigation }) {
             onPress={() => navigation.navigate('AppearanceScreen')}
           />
           <SettingItem
-            icon={require('../../public/img/device_default.png')}
+            icon={require('../../public/img/device_usage.png')}
             label="Thống kê tiêu thụ"
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('StatisticsScreen')}
@@ -104,12 +130,20 @@ export default function SettingScreen({ navigation }) {
             value="Vie/Eng"
             noBorder
             textColor={themeStyles.text}
-            onPress={() => Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Tính năng đang phát triển' })}
+            onPress={() =>
+              Toast.show({
+                type: 'info',
+                text1: 'Thông báo',
+                text2: 'Tính năng đang phát triển',
+              })
+            }
           />
         </View>
 
         <Text style={styles.sectionTitle}>Khác</Text>
-        <View style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}>
+        <View
+          style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}
+        >
           <SettingItem
             icon={require('../../public/img/help.png')}
             label="Trợ giúp"
@@ -133,28 +167,67 @@ function SettingItem({ icon, label, value, noBorder, onPress, textColor }) {
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      style={[styles.item, noBorder && { borderBottomWidth: 0 }, { borderBottomColor: '#f0f0f033' }]}
+      style={[
+        styles.item,
+        noBorder && { borderBottomWidth: 0 },
+        { borderBottomColor: '#f0f0f033' },
+      ]}
     >
       <Image source={icon} style={styles.itemIcon} />
       <Text style={[styles.itemText, { color: textColor }]}>{label}</Text>
       {value && <Text style={styles.valueText}>{value}</Text>}
-      <Image source={require('../../public/img/arrow-right.png')} style={styles.arrow} />
+      <Image
+        source={require('../../public/img/arrow-right.png')}
+        style={styles.arrow}
+      />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { height: 70, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', elevation: 4 },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: '600', textAlign: 'center', flex: 1 },
+  header: {
+    height: 70,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 4,
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
+  },
   body: { padding: 16, paddingBottom: 40 },
-  userBox: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, backgroundColor: '#fff', marginBottom: 24 },
+  userBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    marginBottom: 24,
+  },
   avatar: { width: 50, height: 50, borderRadius: 26, marginRight: 14 },
   userName: { fontSize: 18, fontWeight: '700' },
   userEmail: { fontSize: 14 },
-  sectionTitle: { fontSize: 15, fontWeight: '600', color: '#888', marginBottom: 8, marginLeft: 4 },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#888',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
   sectionBox: { borderRadius: 16, marginBottom: 20, elevation: 1 },
-  item: { flexDirection: 'row', alignItems: 'center', padding: 18, borderBottomWidth: 1 },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+    borderBottomWidth: 1,
+  },
   itemIcon: { width: 22, height: 22, marginRight: 14, tintColor: '#3b9cff' },
   itemText: { flex: 1, fontSize: 16 },
   valueText: { fontSize: 14, color: '#999', marginRight: 6 },

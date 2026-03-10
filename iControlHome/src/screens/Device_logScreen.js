@@ -107,6 +107,10 @@ export default function Device_logScreen() {
 
       {/* HEADER */}
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
+        <Image
+          source={require('../../public/img/history.png')}
+          style={styles.headerIcon}
+        />
         <Text style={styles.headerTitle}>Nhật ký thiết bị</Text>
       </View>
 
@@ -170,7 +174,7 @@ export default function Device_logScreen() {
         <ActivityIndicator
           size="large"
           color={themeStyles.primary}
-          style={{ marginTop: 20 }}
+          style={{ marginTop: 50 }}
         />
       ) : (
         <FlatList
@@ -185,9 +189,15 @@ export default function Device_logScreen() {
             />
           }
           ListEmptyComponent={
-            <Text style={{ textAlign: 'center', marginTop: 20 }}>
-              Chưa có nhật ký hoạt động
-            </Text>
+            <View style={styles.emptyContainer}>
+              <Image
+                source={require('../../public/img/history.png')}
+                style={styles.emptyIcon}
+              />
+              <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
+                Chưa có nhật ký hoạt động nào
+              </Text>
+            </View>
           }
           renderItem={({ item }) => (
             <HistoryItem
@@ -211,12 +221,21 @@ function FilterItem({ label, active, onPress, themeStyles }) {
     <TouchableOpacity
       style={[
         styles.filterItem,
-        { backgroundColor: themeStyles.card },
-        active && { borderColor: '#3b9cff', borderWidth: 1 },
+        {
+          backgroundColor: active ? '#3b9cff' : themeStyles.card,
+          borderColor: active ? '#3b9cff' : themeStyles.secondary,
+        },
       ]}
       onPress={onPress}
     >
-      <Text style={{ color: themeStyles.text }}>{label}</Text>
+      <Text style={{ color: active ? '#fff' : themeStyles.text }}>{label}</Text>
+      <Image
+        source={require('../../public/img/down.png')}
+        style={[
+          styles.filterIcon,
+          { tintColor: active ? '#fff' : themeStyles.text },
+        ]}
+      />
     </TouchableOpacity>
   );
 }
@@ -224,10 +243,15 @@ function FilterItem({ label, active, onPress, themeStyles }) {
 function DropdownOption({ label, active, onPress, themeStyles }) {
   return (
     <TouchableOpacity
-      style={[styles.dropdownItem, active && { backgroundColor: '#3b9cff' }]}
+      style={[
+        styles.dropdownItem,
+        active && { backgroundColor: 'rgba(59, 156, 255, 0.2)' },
+      ]}
       onPress={onPress}
     >
-      <Text style={{ color: active ? '#fff' : themeStyles.text }}>{label}</Text>
+      <Text style={{ color: themeStyles.text, fontWeight: active ? 'bold' : 'normal' }}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -245,13 +269,10 @@ function HistoryItem({
     switch (deviceType) {
       case 'light':
         return require('../../public/img/light.png');
-
       case 'fan':
         return require('../../public/img/fan.png');
-
       case 'socket':
         return require('../../public/img/socket.png');
-
       default:
         return require('../../public/img/device_default.png');
     }
@@ -259,48 +280,48 @@ function HistoryItem({
 
   const formatDate = date => {
     if (!date) return '';
-
     const d = new Date(date);
-
     const h = String(d.getHours()).padStart(2, '0');
     const m = String(d.getMinutes()).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const mon = String(d.getMonth() + 1).padStart(2, '0');
     const y = d.getFullYear();
-
     return `${h}:${m} ${day}/${mon}/${y}`;
   };
 
-  return (
-    <View style={[styles.historyItem, { backgroundColor: themeStyles.card }]}>
-      <Image source={getIcon(type)} style={styles.deviceIcon} />
+  const actionText = action === 'ON' ? 'Đã Bật' : 'Đã Tắt';
+  const actionColor = action === 'ON' ? '#4CAF50' : '#F44336';
+  const actionIcon = action === 'ON' ? '🟢' : '🔴';
 
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+  return (
+    <View style={[styles.historyItem, { backgroundColor: themeStyles.card, shadowColor: themeStyles.text }]}>
+      <Image source={getIcon(type)} style={styles.deviceIcon} />
+      <View style={styles.itemContent}>
+        <View style={styles.itemHeader}>
           <Text style={[styles.itemTitle, { color: themeStyles.text }]}>
             {deviceName}
           </Text>
-
-          <Text style={{ color: themeStyles.subText, fontSize: 11 }}>
-            {formatDate(time)}
+          <Text style={[styles.itemAction, { color: actionColor }]}>
+            {actionIcon} {actionText}
           </Text>
         </View>
 
-        <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
-          Phòng: {roomName}
-        </Text>
+        <View style={styles.itemRow}>
+          <Image source={require('../../public/img/room.png')} style={styles.smallIcon} />
+          <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
+            {roomName}
+          </Text>
+        </View>
+        
+        <View style={styles.itemRow}>
+          <Image source={require('../../public/img/user.png')} style={styles.smallIcon} />
+          <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
+            {userName}
+          </Text>
+        </View>
 
-        <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
-          Người dùng: {userName}
-        </Text>
-
-        <Text
-          style={{
-            color: action === 'ON' ? '#4CAF50' : '#F44336',
-            fontWeight: '600',
-          }}
-        >
-          {action === 'ON' ? '🟢 Đã Bật' : '🔴 Đã Tắt'}
+        <Text style={[styles.itemTime, { color: themeStyles.subText }]}>
+          {formatDate(time)}
         </Text>
       </View>
     </View>
@@ -312,47 +333,67 @@ const styles = StyleSheet.create({
 
   header: {
     height: 70,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    paddingHorizontal: 16,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-
+  headerIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#fff',
+    marginRight: 10,
+  },
   headerTitle: {
     color: '#fff',
     fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
-    flex: 1,
+    fontWeight: 'bold',
   },
 
-  filterWrapper: { padding: 16 },
-
+  filterWrapper: { padding: 16, zIndex: 1 },
   filterRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    gap: 12,
   },
-
   filterItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
+    borderWidth: 1,
+  },
+  filterIcon: {
+    width: 16,
+    height: 16,
+    marginLeft: 8,
   },
 
   dropdown: {
-    marginTop: 8,
+    position: 'absolute',
+    top: 65,
+    left: 16,
+    right: 16,
     borderRadius: 12,
-    overflow: 'hidden',
+    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
-
   dropdownItem: {
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
 
   body: {
     paddingHorizontal: 16,
+    paddingBottom: 16,
   },
 
   historyItem: {
@@ -360,16 +401,64 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: 'row',
     marginBottom: 12,
+    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    alignItems: 'center',
   },
-
   deviceIcon: {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     marginRight: 15,
   },
-
+  itemContent: {
+    flex: 1,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   itemTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
+  },
+  itemAction: {
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  smallIcon: {
+    width: 14,
+    height: 14,
+    marginRight: 6,
+    tintColor: '#888',
+  },
+  itemTime: {
+    fontSize: 11,
+    alignSelf: 'flex-end',
+    marginTop: 4,
+  },
+  
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 100,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    tintColor: '#ccc',
+    marginBottom: 20,
+    opacity: 0.5,
+  },
+  emptyText: {
+    fontSize: 16,
   },
 });

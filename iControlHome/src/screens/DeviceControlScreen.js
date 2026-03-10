@@ -36,8 +36,6 @@ export default function DeviceControlScreen({ route }) {
     fetchLatestStatus();
   }, [device._id]);
 
-  // ✅ FIX: Dùng useFocusEffect thay vì useEffect([])
-  // Đảm bảo socket luôn join đúng room và listener không bị đăng ký nhiều lần
   useFocusEffect(
     useCallback(() => {
       let mounted = true;
@@ -45,21 +43,21 @@ export default function DeviceControlScreen({ route }) {
       const onStatusChanged = ({ device_id, status: newStatus }) => {
         if (!mounted) return;
         if (device_id === device._id) {
+          console.log('[DeviceControl] Status changed from socket:', newStatus);
           setStatus(newStatus);
         }
       };
 
       const setupSocket = async () => {
-        const socket = await connectSocket();
-
-        // ✅ FIX: Chủ động emit join_house khi màn hình focus
-        const currentHouseId = await AsyncStorage.getItem('current_house_id');
-        if (socket.connected && currentHouseId) {
-          socket.emit('join_house', { house_id: currentHouseId });
+        try {
+          const socket = await connectSocket();
+          socket
+            .off('device_status_changed')
+            .on('device_status_changed', onStatusChanged);
+          console.log('[DeviceControl] Socket listener registered');
+        } catch (err) {
+          console.error('[DeviceControl] Socket setup error:', err);
         }
-
-        // ✅ FIX: Dùng .off().on() tránh đăng ký listener nhiều lần
-        socket.off('device_status_changed').on('device_status_changed', onStatusChanged);
       };
 
       setupSocket();
@@ -67,9 +65,12 @@ export default function DeviceControlScreen({ route }) {
       return () => {
         mounted = false;
         const socket = getSocket();
-        if (socket) socket.off('device_status_changed', onStatusChanged);
+        if (socket) {
+          socket.off('device_status_changed');
+          console.log('[DeviceControl] Cleaning up socket listener');
+        }
       };
-    }, [device._id])
+    }, [device._id]),
   );
 
   const toggleStatus = async () => {
@@ -128,7 +129,10 @@ export default function DeviceControlScreen({ route }) {
 
       {/* Nút bật tắt */}
       <TouchableOpacity
-        style={[styles.powerButton, { backgroundColor: isOn ? '#4CAF50' : '#F44336' }]}
+        style={[
+          styles.powerButton,
+          { backgroundColor: isOn ? '#4CAF50' : '#F44336' },
+        ]}
         onPress={toggleStatus}
         disabled={loading || fetching}
       >
@@ -199,7 +203,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  label: { fontSize: 15, fontWeight: '600', color: '#757575', letterSpacing: 0.5 },
-  value: { fontSize: 15, fontWeight: '700', color: '#212121', textAlign: 'right', maxWidth: '60%' },
+  label: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#757575',
+    letterSpacing: 0.5,
+  },
+  value: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#212121',
+    textAlign: 'right',
+    maxWidth: '60%',
+  },
 });
-//

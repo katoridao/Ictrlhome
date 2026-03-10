@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ⚠️ Thay bằng IP server thực tế của bạn (cùng mạng WiFi)
-const SOCKET_URL = 'http://192.168.1.110:3000';
+const SOCKET_URL = 'http://192.168.100.91:3000';
 
 let socket = null;
 let isConnecting = false;
@@ -59,7 +59,9 @@ export const connectSocket = async () => {
       socket.emit('join_house', { house_id: currentHouseId });
       console.log('[Socket] Đã emit join_house:', currentHouseId);
     } else {
-      console.warn('[Socket] ⚠️ KHÔNG CÓ current_house_id — không thể join house!');
+      console.warn(
+        '[Socket] ⚠️ KHÔNG CÓ current_house_id — không thể join house!',
+      );
     }
   });
 
