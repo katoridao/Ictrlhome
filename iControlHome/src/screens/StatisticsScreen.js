@@ -13,8 +13,10 @@ import {
 
 import { useTheme } from "../context/ThemeContext";
 import api from "../database/api";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function StatisticsScreen({ navigation }) {
+
   const { styles: themeStyles, theme } = useTheme();
 
   const [loading, setLoading] = useState(true);
@@ -22,13 +24,13 @@ export default function StatisticsScreen({ navigation }) {
   const [devices, setDevices] = useState([]);
 
   // ===============================
-  // LẤY DỮ LIỆU TỪ BACKEND
+  // FETCH DATA FROM BACKEND
   // ===============================
   const fetchData = useCallback(async () => {
-    try {
-      const res = await api.get("/device-usages/realtime");
 
-      console.log("API DATA:", res.data);
+    try {
+
+      const res = await api.get("/device-usages/realtime");
 
       const devicesFromServer = res.data.devices || [];
 
@@ -38,57 +40,79 @@ export default function StatisticsScreen({ navigation }) {
           runtime_seconds: d.runtime_seconds || 0,
           energy_kwh: d.energy_kwh || 0,
           cost: d.cost || 0,
-          power_watt: d.power_watt || 100,
+          power_watt: d.power_watt || 0,
         }))
       );
+
     } catch (error) {
+
       console.log("Fetch error:", error.message);
+
     } finally {
+
       setLoading(false);
       setRefreshing(false);
+
     }
+
   }, []);
 
   useEffect(() => {
+
     fetchData();
+
   }, [fetchData]);
 
   // ===============================
-  // REALTIME UPDATE MỖI GIÂY
+  // REALTIME TIMER (1 SECOND)
   // ===============================
-  useEffect(() => {
+  useFocusEffect(
+  useCallback(() => {
+
+    // khi vào màn hình -> sync dữ liệu từ server
+    fetchData();
+
     const timer = setInterval(() => {
-      setDevices((prevDevices) =>
-        prevDevices.map((dev) => {
-          if (!dev.isActive) return dev;
 
-          const additionalSeconds = 1;
+      setDevices((prev) =>
+        prev.map((d) => {
 
-          const additionalKwh =
-            (dev.power_watt * additionalSeconds) / 3600000;
+          if (!d.isActive) return d;
 
-          const additionalCost = additionalKwh * 1806;
+          const runtime = d.runtime_seconds + 1;
+
+          const energy =
+            (d.power_watt * runtime) / 3600000;
+
+          const cost = energy * 1806;
 
           return {
-            ...dev,
-            runtime_seconds: dev.runtime_seconds + additionalSeconds,
-            energy_kwh: dev.energy_kwh + additionalKwh,
-            cost: dev.cost + additionalCost,
+            ...d,
+            runtime_seconds: runtime,
+            energy_kwh: energy,
+            cost: cost
           };
+
         })
       );
+
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+
+  }, [fetchData])
+);
 
   const onRefresh = () => {
+
     setRefreshing(true);
+
     fetchData();
+
   };
 
   // ===============================
-  // TỔNG ĐIỆN NĂNG + CHI PHÍ
+  // TOTAL ENERGY + COST
   // ===============================
   const totalKwh = devices.reduce(
     (sum, d) => sum + (d.energy_kwh || 0),
@@ -155,13 +179,15 @@ export default function StatisticsScreen({ navigation }) {
           />
         }
       >
-        {/* CARD TỔNG */}
+
+        {/* SUMMARY CARD */}
         <View
           style={[
             styles.summaryCard,
             { backgroundColor: themeStyles.primary },
           ]}
         >
+
           <Text style={styles.summaryLabel}>
             Tổng chi phí các thiết bị
           </Text>
@@ -173,6 +199,7 @@ export default function StatisticsScreen({ navigation }) {
           <View style={styles.divider} />
 
           <View style={styles.row}>
+
             <View>
               <Text style={styles.subLabel}>
                 Tổng điện năng
@@ -187,14 +214,12 @@ export default function StatisticsScreen({ navigation }) {
                 Đang hoạt động
               </Text>
               <Text style={styles.subValue}>
-                {
-                  devices.filter((d) => d.isActive)
-                    .length
-                }{" "}
-                thiết bị
+                {devices.filter((d) => d.isActive).length} thiết bị
               </Text>
             </View>
+
           </View>
+
         </View>
 
         <Text
@@ -207,11 +232,14 @@ export default function StatisticsScreen({ navigation }) {
         </Text>
 
         {loading ? (
+
           <ActivityIndicator
             size="large"
             color={themeStyles.primary}
           />
+
         ) : devices.length === 0 ? (
+
           <Text
             style={{
               textAlign: "center",
@@ -221,8 +249,11 @@ export default function StatisticsScreen({ navigation }) {
           >
             Không có dữ liệu thiết bị
           </Text>
+
         ) : (
+
           devices.map((item) => {
+
             const minutes = Math.floor(
               item.runtime_seconds / 60
             );
@@ -232,23 +263,24 @@ export default function StatisticsScreen({ navigation }) {
             );
 
             return (
+
               <View
                 key={item.device_id || item._id}
                 style={[
                   styles.deviceItem,
-                  {
-                    backgroundColor:
-                      themeStyles.card,
-                  },
+                  { backgroundColor: themeStyles.card },
                 ]}
               >
+
                 <View style={styles.deviceInfo}>
+
                   <View
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
                     }}
                   >
+
                     <Text
                       style={[
                         styles.deviceName,
@@ -259,10 +291,9 @@ export default function StatisticsScreen({ navigation }) {
                     </Text>
 
                     {item.isActive && (
-                      <View
-                        style={styles.activeDot}
-                      />
+                      <View style={styles.activeDot} />
                     )}
+
                   </View>
 
                   <Text
@@ -275,21 +306,23 @@ export default function StatisticsScreen({ navigation }) {
                       },
                     ]}
                   >
+
                     {item.isActive
                       ? "⚡ Đang chạy: "
                       : "⌛ Đã dùng: "}
+
                     {minutes}ph {seconds}s
+
                   </Text>
+
                 </View>
 
                 <View style={styles.deviceStats}>
+
                   <Text
                     style={[
                       styles.deviceCost,
-                      {
-                        color:
-                          themeStyles.primary,
-                      },
+                      { color: themeStyles.primary },
                     ]}
                   >
                     {formatCurrency(item.cost)} đ
@@ -298,25 +331,29 @@ export default function StatisticsScreen({ navigation }) {
                   <Text
                     style={[
                       styles.deviceKwh,
-                      {
-                        color:
-                          themeStyles.subText,
-                      },
+                      { color: themeStyles.subText },
                     ]}
                   >
                     {formatKwh(item.energy_kwh)} kWh
                   </Text>
+
                 </View>
+
               </View>
+
             );
+
           })
+
         )}
+
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+
   container: { flex: 1 },
 
   header: {
@@ -432,4 +469,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
     marginLeft: 8,
   },
+
 });
