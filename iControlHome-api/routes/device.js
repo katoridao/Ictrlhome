@@ -40,7 +40,7 @@ router.get("/", authenticate, checkHouseMembership, async (req, res) => {
     const role = req.user.role;
     const { room_id } = req.query;
 
-    let query = { house_id: "H001" };
+    let query = {};
     if (room_id) {
       query.room_id = room_id === "null" ? null : room_id;
     }

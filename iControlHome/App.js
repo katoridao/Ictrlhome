@@ -13,8 +13,8 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 
 // Import Screens - Device Management
-import AddDeviceModal from './src/screens/AddDeviceModal'; 
-import DeviceControlScreen from './src/screens/DeviceControlScreen'; 
+import AddDeviceModal from './src/screens/AddDeviceModal';
+import DeviceControlScreen from './src/screens/DeviceControlScreen';
 
 // Import Screens - Room Management
 import RoomDetailScreen from './src/screens/RoomDetailScreen';
@@ -32,56 +32,79 @@ import { ManageMembersScreen, MemberPermissionScreen } from './src/screens/Membe
 // Import Navigation - Tab
 import MainTab from './src/navigation/MainTab';
 
+// Automation Screen
+import MainAutomationScreen from './src/screens/MainAutomationScreen';
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <ThemeProvider>
       <NavigationContainer>
-        <Stack.Navigator 
-          screenOptions={{ headerShown: false }} 
+        <Stack.Navigator
+          screenOptions={{ headerShown: false }}
           initialRouteName="Welcome"
         >
-          {/* Luồng khởi đầu */}
+
+          {/* Auth */}
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
 
-          {/* Luồng Chính (Tabs: Home, Room, Script, Device_log, Setting) */}
+          {/* Main Tab */}
           <Stack.Screen name="Main" component={MainTab} />
 
-          {/* Quản lý thiết bị */}
+          {/* Device */}
           <Stack.Screen name="AddDevice" component={AddDeviceModal} />
           <Stack.Screen name="EditDevice" component={AddDeviceModal} />
-          <Stack.Screen 
-            name="DeviceControl" 
-            component={DeviceControlScreen} 
-            options={{ headerShown: true, title: 'Điều khiển thiết bị' }} 
+          <Stack.Screen
+            name="DeviceControl"
+            component={DeviceControlScreen}
+            options={{
+              headerShown: true,
+              title: 'Điều khiển thiết bị',
+              headerStyle: { backgroundColor: '#2196F3' },
+              headerTintColor: '#fff'
+            }}
           />
-          {/* Quản lý phòng */}
-          <Stack.Screen 
-            name="RoomDetail" 
-            component={RoomDetailScreen} 
-            options={{ 
-              headerShown: true, 
+
+          {/* Room */}
+          <Stack.Screen
+            name="RoomDetail"
+            component={RoomDetailScreen}
+            options={{
+              headerShown: true,
               title: 'Chi tiết phòng',
               headerStyle: { backgroundColor: '#2196F3' },
               headerTintColor: '#fff'
-            }} 
+            }}
           />
 
-          {/* Cài đặt & Cá nhân hóa */}
+          {/* Settings */}
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="NotificationSetting" component={NotificationSettingScreen} />
           <Stack.Screen name="AppearanceScreen" component={AppearanceScreen} />
           <Stack.Screen name="StatisticsScreen" component={StatisticsScreen} />
-          {/* Quản lý Thành viên & Phân quyền */}
           <Stack.Screen name="JoinHouse" component={JoinHouseScreen} />
 
-          <Stack.Screen 
-            name="ManageMembers" 
-            component={ManageMembersScreen} 
+          {/* Automation */}
+          <Stack.Screen
+            name="Automation"
+            component={MainAutomationScreen}
+            options={{
+              headerShown: true,
+              title: 'Thiết lập Tự động hóa',
+              headerStyle: { backgroundColor: '#2196F3' },
+              headerTintColor: '#fff',
+              headerTitleAlign: 'center'
+            }}
+          />
+
+          {/* Member Management */}
+          <Stack.Screen
+            name="ManageMembers"
+            component={ManageMembersScreen}
             options={{
               headerShown: true,
               title: 'Quản lý thành viên',
@@ -90,9 +113,10 @@ export default function App() {
               headerTitleAlign: 'center'
             }}
           />
-          <Stack.Screen 
-            name="MemberPermission" 
-            component={MemberPermissionScreen} 
+
+          <Stack.Screen
+            name="MemberPermission"
+            component={MemberPermissionScreen}
             options={{
               headerShown: true,
               title: 'Phân quyền thiết bị',
@@ -101,7 +125,7 @@ export default function App() {
               headerTitleAlign: 'center'
             }}
           />
-          
+
         </Stack.Navigator>
       </NavigationContainer>
 
