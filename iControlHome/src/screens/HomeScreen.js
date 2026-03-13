@@ -74,6 +74,8 @@ export default function HomeScreen({ navigation }) {
         fetchDevices();
       };
 
+      // đăng ký socket cho tự động hoá
+
       const setupSocket = async () => {
         try {
           const socket = await connectSocket();
@@ -92,6 +94,8 @@ export default function HomeScreen({ navigation }) {
           socket
             .off('permission_removed')
             .on('permission_removed', onPermissionRemoved);
+
+          // socket on tự động hoá
 
           console.log('[HomeScreen] Socket listeners registered');
         } catch (err) {
@@ -112,6 +116,8 @@ export default function HomeScreen({ navigation }) {
           socket.off('device_deleted');
           socket.off('permission_updated');
           socket.off('permission_removed');
+
+          // socket off tự động hoá
         }
       };
     }, []),
