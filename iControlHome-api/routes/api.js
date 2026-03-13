@@ -75,7 +75,7 @@ router.post("/login", async (req, res) => {
     res.json({
       message: "Đăng nhập thành công",
       token,
-      user: { _id: user._id, name: user.name, phone: user.phone }
+      user: { _id: user._id, name: user.name, phone: user.phone, role: user.role }
     });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
