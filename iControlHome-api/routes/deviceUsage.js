@@ -1,249 +1,184 @@
 const express = require("express");
 const router = express.Router();
+
 const DeviceUsage = require("../models/DeviceUsage");
 const Device = require("../models/Device");
-const { authenticate, checkHouseMembership } = require("../middlewares/auth");
 
-const HOUSE_ID = "H001";
 
-// START DEVICE
-router.post("/start/:deviceId", async (req, res) => {
+router.post("/device-on/:deviceId", async (req, res) => {
   try {
-    const { deviceId } = req.params;
+
+    const deviceId = req.params.deviceId;
+
     const device = await Device.findById(deviceId);
 
     if (!device) {
-      return res.status(404).json({ message: "Device not found" });
-    }
-
-    if (device.house_id !== HOUSE_ID) {
-      return res.status(403).json({ message: "Does not belong to this house" });
-    }
-
-    if (device.status) {
-      return res.status(400).json({ message: "Device already ON" });
-    }
-
-    const existed = await DeviceUsage.findOne({
-      device_id: device._id,
-      end_time: null,
-    });
-
-    if (existed) {
-      return res.status(400).json({
-        message: "Device already has active session",
+      return res.status(404).json({
+        message: "Device not found",
       });
     }
 
-    device.status = true;
-    await device.save();
+    const running = await DeviceUsage.findOne({
+      device_id: deviceId,
+      end_time: null,
+    });
 
-    const usage = await DeviceUsage.create({
-      device_id: device._id,
+    if (running) {
+      return res.json({
+        message: "Device already running",
+      });
+    }
+
+    // Đồng bộ trạng thái thiết bị: bật mới coi là đang chạy
+    if (!device.status) {
+      device.status = true;
+      await device.save();
+    }
+
+    const usage = new DeviceUsage({
+      device_id: deviceId,
       start_time: new Date(),
     });
 
+    await usage.save();
+
+    // 🔥 emit socket update ngay
+    global.io.emit("device-update");
+
     res.json({
       message: "Device turned ON",
-      usage,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
   }
 });
 
-// STOP DEVICE
-router.post("/stop/:deviceId", async (req, res) => {
+
+router.post("/device-off/:deviceId", async (req, res) => {
+
   try {
-    const { deviceId } = req.params;
+
+    const deviceId = req.params.deviceId;
 
     const usage = await DeviceUsage.findOne({
       device_id: deviceId,
       end_time: null,
-    }).sort({ start_time: -1 });
+    }).populate("device_id");
 
     if (!usage) {
-      return res.status(400).json({ message: "No active session" });
+      return res.status(404).json({
+        message: "Device not running",
+      });
     }
 
-    const device = await Device.findById(deviceId);
+    const now = new Date();
 
-    const end = new Date();
+    const runtime =
+      Math.floor((now - usage.start_time) / 1000);
 
-    const durationSeconds = (end.getTime() - usage.start_time.getTime()) / 1000;
+    const energy =
+      (usage.device_id.power_watt * runtime) / 3600000;
 
-    usage.end_time = end;
-
-    usage.duration_minutes = durationSeconds / 60;
-
-    usage.energy_kwh = (device.power_watt * durationSeconds) / 3600000;
+    usage.end_time = now;
+    usage.duration_minutes = runtime / 60;
+    usage.energy_kwh = energy;
 
     await usage.save();
 
-    device.status = false;
-    await device.save();
+    // Đồng bộ trạng thái thiết bị: tắt thì không còn "đang chạy"
+    const device = usage.device_id;
+    if (device && device.status) {
+      device.status = false;
+      await device.save();
+    }
+
+    // 🔥 emit socket update ngay
+    global.io.emit("device-update");
 
     res.json({
       message: "Device turned OFF",
-      usage,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// LIST USAGES — trả rỗng nếu chưa là member
-router.get("/", authenticate, checkHouseMembership, async (req, res) => {
-  try {
-    const devices = await Device.find({ house_id: HOUSE_ID });
-
-    const deviceIds = devices.map((d) => d._id);
-
-    const usages = await DeviceUsage.find({
-      device_id: { $in: deviceIds },
-    }).populate("device_id", "name type power_watt status");
-
-    const now = Date.now();
-
-    const result = usages.map((u) => {
-      let duration = u.duration_minutes || 0;
-
-      if (!u.end_time) {
-        const realtime = (now - new Date(u.start_time).getTime()) / 60000;
-
-        duration += realtime;
-      }
-
-      const energy = (u.device_id.power_watt * duration) / 60000;
-
-      return {
-        ...u._doc,
-        realtime_minutes: duration,
-        realtime_energy_kwh: energy,
-      };
     });
 
-    res.json({ usages: result });
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
   }
+
 });
 
-// DAILY SUMMARY — trả rỗng nếu chưa là member
-router.get(
-  "/summary/day",
-  authenticate,
-  checkHouseMembership,
-  async (req, res) => {
-    try {
-      if (!req.isHouseMember) {
-        return res.json({ total_energy_kwh: 0, total_sessions: 0 });
-      }
-
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const devices = await Device.find({ house_id: HOUSE_ID }).select("_id");
-      const deviceIds = devices.map((d) => d._id);
-
-      const result = await DeviceUsage.aggregate([
-        {
-          $match: {
-            device_id: { $in: deviceIds },
-            end_time: { $gte: startOfDay },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            totalEnergy: { $sum: "$energy_kwh" },
-            totalSessions: { $sum: 1 },
-          },
-        },
-      ]);
-
-      res.json({
-        total_energy_kwh: result[0]?.totalEnergy || 0,
-        total_sessions: result[0]?.totalSessions || 0,
-      });
-    } catch (err) {
-      res.status(500).json({ message: "Server error" });
-    }
-  },
-);
-
+// ===============================
+// REALTIME THỐNG KÊ
+// ===============================
 router.get("/realtime", async (req, res) => {
   try {
-    const devices = await Device.find({ house_id: HOUSE_ID });
 
-    const usages = await DeviceUsage.find({
-      device_id: { $in: devices.map((d) => d._id) },
-    });
+    const devices = await Device.find();
 
-    const now = Date.now();
+    const result = [];
 
-    const result = devices.map((device) => {
-      const sessions = usages.filter(
-        (u) => u.device_id.toString() === device._id.toString(),
-      );
+    for (const device of devices) {
+      const deviceIsOn = !!device.status;
 
-      let totalSeconds = 0;
-
-      sessions.forEach((s) => {
-        if (s.end_time) {
-          totalSeconds +=
-            (new Date(s.end_time) - new Date(s.start_time)) / 1000;
-        } else {
-          totalSeconds += (now - new Date(s.start_time)) / 1000;
-        }
+      // Tổng tất cả các lần đã chạy (usage đã đóng)
+      const closedUsages = await DeviceUsage.find({
+        device_id: device._id,
+        end_time: { $ne: null },
       });
 
-      const energy_kwh = (device.power_watt * totalSeconds) / 3600000;
-      const cost = energy_kwh * 1806;
+      let totalSeconds = 0;
+      let totalEnergy = 0;
 
-      return {
+      closedUsages.forEach((u) => {
+        const durationMinutes =
+          typeof u.duration_minutes === "number" && u.duration_minutes > 0
+            ? u.duration_minutes
+            : (new Date(u.end_time) - new Date(u.start_time)) / (1000 * 60);
+        totalSeconds += Math.floor(durationMinutes * 60);
+        totalEnergy += u.energy_kwh || 0;
+      });
+
+      // Lần đang chạy (nếu có)
+      const openUsage = await DeviceUsage.findOne({
+        device_id: device._id,
+        end_time: null,
+      }).sort({ start_time: -1 });
+
+      let isActive = false;
+
+      if (openUsage && deviceIsOn) {
+        const runtimeNow = Math.floor(
+          (Date.now() - new Date(openUsage.start_time)) / 1000
+        );
+        totalSeconds += runtimeNow;
+        totalEnergy += (device.power_watt * runtimeNow) / 3600000;
+        isActive = true;
+      }
+
+      const runtime = totalSeconds;
+      const energy = totalEnergy;
+
+      result.push({
         device_id: device._id,
         device_name: device.name,
-        runtime_seconds: totalSeconds,
-        energy_kwh,
-        cost,
         power_watt: device.power_watt,
-        isActive: device.status,
-      };
-    });
+        runtime_seconds: runtime,
+        energy_kwh: energy,
+        isActive,
+      });
+    }
 
     res.json({ devices: result });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
   }
 });
 
-function calculateElectricCost(kwh) {
-  const tiers = [
-    { limit: 50, price: 1806 },
-    { limit: 50, price: 1866 },
-    { limit: 100, price: 2167 },
-    { limit: 100, price: 2729 },
-    { limit: 100, price: 3050 },
-    { limit: Infinity, price: 3151 },
-  ];
 
-  let remaining = kwh;
-  let cost = 0;
-
-  for (const tier of tiers) {
-    const used = Math.min(remaining, tier.limit);
-
-    cost += used * tier.price;
-
-    remaining -= used;
-
-    if (remaining <= 0) break;
-  }
-
-  return cost;
-}
 module.exports = router;
