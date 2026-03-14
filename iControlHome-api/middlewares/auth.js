@@ -33,14 +33,12 @@ const isOwner = (req, res, next) => {
 };
 
 // 3. Kiểm tra quyền điều khiển thiết bị
-// Ưu tiên: OWNER > quyền phòng > quyền thiết bị đơn lẻ
 const canControlDevice = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const role = req.user.role;
     const deviceId = req.params.id;
 
-    // OWNER luôn có toàn quyền
     if (role === "OWNER") return next();
 
     const device = await Device.findById(deviceId);
@@ -48,7 +46,6 @@ const canControlDevice = async (req, res, next) => {
       return res.status(404).json({ message: "Không tìm thấy thiết bị" });
     }
 
-    // Kiểm tra quyền theo PHÒNG (nếu thiết bị được gán phòng)
     if (device.room_id) {
       const room = await Room.findById(device.room_id);
       if (room) {
@@ -59,7 +56,6 @@ const canControlDevice = async (req, res, next) => {
       }
     }
 
-    // Kiểm tra quyền theo THIẾT BỊ đơn lẻ
     const devicePerm = device.permissions.find(
       (p) => p.user_id.toString() === userId.toString()
     );
@@ -72,9 +68,7 @@ const canControlDevice = async (req, res, next) => {
 };
 
 // 4. Kiểm tra quyền XEM thiết bị
-// Dùng để filter danh sách thiết bị MEMBER được thấy
 const canViewDevice = async (userId, device) => {
-  // Kiểm tra quyền theo phòng
   if (device.room_id) {
     const room = await Room.findById(device.room_id);
     if (room) {
@@ -85,11 +79,37 @@ const canViewDevice = async (userId, device) => {
     }
   }
 
-  // Kiểm tra quyền theo thiết bị đơn lẻ
   const devicePerm = device.permissions.find(
     (p) => p.user_id.toString() === userId.toString()
   );
   return !!(devicePerm?.can_control);
 };
 
-module.exports = { authenticate, isOwner, canControlDevice, canViewDevice };
+// 5. Kiểm tra user có trong house.members không
+// Dùng để filter data — MEMBER chưa được thêm vào nhà sẽ nhận data rỗng
+// KHÔNG chặn request, chỉ đính kèm flag req.isHouseMember để route tự xử lý
+const checkHouseMembership = async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    // OWNER luôn là member
+    if (user.role === "OWNER") {
+      req.isHouseMember = true;
+      return next();
+    }
+
+    const House = require("../models/House");
+    const house = await House.findById("H001");
+
+    req.isHouseMember = house
+      ? house.members.some((m) => m.toString() === user._id.toString())
+      : false;
+
+    next();
+  } catch (error) {
+    req.isHouseMember = false;
+    next();
+  }
+};
+
+module.exports = { authenticate, isOwner, canControlDevice, canViewDevice, checkHouseMembership };

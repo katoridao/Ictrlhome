@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
+import { connectSocket, getSocket } from '../database/socket';
 
 export default function RoomScreen({ navigation }) {
   const { styles: themeStyles } = useTheme();
@@ -37,7 +39,6 @@ export default function RoomScreen({ navigation }) {
       const response = await api.get('/rooms');
       const roomList = response.data?.rooms || [];
 
-      // Lấy thêm danh sách thiết bị cho mỗi phòng để biết có thiết bị nào đang bật không
       const roomsWithStatus = await Promise.all(
         roomList.map(async room => {
           try {
@@ -67,6 +68,119 @@ export default function RoomScreen({ navigation }) {
     }, []),
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+
+      const onStatusChanged = ({ device_id, status }) => {
+        if (!mounted) return;
+        setRooms(prev =>
+          prev.map(room => {
+            const deviceIndex = room.devices?.findIndex(
+              d => d._id === device_id,
+            );
+            if (deviceIndex === -1 || deviceIndex === undefined) return room;
+            const updatedDevices = room.devices.map(d =>
+              d._id === device_id ? { ...d, status } : d,
+            );
+            const onCount = updatedDevices.filter(d => d.status).length;
+            return { ...room, devices: updatedDevices, onCount };
+          }),
+        );
+      };
+
+      const onRoomAdded = ({ room }) => {
+        if (!mounted) return;
+        setRooms(prev => [
+          ...prev,
+          { ...room, devices: [], onCount: 0, totalDevices: 0 },
+        ]);
+      };
+
+      const onRoomUpdated = ({ room }) => {
+        if (!mounted) return;
+        setRooms(prev =>
+          prev.map(r => (r._id === room._id ? { ...r, ...room } : r)),
+        );
+      };
+
+      const onRoomDeleted = ({ room_id }) => {
+        if (!mounted) return;
+        setRooms(prev => prev.filter(r => r._id !== room_id));
+      };
+
+      const onDeviceAdded = ({ device }) => {
+        if (!mounted) return;
+        setRooms(prev =>
+          prev.map(room => {
+            if (room._id === device.room_id) {
+              return {
+                ...room,
+                devices: [...(room.devices || []), device],
+                totalDevices: (room.devices?.length || 0) + 1,
+              };
+            }
+            return room;
+          }),
+        );
+      };
+
+      const onDeviceDeleted = ({ device_id }) => {
+        if (!mounted) return;
+        setRooms(prev =>
+          prev.map(room => {
+            const updatedDevices = room.devices?.filter(
+              d => d._id !== device_id,
+            );
+            const onCount = updatedDevices?.filter(d => d.status).length || 0;
+            return {
+              ...room,
+              devices: updatedDevices,
+              onCount,
+              totalDevices: updatedDevices?.length || 0,
+            };
+          }),
+        );
+      };
+
+      const setupSocket = async () => {
+        try {
+          const socket = await connectSocket();
+
+          // Setup listeners for real-time updates
+          socket
+            .off('device_status_changed')
+            .on('device_status_changed', onStatusChanged);
+          socket.off('room_added').on('room_added', onRoomAdded);
+          socket.off('room_updated').on('room_updated', onRoomUpdated);
+          socket.off('room_deleted').on('room_deleted', onRoomDeleted);
+          socket.off('device_added').on('device_added', onDeviceAdded);
+          socket.off('device_deleted').on('device_deleted', onDeviceDeleted);
+
+          console.log('[RoomScreen] Socket listeners registered');
+        } catch (err) {
+          console.error('[RoomScreen] Socket setup error:', err);
+        }
+      };
+
+      setupSocket();
+
+      return () => {
+        mounted = false;
+        const socket = getSocket();
+        if (socket) {
+          console.log('[RoomScreen] Cleaning up socket listeners');
+          socket.off('device_status_changed');
+          socket.off('room_added');
+          socket.off('room_updated');
+          socket.off('room_deleted');
+          socket.off('device_added');
+          socket.off('device_deleted');
+        }
+      };
+    }, []),
+  );
+
   const handleSave = async () => {
     if (!roomName.trim()) return;
     try {
@@ -75,7 +189,11 @@ export default function RoomScreen({ navigation }) {
       } else {
         const houseId = await AsyncStorage.getItem('current_house_id');
         if (!houseId) {
-          Alert.alert('Lỗi', 'Vui lòng chọn nhà trước.');
+          Toast.show({
+            type: 'error',
+            text1: 'Lỗi',
+            text2: 'Vui lòng chọn nhà trước.',
+          });
           return;
         }
         await api.post('/rooms/add', { name: roomName, house_id: houseId });
@@ -84,10 +202,11 @@ export default function RoomScreen({ navigation }) {
       setRoomName('');
       fetchRooms();
     } catch (error) {
-      Alert.alert(
-        'Lỗi',
-        error.response?.data?.message || 'Không thể lưu phòng',
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: error.response?.data?.message || 'Không thể lưu phòng',
+      });
     }
   };
 
@@ -102,14 +221,13 @@ export default function RoomScreen({ navigation }) {
             await api.delete(`/rooms/del/${id}`);
             fetchRooms();
           } catch (e) {
-            Alert.alert('Lỗi', 'Không thể xóa');
+            Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể xóa' });
           }
         },
       },
     ]);
   };
 
-  // Tắt tổng tất cả thiết bị trong 1 phòng từ ngoài danh sách
   const handleToggleAllInRoom = async room => {
     if (room.totalDevices === 0) return;
     const allOn = room.onCount === room.totalDevices;
@@ -132,7 +250,11 @@ export default function RoomScreen({ navigation }) {
         }),
       );
     } catch (e) {
-      Alert.alert('Lỗi', 'Không thể cập nhật thiết bị');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể cập nhật thiết bị',
+      });
     } finally {
       setTogglingRoomId(null);
     }
@@ -142,7 +264,6 @@ export default function RoomScreen({ navigation }) {
     <View
       style={[styles.container, { backgroundColor: themeStyles.background }]}
     >
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
         <Text style={styles.sortText}>Sắp xếp</Text>
         <Text style={styles.headerTitle}>Phòng</Text>
@@ -189,7 +310,6 @@ export default function RoomScreen({ navigation }) {
         )}
       </ScrollView>
 
-      {/* Modal Thêm/Sửa */}
       <Modal transparent visible={modalVisible} animationType="fade">
         <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
           <View style={styles.modalOverlay}>
@@ -268,7 +388,6 @@ function RoomItem({
         <Text style={[styles.roomName, { color: themeStyles.text }]}>
           {room.name}
         </Text>
-        {/* Số thiết bị đang bật */}
         <Text style={[styles.roomSub, { color: themeStyles.subText }]}>
           {hasDevices
             ? `${room.onCount}/${room.totalDevices} thiết bị đang bật`
@@ -277,7 +396,6 @@ function RoomItem({
       </View>
 
       <View style={styles.roomActions}>
-        {/* Nút tắt tổng nhanh */}
         {hasDevices && (
           <TouchableOpacity
             style={[
@@ -297,8 +415,6 @@ function RoomItem({
             )}
           </TouchableOpacity>
         )}
-
-        {/* Nút sửa/xóa chỉ OWNER */}
         {isOwner && (
           <>
             <TouchableOpacity

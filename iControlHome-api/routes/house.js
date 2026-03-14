@@ -3,7 +3,7 @@ const router = express.Router();
 const House = require("../models/House");
 const User = require("../models/User");
 const DeviceUsage = require("../models/DeviceUsage");
-const { authenticate, isOwner } = require("../middlewares/auth");
+const { authenticate, isOwner, isMember } = require("../middlewares/auth");
 
 // GET /api/houses
 router.get("/", async (req, res) => {
@@ -17,6 +17,35 @@ router.get("/", async (req, res) => {
     }
 
     res.json(house);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// GET /api/houses/check-member — Kiểm tra user hiện tại có trong nhà không
+// Frontend gọi sau login để quyết định có cho vào app không
+router.get("/check-member", authenticate, async (req, res) => {
+  try {
+    const user = req.user;
+
+    // OWNER luôn hợp lệ
+    if (user.role === "OWNER") {
+      return res.json({ is_member: true, role: "OWNER" });
+    }
+
+    const house = await House.findById("H001");
+    if (!house) {
+      return res.status(404).json({ message: "Không tìm thấy nhà" });
+    }
+
+    const isMemberOfHouse = house.members.some(
+      (m) => m.toString() === user._id.toString(),
+    );
+
+    res.json({
+      is_member: isMemberOfHouse,
+      role: user.role,
+    });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
   }
@@ -43,7 +72,10 @@ router.get("/statistics", async (req, res) => {
       start_time: { $gte: startDate, $lte: endDate },
     });
 
-    const totalKwh = usages.reduce((acc, curr) => acc + (curr.energy_kwh || 0), 0);
+    const totalKwh = usages.reduce(
+      (acc, curr) => acc + (curr.energy_kwh || 0),
+      0,
+    );
     const price = house.electricity.price_per_kwh || 0;
     const totalCost = totalKwh * price;
 
@@ -71,7 +103,9 @@ router.post("/add-member", authenticate, isOwner, async (req, res) => {
     // Tìm user theo số điện thoại
     const user = await User.findOne({ phone: phone.trim() });
     if (!user) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng với số điện thoại này" });
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy người dùng với số điện thoại này" });
     }
 
     const house = await House.findById("H001");
@@ -86,10 +120,12 @@ router.post("/add-member", authenticate, isOwner, async (req, res) => {
 
     // Kiểm tra đã là member chưa
     const alreadyMember = house.members.some(
-      (m) => m.toString() === user._id.toString()
+      (m) => m.toString() === user._id.toString(),
     );
     if (alreadyMember) {
-      return res.status(400).json({ message: "Người dùng đã là thành viên của nhà" });
+      return res
+        .status(400)
+        .json({ message: "Người dùng đã là thành viên của nhà" });
     }
 
     // Thêm vào mảng members
@@ -106,11 +142,105 @@ router.post("/add-member", authenticate, isOwner, async (req, res) => {
       .populate("owner_id", "name phone")
       .populate("members", "name phone");
 
+    // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
+    const io = req.app.get("io");
+    if (io) {
+      console.log("[House] Emit member_added to H001:", user._id);
+      io.to("H001").emit("member_added", {
+        member: {
+          _id: user._id,
+          name: user.name,
+          phone: user.phone,
+        },
+        house_id: "H001",
+      });
+    }
+
     res.json({
       message: `Đã thêm ${user.name || user.phone} vào nhà thành công`,
       house: updatedHouse,
     });
   } catch (err) {
+    console.error("[House] Error adding member:", err);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// POST /api/houses/request-join — Member tự tham gia bằng SĐT + mật khẩu của OWNER
+router.post("/request-join", authenticate, async (req, res) => {
+  try {
+    const { admin_phone, admin_password } = req.body;
+    const requestingUser = req.user;
+
+    if (!admin_phone || !admin_password) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng nhập đầy đủ thông tin" });
+    }
+
+    // Tìm OWNER theo số điện thoại
+    const admin = await User.findOne({
+      phone: admin_phone.trim(),
+      role: "OWNER",
+    });
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy chủ nhà với số điện thoại này" });
+    }
+
+    // Xác thực mật khẩu của OWNER
+    const isMatch = await bcrypt.compare(admin_password, admin.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Mật khẩu không chính xác" });
+    }
+
+    const house = await House.findById("H001");
+    if (!house) {
+      return res.status(404).json({ message: "Không tìm thấy nhà" });
+    }
+
+    // Kiểm tra requesting user có phải owner không
+    if (house.owner_id.toString() === requestingUser._id.toString()) {
+      return res
+        .status(400)
+        .json({ message: "Bạn là chủ nhà, không cần tham gia" });
+    }
+
+    // Kiểm tra đã là member chưa
+    const alreadyMember = house.members.some(
+      (m) => m.toString() === requestingUser._id.toString(),
+    );
+    if (alreadyMember) {
+      return res
+        .status(400)
+        .json({ message: "Bạn đã là thành viên của nhà này" });
+    }
+
+    // Thêm vào nhà
+    house.members.push(requestingUser._id);
+    await house.save();
+
+    // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
+    const io = req.app.get("io");
+    if (io) {
+      console.log(
+        "[House] Emit member_added to H001 (request-join):",
+        requestingUser._id,
+      );
+      io.to("H001").emit("member_added", {
+        member: {
+          _id: requestingUser._id,
+          name: requestingUser.name,
+          phone: requestingUser.phone,
+        },
+        house_id: "H001",
+      });
+    }
+
+    res.json({ message: "Tham gia nhà thành công! Bạn đã được thêm vào nhà." });
+  } catch (err) {
+    console.error("[House] Error request-join:", err);
     res.status(500).json({ message: "Lỗi server" });
   }
 });
@@ -131,11 +261,23 @@ router.delete("/remove-member", authenticate, isOwner, async (req, res) => {
 
     const existed = house.members.some((m) => m.toString() === member_id);
     if (!existed) {
-      return res.status(404).json({ message: "Thành viên không tồn tại trong nhà" });
+      return res
+        .status(404)
+        .json({ message: "Thành viên không tồn tại trong nhà" });
     }
 
     house.members = house.members.filter((m) => m.toString() !== member_id);
     await house.save();
+
+    // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
+    const io = req.app.get("io");
+    if (io) {
+      console.log("[House] Emit member_removed to H001:", member_id);
+      io.to("H001").emit("member_removed", {
+        member_id,
+        house_id: "H001",
+      });
+    }
 
     const updatedHouse = await House.findById("H001")
       .populate("owner_id", "name phone")
@@ -146,6 +288,7 @@ router.delete("/remove-member", authenticate, isOwner, async (req, res) => {
       house: updatedHouse,
     });
   } catch (err) {
+    console.error("[House] Error removing member:", err);
     res.status(500).json({ message: "Lỗi server" });
   }
 });
@@ -154,7 +297,7 @@ router.delete("/remove-member", authenticate, isOwner, async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const houseId = (!id || id === "null" || id === "undefined") ? "H001" : id;
+    const houseId = !id || id === "null" || id === "undefined" ? "H001" : id;
 
     const house = await House.findById(houseId)
       .populate("owner_id", "name phone")
@@ -165,6 +308,66 @@ router.get("/:id", async (req, res) => {
     }
 
     res.json(house);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// POST /api/houses/join — Member tự tham gia nhà bằng SĐT admin + mật khẩu nhà
+router.post("/join", authenticate, async (req, res) => {
+  try {
+    const { admin_phone, join_password } = req.body;
+    const memberId = req.user._id;
+
+    if (!admin_phone || !join_password) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng nhập đầy đủ thông tin" });
+    }
+
+    // Xác minh SĐT admin tồn tại và có role OWNER
+    const admin = await User.findOne({ phone: admin_phone.trim() });
+    if (!admin || admin.role !== "OWNER") {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy tài khoản chủ nhà" });
+    }
+
+    // Tìm nhà
+    const house = await House.findById("H001");
+    if (!house) {
+      return res.status(404).json({ message: "Không tìm thấy nhà" });
+    }
+
+    // Kiểm tra mật khẩu tham gia nhà (so sánh trực tiếp, không hash)
+    if (house.join_password !== join_password) {
+      return res
+        .status(401)
+        .json({ message: "Mật khẩu tham gia nhà không đúng" });
+    }
+
+    // Không cho owner tự thêm chính mình
+    if (house.owner_id.toString() === memberId.toString()) {
+      return res
+        .status(400)
+        .json({ message: "Bạn là chủ nhà, không cần tham gia" });
+    }
+
+    // Kiểm tra đã là member chưa
+    const alreadyMember = house.members.some(
+      (m) => m.toString() === memberId.toString(),
+    );
+    if (alreadyMember) {
+      return res
+        .status(400)
+        .json({ message: "Bạn đã là thành viên của nhà này" });
+    }
+
+    // Thêm member vào nhà
+    house.members.push(memberId);
+    await house.save();
+
+    res.json({ message: "Tham gia nhà thành công! Bạn đã được kết nối." });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
   }

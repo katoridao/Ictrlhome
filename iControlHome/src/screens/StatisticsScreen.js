@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -9,110 +9,183 @@ import {
   StatusBar,
   Image,
   TouchableOpacity,
+  AppState,
 } from "react-native";
 
 import { useTheme } from "../context/ThemeContext";
 import api from "../database/api";
-import { useFocusEffect } from "@react-navigation/native";
+import { connectSocket, getSocket } from "../database/socket";
 
 export default function StatisticsScreen({ navigation }) {
-
   const { styles: themeStyles, theme } = useTheme();
 
+  const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [devices, setDevices] = useState([]);
+  const [tick, setTick] = useState(0);
+
+  const appState = useRef(AppState.currentState);
+  const socketRef = useRef(null);
+  const lastUpdateRef = useRef({});
 
   // ===============================
-  // FETCH DATA FROM BACKEND
+  // TÍNH TIỀN ĐIỆN
+  // ===============================
+  const calculateElectricCost = (kwh) => {
+    const rates = [
+      { limit: 50, rate: 1484 },
+      { limit: 100, rate: 1533 },
+      { limit: 200, rate: 1786 },
+      { limit: Infinity, rate: 2242 },
+    ];
+
+    let cost = 0;
+    let remaining = kwh;
+
+    for (const { limit, rate } of rates) {
+      const use = Math.min(remaining, limit);
+      cost += use * rate;
+      remaining -= use;
+      if (remaining <= 0) break;
+    }
+
+    return cost;
+  };
+
+  // ===============================
+  // FETCH DATA (LOAD LẦN ĐẦU)
   // ===============================
   const fetchData = useCallback(async () => {
-
     try {
-
       const res = await api.get("/device-usages/realtime");
 
       const devicesFromServer = res.data.devices || [];
 
-      setDevices(
-        devicesFromServer.map((d) => ({
+      const formatted = devicesFromServer.map((d) => {
+        const runtime = d.runtime_seconds || 0;
+        const energy = d.energy_kwh || 0;
+
+        return {
           ...d,
-          runtime_seconds: d.runtime_seconds || 0,
-          energy_kwh: d.energy_kwh || 0,
-          cost: d.cost || 0,
-          power_watt: d.power_watt || 0,
-        }))
-      );
+          runtime_seconds: runtime,
+          energy_kwh: energy,
+          cost: calculateElectricCost(energy),
+        };
+      });
 
+      setDevices(formatted);
+      const now = Date.now();
+      const next = { ...lastUpdateRef.current };
+      formatted.forEach((d) => {
+        next[String(d.device_id)] = now;
+      });
+      lastUpdateRef.current = next;
     } catch (error) {
-
       console.log("Fetch error:", error.message);
-
     } finally {
-
       setLoading(false);
       setRefreshing(false);
-
     }
-
   }, []);
 
   useEffect(() => {
-
     fetchData();
-
   }, [fetchData]);
 
   // ===============================
-  // REALTIME TIMER (1 SECOND)
+  // SOCKET REALTIME
   // ===============================
-  useFocusEffect(
-  useCallback(() => {
+  const onDeviceRuntime = useCallback(
+    (devicesFromServer) => {
+      const formatted = (devicesFromServer || []).map((d) => {
+        const runtime = d.runtime_seconds || 0;
+        const energy = d.energy_kwh || 0;
 
-    // khi vào màn hình -> sync dữ liệu từ server
-    fetchData();
+        return {
+          ...d,
+          runtime_seconds: runtime,
+          energy_kwh: energy,
+          cost: calculateElectricCost(energy),
+        };
+      });
 
-    const timer = setInterval(() => {
+      setDevices(formatted);
+      const now = Date.now();
+      const next = { ...lastUpdateRef.current };
+      formatted.forEach((d) => {
+        next[String(d.device_id)] = now;
+      });
+      lastUpdateRef.current = next;
+    },
+    [calculateElectricCost]
+  );
 
-      setDevices((prev) =>
-        prev.map((d) => {
+  useEffect(() => {
+    let mounted = true;
 
-          if (!d.isActive) return d;
+    const setup = async () => {
+      const socket = await connectSocket();
+      if (!mounted) return;
 
-          const runtime = d.runtime_seconds + 1;
+      socketRef.current = socket;
 
-          const energy =
-            (d.power_watt * runtime) / 3600000;
+      // chỉ đăng ký 1 handler, không bị chồng khi remount
+      socket.off("device-runtime", onDeviceRuntime);
+      socket.on("device-runtime", onDeviceRuntime);
+    };
 
-          const cost = energy * 1806;
+    setup();
 
-          return {
-            ...d,
-            runtime_seconds: runtime,
-            energy_kwh: energy,
-            cost: cost
-          };
+    return () => {
+      mounted = false;
+      const s = socketRef.current || getSocket();
+      s?.off("device-runtime", onDeviceRuntime);
+    };
+  }, [onDeviceRuntime]);
 
-        })
-      );
+  // Khi quay lại screen thì fetch để đồng bộ ngay (kể cả lúc đang chạy)
+  useEffect(() => {
+    const unsubFocus = navigation.addListener("focus", () => {
+      fetchData();
+    });
+    return () => unsubFocus?.();
+  }, [navigation, fetchData]);
 
-    }, 1000);
+  // ===============================
+  // APP STATE LISTENER
+  // ===============================
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      (state) => {
+        if (
+          appState.current.match(/inactive|background/) &&
+          state === "active"
+        ) {
+          fetchData();
+        }
 
-    return () => clearInterval(timer);
+        appState.current = state;
+      }
+    );
 
-  }, [fetchData])
-);
+    return () => subscription.remove();
+  }, [fetchData]);
+
+  // Re-render mỗi giây để UI chạy giây mượt,
+  // nhưng runtime luôn dựa trên "lần server update gần nhất" + diff thời gian local.
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const onRefresh = () => {
-
     setRefreshing(true);
-
     fetchData();
-
   };
 
   // ===============================
-  // TOTAL ENERGY + COST
+  // TỔNG KWH + COST
   // ===============================
   const totalKwh = devices.reduce(
     (sum, d) => sum + (d.energy_kwh || 0),
@@ -125,7 +198,11 @@ export default function StatisticsScreen({ navigation }) {
   );
 
   const formatKwh = (num) =>
-    num === 0 ? "0" : num < 0.001 ? num.toFixed(5) : num.toFixed(3);
+    num === 0
+      ? "0"
+      : num < 0.001
+      ? num.toFixed(5)
+      : num.toFixed(3);
 
   const formatCurrency = (num) => {
     if (num < 1) return num.toFixed(3);
@@ -140,7 +217,11 @@ export default function StatisticsScreen({ navigation }) {
       ]}
     >
       <StatusBar
-        barStyle={theme === "DARK" ? "light-content" : "dark-content"}
+        barStyle={
+          theme === "DARK"
+            ? "light-content"
+            : "dark-content"
+        }
         backgroundColor={themeStyles.primary}
       />
 
@@ -151,7 +232,9 @@ export default function StatisticsScreen({ navigation }) {
           { backgroundColor: themeStyles.primary },
         ]}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+        >
           <Image
             source={require("../../public/img/back.png")}
             style={{
@@ -179,15 +262,13 @@ export default function StatisticsScreen({ navigation }) {
           />
         }
       >
-
-        {/* SUMMARY CARD */}
+        {/* SUMMARY */}
         <View
           style={[
             styles.summaryCard,
             { backgroundColor: themeStyles.primary },
           ]}
         >
-
           <Text style={styles.summaryLabel}>
             Tổng chi phí các thiết bị
           </Text>
@@ -199,7 +280,6 @@ export default function StatisticsScreen({ navigation }) {
           <View style={styles.divider} />
 
           <View style={styles.row}>
-
             <View>
               <Text style={styles.subLabel}>
                 Tổng điện năng
@@ -214,12 +294,14 @@ export default function StatisticsScreen({ navigation }) {
                 Đang hoạt động
               </Text>
               <Text style={styles.subValue}>
-                {devices.filter((d) => d.isActive).length} thiết bị
+                {
+                  devices.filter((d) => d.isActive)
+                    .length
+                }{" "}
+                thiết bị
               </Text>
             </View>
-
           </View>
-
         </View>
 
         <Text
@@ -232,14 +314,11 @@ export default function StatisticsScreen({ navigation }) {
         </Text>
 
         {loading ? (
-
           <ActivityIndicator
             size="large"
             color={themeStyles.primary}
           />
-
         ) : devices.length === 0 ? (
-
           <Text
             style={{
               textAlign: "center",
@@ -249,38 +328,34 @@ export default function StatisticsScreen({ navigation }) {
           >
             Không có dữ liệu thiết bị
           </Text>
-
         ) : (
-
           devices.map((item) => {
-
-            const minutes = Math.floor(
-              item.runtime_seconds / 60
-            );
-
-            const seconds = Math.floor(
-              item.runtime_seconds % 60
-            );
+            const baseRuntime = item.runtime_seconds || 0;
+            const lastUpdate = lastUpdateRef.current[String(item.device_id)] || Date.now();
+            const extra =
+              item.isActive ? Math.max(0, Math.floor((Date.now() - lastUpdate) / 1000)) : 0;
+            const runtime = baseRuntime + extra;
+            const minutes = Math.floor(runtime / 60);
+            const seconds = Math.floor(runtime % 60);
 
             return (
-
               <View
-                key={item.device_id || item._id}
+                key={item.device_id}
                 style={[
                   styles.deviceItem,
-                  { backgroundColor: themeStyles.card },
+                  {
+                    backgroundColor:
+                      themeStyles.card,
+                  },
                 ]}
               >
-
                 <View style={styles.deviceInfo}>
-
                   <View
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
                     }}
                   >
-
                     <Text
                       style={[
                         styles.deviceName,
@@ -293,7 +368,6 @@ export default function StatisticsScreen({ navigation }) {
                     {item.isActive && (
                       <View style={styles.activeDot} />
                     )}
-
                   </View>
 
                   <Text
@@ -306,19 +380,14 @@ export default function StatisticsScreen({ navigation }) {
                       },
                     ]}
                   >
-
                     {item.isActive
                       ? "⚡ Đang chạy: "
                       : "⌛ Đã dùng: "}
-
                     {minutes}ph {seconds}s
-
                   </Text>
-
                 </View>
 
                 <View style={styles.deviceStats}>
-
                   <Text
                     style={[
                       styles.deviceCost,
@@ -336,24 +405,17 @@ export default function StatisticsScreen({ navigation }) {
                   >
                     {formatKwh(item.energy_kwh)} kWh
                   </Text>
-
                 </View>
-
               </View>
-
             );
-
           })
-
         )}
-
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-
   container: { flex: 1 },
 
   header: {
@@ -371,9 +433,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  body: {
-    padding: 16,
-  },
+  body: { padding: 16 },
 
   summaryCard: {
     borderRadius: 16,
@@ -433,9 +493,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
 
-  deviceInfo: {
-    flex: 1,
-  },
+  deviceInfo: { flex: 1 },
 
   deviceName: {
     fontSize: 16,
@@ -448,9 +506,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  deviceStats: {
-    alignItems: "flex-end",
-  },
+  deviceStats: { alignItems: "flex-end" },
 
   deviceCost: {
     fontSize: 16,
@@ -458,9 +514,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  deviceKwh: {
-    fontSize: 12,
-  },
+  deviceKwh: { fontSize: 12 },
 
   activeDot: {
     width: 8,
@@ -469,5 +523,4 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
     marginLeft: 8,
   },
-
 });

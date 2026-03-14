@@ -37,31 +37,6 @@ export default function NotificationSettingScreen({ navigation }) {
 
         <View style={{ width: 22 }} />
       </View>
-
-      {/* BODY */}
-      <View style={styles.body}>
-        <View style={[styles.settingItem, darkMode && styles.darkItem]}>
-          <Text style={[styles.label, darkMode && { color: '#fff' }]}>
-            Bật thông báo
-          </Text>
-          <Switch
-            value={notify}
-            onValueChange={setNotify}
-            trackColor={{ true: '#3b9cff' }}
-          />
-        </View>
-
-        <View style={[styles.settingItem, darkMode && styles.darkItem]}>
-          <Text style={[styles.label, darkMode && { color: '#fff' }]}>
-            Chế độ tối
-          </Text>
-          <Switch
-            value={darkMode}
-            onValueChange={setDarkMode}
-            trackColor={{ true: '#3b9cff' }}
-          />
-        </View>
-      </View>
     </View>
   );
 }
@@ -91,30 +66,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#fff',
-  },
-
-  body: {
-    padding: 16,
-  },
-
-  settingItem: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    elevation: 2,
-  },
-
-  label: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
-
-  darkItem: {
-    backgroundColor: '#1f1f1f',
   },
 });

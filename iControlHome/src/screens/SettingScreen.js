@@ -10,21 +10,22 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native'; // Hook để nhận biết khi quay lại màn hình
+import { useFocusEffect } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
 
 export default function SettingScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const { theme, styles: themeStyles } = useTheme();
 
-  // Dùng useFocusEffect thay cho useEffect để load lại tên mỗi khi quay lại
   useFocusEffect(
     useCallback(() => {
       const loadUserData = async () => {
         try {
           const jsonValue = await AsyncStorage.getItem('user_info');
           if (jsonValue !== null) {
-            setUserData(JSON.parse(jsonValue));
+            const user = JSON.parse(jsonValue);
+            setUserData(user);
           }
         } catch (e) {
           console.error('Lỗi lấy dữ liệu:', e);
@@ -35,17 +36,21 @@ export default function SettingScreen({ navigation }) {
   );
 
   const handleLogout = () => {
+    // Giữ lại: đây là confirm dialog cần người dùng xác nhận
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn thoát khỏi ứng dụng?', [
       { text: 'Hủy', style: 'cancel' },
       {
         text: 'Đồng ý',
         onPress: async () => {
-          // Xóa tất cả thông tin liên quan đến người dùng cũ
           await AsyncStorage.multiRemove([
             'user_info',
             'phone',
             'current_house_id',
             'current_house_name',
+            'token',
+            'saved_phone',
+            'saved_password',
+            'remember_me',
           ]);
           navigation.replace('Login');
         },
@@ -68,7 +73,6 @@ export default function SettingScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {/* THÔNG TIN NGƯỜI DÙNG */}
         <TouchableOpacity
           style={styles.userBox}
           activeOpacity={0.9}
@@ -107,7 +111,6 @@ export default function SettingScreen({ navigation }) {
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('NotificationSetting')}
           />
-
           <SettingItem
             icon={require('../../public/img/moon.png')}
             label="Giao diện"
@@ -115,14 +118,12 @@ export default function SettingScreen({ navigation }) {
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('AppearanceScreen')}
           />
-
           <SettingItem
-            icon={require('../../public/img/device_default.png')} // Icon thống kê
+            icon={require('../../public/img/device_usage.png')}
             label="Thống kê tiêu thụ"
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('StatisticsScreen')}
           />
-
           <SettingItem
             icon={require('../../public/img/language.png')}
             label="Ngôn ngữ"
@@ -130,7 +131,11 @@ export default function SettingScreen({ navigation }) {
             noBorder
             textColor={themeStyles.text}
             onPress={() =>
-              Alert.alert('Thông báo', 'Tính năng đang phát triển')
+              Toast.show({
+                type: 'info',
+                text1: 'Thông báo',
+                text2: 'Tính năng đang phát triển',
+              })
             }
           />
         </View>
@@ -206,12 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 24,
   },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 26,
-    marginRight: 14,
-  },
+  avatar: { width: 50, height: 50, borderRadius: 26, marginRight: 14 },
   userName: { fontSize: 18, fontWeight: '700' },
   userEmail: { fontSize: 14 },
   sectionTitle: {
@@ -231,9 +231,5 @@ const styles = StyleSheet.create({
   itemIcon: { width: 22, height: 22, marginRight: 14, tintColor: '#3b9cff' },
   itemText: { flex: 1, fontSize: 16 },
   valueText: { fontSize: 14, color: '#999', marginRight: 6 },
-  arrow: {
-    width: 14,
-    height: 14,
-    tintColor: '#bbb',
-  },
+  arrow: { width: 14, height: 14, tintColor: '#bbb' },
 });

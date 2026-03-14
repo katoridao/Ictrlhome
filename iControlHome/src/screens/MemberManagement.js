@@ -1,13 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  FlatList, Switch, ActivityIndicator, Alert, TextInput, SectionList
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  Switch,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+  SectionList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
+import { connectSocket, getSocket } from '../database/socket';
 
 /**
  * MÀN HÌNH 1: DANH SÁCH THÀNH VIÊN
@@ -22,77 +33,197 @@ export const ManageMembersScreen = ({ navigation }) => {
   const fetchMembers = useCallback(async () => {
     try {
       setLoading(true);
-      const houseId = await AsyncStorage.getItem('current_house_id') || 'H001';
+      const houseId =
+        (await AsyncStorage.getItem('current_house_id')) || 'H001';
       const response = await api.get(`/houses/${houseId}`);
       setMembers(response.data.members || []);
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể tải danh sách thành viên.');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể tải danh sách thành viên.',
+      });
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchMembers(); }, [fetchMembers]);
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  // ✅ Socket setup for real-time member updates
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+
+      const onMemberAdded = ({ member }) => {
+        if (!mounted) return;
+        console.log('[ManageMembers] New member added:', member._id);
+        // Fetch members again to update the list with complete data
+        fetchMembers();
+      };
+
+      const onMemberRemoved = ({ member_id }) => {
+        if (!mounted) return;
+        console.log('[ManageMembers] Member removed:', member_id);
+        setMembers(prev => prev.filter(m => m._id !== member_id));
+      };
+
+      const setupSocket = async () => {
+        try {
+          const socket = await connectSocket();
+          socket.off('member_added').on('member_added', onMemberAdded);
+          socket.off('member_removed').on('member_removed', onMemberRemoved);
+          console.log('[ManageMembers] Socket listeners registered');
+        } catch (err) {
+          console.error('[ManageMembers] Socket setup error:', err);
+        }
+      };
+
+      setupSocket();
+
+      return () => {
+        mounted = false;
+        const socket = getSocket();
+        if (socket) {
+          socket.off('member_added');
+          socket.off('member_removed');
+        }
+      };
+    }, [fetchMembers]),
+  );
 
   const handleAddMember = async () => {
     const cleanPhone = phone.trim();
-    if (!cleanPhone) { Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại'); return; }
+    if (!cleanPhone) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Vui lòng nhập số điện thoại',
+      });
+      return;
+    }
     setAdding(true);
     try {
-      const response = await api.post('/houses/add-member', { phone: cleanPhone });
-      Alert.alert('Thành công', response.data.message);
+      const response = await api.post('/houses/add-member', {
+        phone: cleanPhone,
+      });
+      Toast.show({
+        type: 'success',
+        text1: 'Thành công',
+        text2: response.data.message,
+      });
       setPhone('');
       setMembers(response.data.house.members || []);
     } catch (error) {
-      Alert.alert('Lỗi', error.response?.data?.message || 'Không thể thêm thành viên');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: error.response?.data?.message || 'Không thể thêm thành viên',
+      });
     } finally {
       setAdding(false);
     }
   };
 
-  const handleRemoveMember = (member) => {
-    Alert.alert('Xóa thành viên', `Bạn có chắc muốn xóa ${member.name || member.phone}?`, [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Xóa', style: 'destructive', onPress: async () => {
-          try {
-            const response = await api.delete('/houses/remove-member', { data: { member_id: member._id } });
-            setMembers(response.data.house.members || []);
-          } catch (error) {
-            Alert.alert('Lỗi', error.response?.data?.message || 'Không thể xóa');
-          }
-        }
-      }
-    ]);
+  const handleRemoveMember = member => {
+    // Giữ lại: đây là confirm dialog cần người dùng xác nhận
+    Alert.alert(
+      'Xóa thành viên',
+      `Bạn có chắc muốn xóa ${member.name || member.phone}?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await api.delete('/houses/remove-member', {
+                data: { member_id: member._id },
+              });
+              setMembers(response.data.house.members || []);
+              Toast.show({
+                type: 'success',
+                text1: 'Đã xóa',
+                text2: `${member.name || member.phone} đã bị xóa khỏi nhà.`,
+              });
+            } catch (error) {
+              Toast.show({
+                type: 'error',
+                text1: 'Lỗi',
+                text2: error.response?.data?.message || 'Không thể xóa',
+              });
+            }
+          },
+        },
+      ],
+    );
   };
 
   const renderMemberItem = ({ item }) => (
     <View style={[styles.card, { backgroundColor: themeStyles.card }]}>
-      <View style={[styles.avatarCircle, { backgroundColor: themeStyles.primary }]}>
-        <Text style={styles.avatarText}>{item.name?.charAt(0).toUpperCase() || 'U'}</Text>
+      <View
+        style={[styles.avatarCircle, { backgroundColor: themeStyles.primary }]}
+      >
+        <Text style={styles.avatarText}>
+          {item.name?.charAt(0).toUpperCase() || 'U'}
+        </Text>
       </View>
-      <TouchableOpacity style={styles.memberInfo} onPress={() => navigation.navigate('MemberPermission', { member: item })}>
-        <Text style={[styles.memberName, { color: themeStyles.text }]}>{item.name || 'Thành viên'}</Text>
-        <Text style={[styles.memberPhone, { color: themeStyles.subText }]}>{item.phone}</Text>
+      <TouchableOpacity
+        style={styles.memberInfo}
+        onPress={() =>
+          navigation.navigate('MemberPermission', { member: item })
+        }
+      >
+        <Text style={[styles.memberName, { color: themeStyles.text }]}>
+          {item.name || 'Thành viên'}
+        </Text>
+        <Text style={[styles.memberPhone, { color: themeStyles.subText }]}>
+          {item.phone}
+        </Text>
       </TouchableOpacity>
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('MemberPermission', { member: item })}>
-          <MaterialCommunityIcons name="shield-account" size={22} color={themeStyles.primary} />
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() =>
+            navigation.navigate('MemberPermission', { member: item })
+          }
+        >
+          <MaterialCommunityIcons
+            name="shield-account"
+            size={22}
+            color={themeStyles.primary}
+          />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => handleRemoveMember(item)}>
-          <MaterialCommunityIcons name="account-remove" size={22} color="#F44336" />
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => handleRemoveMember(item)}
+        >
+          <MaterialCommunityIcons
+            name="account-remove"
+            size={22}
+            color="#F44336"
+          />
         </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeStyles.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: themeStyles.background }]}
+    >
       <View style={[styles.addBox, { backgroundColor: themeStyles.card }]}>
-        <Text style={[styles.sectionTitle, { color: themeStyles.text }]}>Thêm thành viên</Text>
+        <Text style={[styles.sectionTitle, { color: themeStyles.text }]}>
+          Thêm thành viên
+        </Text>
         <View style={styles.inputRow}>
           <TextInput
-            style={[styles.input, { color: themeStyles.text, borderColor: themeStyles.subText }]}
+            style={[
+              styles.input,
+              { color: themeStyles.text, borderColor: themeStyles.subText },
+            ]}
             placeholder="Nhập số điện thoại..."
             placeholderTextColor={themeStyles.subText}
             value={phone}
@@ -100,24 +231,39 @@ export const ManageMembersScreen = ({ navigation }) => {
             keyboardType="phone-pad"
           />
           <TouchableOpacity
-            style={[styles.addBtn, { backgroundColor: themeStyles.primary }, adding && { opacity: 0.7 }]}
+            style={[
+              styles.addBtn,
+              { backgroundColor: themeStyles.primary },
+              adding && { opacity: 0.7 },
+            ]}
             onPress={handleAddMember}
             disabled={adding}
           >
-            {adding ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.addBtnText}>Thêm</Text>}
+            {adding ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.addBtnText}>Thêm</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: themeStyles.text, marginHorizontal: 16 }]}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          { color: themeStyles.text, marginHorizontal: 16 },
+        ]}
+      >
         Danh sách thành viên ({members.length})
       </Text>
       <FlatList
         data={members}
-        keyExtractor={(item) => item._id}
+        keyExtractor={item => item._id}
         renderItem={renderMemberItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<Text style={styles.emptyText}>Chưa có thành viên nào.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>Chưa có thành viên nào.</Text>
+        }
         onRefresh={fetchMembers}
         refreshing={loading}
       />
@@ -131,16 +277,15 @@ export const ManageMembersScreen = ({ navigation }) => {
 export const MemberPermissionScreen = ({ route }) => {
   const { member } = route.params;
   const { styles: themeStyles } = useTheme();
-  const [sections, setSections] = useState([]); // [{title, roomId, type, data}]
+  const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const houseId = await AsyncStorage.getItem('current_house_id') || 'H001';
-
-      // Lấy danh sách phòng và thiết bị song song
+      const houseId =
+        (await AsyncStorage.getItem('current_house_id')) || 'H001';
       const [roomsRes, devicesRes] = await Promise.all([
         api.get('/rooms'),
         api.get('/devices', { params: { house_id: houseId } }),
@@ -148,51 +293,51 @@ export const MemberPermissionScreen = ({ route }) => {
 
       const rooms = roomsRes.data.rooms || [];
       const allDevices = devicesRes.data.devices || [];
-
-      // Xây dựng sections:
-      // Section 1..N: Mỗi phòng + các thiết bị trong phòng đó
-      // Section cuối: Thiết bị chưa gán phòng (chỉ cấp quyền đơn lẻ)
       const builtSections = [];
 
-      // Các phòng
       for (const room of rooms) {
         const roomPerm = room.permissions?.find(
-          (p) => p.user_id === member._id || p.user_id?.toString() === member._id
+          p => p.user_id === member._id || p.user_id?.toString() === member._id,
         );
-
         const devicesInRoom = allDevices.filter(
-          (d) => d.room_id?.toString() === room._id?.toString()
+          d => d.room_id?.toString() === room._id?.toString(),
         );
-
         builtSections.push({
           roomId: room._id,
           title: room.name,
           type: 'room',
-          roomPerm: {
-            can_control: roomPerm?.can_control ?? false,
-          },
-          data: devicesInRoom.map((d) => {
+          roomPerm: { can_control: roomPerm?.can_control ?? false },
+          data: devicesInRoom.map(d => {
             const dp = d.permissions?.find(
-              (p) => p.user_id === member._id || p.user_id?.toString() === member._id
+              p =>
+                p.user_id === member._id ||
+                p.user_id?.toString() === member._id,
             );
-            return { ...d, devicePerm: { can_control: dp?.can_control ?? false } };
+            return {
+              ...d,
+              devicePerm: { can_control: dp?.can_control ?? false },
+            };
           }),
         });
       }
 
-      // Thiết bị chưa gán phòng
-      const unassigned = allDevices.filter((d) => !d.room_id);
+      const unassigned = allDevices.filter(d => !d.room_id);
       if (unassigned.length > 0) {
         builtSections.push({
           roomId: null,
           title: 'Thiết bị chưa gán phòng',
           type: 'unassigned',
           roomPerm: null,
-          data: unassigned.map((d) => {
+          data: unassigned.map(d => {
             const dp = d.permissions?.find(
-              (p) => p.user_id === member._id || p.user_id?.toString() === member._id
+              p =>
+                p.user_id === member._id ||
+                p.user_id?.toString() === member._id,
             );
-            return { ...d, devicePerm: { can_control: dp?.can_control ?? false } };
+            return {
+              ...d,
+              devicePerm: { can_control: dp?.can_control ?? false },
+            };
           }),
         });
       }
@@ -205,9 +350,115 @@ export const MemberPermissionScreen = ({ route }) => {
     }
   }, [member._id]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  // Toggle quyền PHÒNG
+  // ✅ Socket setup for real-time permission updates
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+
+      const onPermissionUpdated = ({
+        device_id,
+        room_id,
+        user_id,
+        can_control,
+        can_view,
+      }) => {
+        if (!mounted || user_id !== member._id) return;
+        console.log('[MemberPermission] Permission updated:', {
+          device_id,
+          room_id,
+          user_id,
+        });
+
+        setSections(prev =>
+          prev.map(section => {
+            // Update device permission
+            if (device_id) {
+              return {
+                ...section,
+                data: section.data.map(d =>
+                  d._id === device_id
+                    ? { ...d, devicePerm: { can_control } }
+                    : d,
+                ),
+              };
+            }
+            // Update room permission
+            if (room_id && section.roomId?.toString() === room_id) {
+              return {
+                ...section,
+                roomPerm: { can_control: can_control ?? can_view ?? false },
+              };
+            }
+            return section;
+          }),
+        );
+      };
+
+      const onPermissionRemoved = ({ device_id, room_id, user_id }) => {
+        if (!mounted || user_id !== member._id) return;
+        console.log('[MemberPermission] Permission removed:', {
+          device_id,
+          room_id,
+          user_id,
+        });
+
+        setSections(prev =>
+          prev.map(section => {
+            // Remove device permission
+            if (device_id) {
+              return {
+                ...section,
+                data: section.data.map(d =>
+                  d._id === device_id
+                    ? { ...d, devicePerm: { can_control: false } }
+                    : d,
+                ),
+              };
+            }
+            // Remove room permission
+            if (room_id && section.roomId?.toString() === room_id) {
+              return {
+                ...section,
+                roomPerm: { can_control: false },
+              };
+            }
+            return section;
+          }),
+        );
+      };
+
+      const setupSocket = async () => {
+        try {
+          const socket = await connectSocket();
+          socket
+            .off('permission_updated')
+            .on('permission_updated', onPermissionUpdated);
+          socket
+            .off('permission_removed')
+            .on('permission_removed', onPermissionRemoved);
+          console.log('[MemberPermission] Socket listeners registered');
+        } catch (err) {
+          console.error('[MemberPermission] Socket setup error:', err);
+        }
+      };
+
+      setupSocket();
+
+      return () => {
+        mounted = false;
+        const socket = getSocket();
+        if (socket) {
+          socket.off('permission_updated');
+          socket.off('permission_removed');
+        }
+      };
+    }, [member._id]),
+  );
+
   const toggleRoomPermission = async (roomId, field, currentValue) => {
     const key = `room_${roomId}_${field}`;
     setUpdatingId(key);
@@ -217,19 +468,23 @@ export const MemberPermissionScreen = ({ route }) => {
         member_id: member._id,
         [field]: newValue,
       });
-
-      setSections((prev) => prev.map((s) => {
-        if (s.roomId?.toString() !== roomId?.toString()) return s;
-        return { ...s, roomPerm: { ...s.roomPerm, [field]: newValue } };
-      }));
+      setSections(prev =>
+        prev.map(s => {
+          if (s.roomId?.toString() !== roomId?.toString()) return s;
+          return { ...s, roomPerm: { ...s.roomPerm, [field]: newValue } };
+        }),
+      );
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể cập nhật quyền phòng');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể cập nhật quyền phòng',
+      });
     } finally {
       setUpdatingId(null);
     }
   };
 
-  // Toggle quyền THIẾT BỊ đơn lẻ
   const toggleDevicePermission = async (deviceId, currentValue) => {
     setUpdatingId(deviceId);
     try {
@@ -238,43 +493,62 @@ export const MemberPermissionScreen = ({ route }) => {
         member_id: member._id,
         can_control: newValue,
       });
-
-      setSections((prev) => prev.map((s) => ({
-        ...s,
-        data: s.data.map((d) =>
-          d._id === deviceId
-            ? { ...d, devicePerm: { can_control: newValue } }
-            : d
-        ),
-      })));
+      setSections(prev =>
+        prev.map(s => ({
+          ...s,
+          data: s.data.map(d =>
+            d._id === deviceId
+              ? { ...d, devicePerm: { can_control: newValue } }
+              : d,
+          ),
+        })),
+      );
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể cập nhật quyền thiết bị');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể cập nhật quyền thiết bị',
+      });
     } finally {
       setUpdatingId(null);
     }
   };
 
   const renderSectionHeader = ({ section }) => (
-    <View style={[styles.sectionHeader, { backgroundColor: themeStyles.background }]}>
+    <View
+      style={[
+        styles.sectionHeader,
+        { backgroundColor: themeStyles.background },
+      ]}
+    >
       <View style={styles.sectionHeaderLeft}>
         <MaterialCommunityIcons
           name={section.type === 'unassigned' ? 'devices' : 'door'}
-          size={18} color={themeStyles.primary}
+          size={18}
+          color={themeStyles.primary}
         />
-        <Text style={[styles.sectionHeaderText, { color: themeStyles.text }]}>{section.title}</Text>
+        <Text style={[styles.sectionHeaderText, { color: themeStyles.text }]}>
+          {section.title}
+        </Text>
       </View>
-
-      {/* Toggle quyền phòng (chỉ hiện với phòng thực) */}
       {section.type === 'room' && section.roomPerm !== null && (
         <View style={styles.roomToggles}>
           <View style={styles.toggleGroup}>
-            <Text style={[styles.toggleLabel, { color: themeStyles.subText }]}>Điều khiển</Text>
+            <Text style={[styles.toggleLabel, { color: themeStyles.subText }]}>
+              Điều khiển
+            </Text>
             {updatingId === `room_${section.roomId}_can_control` ? (
               <ActivityIndicator size="small" color={themeStyles.primary} />
             ) : (
               <Switch
                 value={section.roomPerm.can_control}
-                onValueChange={() => toggleRoomPermission(section.roomId, 'can_control', section.roomPerm.can_control)}
+                onValueChange={() =>
+                  toggleRoomPermission(
+                    section.roomId,
+                    'can_control',
+                    section.roomPerm.can_control,
+                  )
+                }
                 trackColor={{ true: '#A5D6A7' }}
                 thumbColor={section.roomPerm.can_control ? '#4CAF50' : '#ccc'}
               />
@@ -286,9 +560,17 @@ export const MemberPermissionScreen = ({ route }) => {
   );
 
   const renderDevice = ({ item, section }) => (
-    <View style={[styles.card, styles.deviceCard, { backgroundColor: themeStyles.card }]}>
+    <View
+      style={[
+        styles.card,
+        styles.deviceCard,
+        { backgroundColor: themeStyles.card },
+      ]}
+    >
       <View style={styles.memberInfo}>
-        <Text style={[styles.deviceName, { color: themeStyles.text }]}>{item.name}</Text>
+        <Text style={[styles.deviceName, { color: themeStyles.text }]}>
+          {item.name}
+        </Text>
         <Text style={{ color: themeStyles.subText, fontSize: 11 }}>
           {item.type ? item.type.toUpperCase() : 'UNKNOWN'}
           {section.type === 'room' && section.roomPerm?.can_control
@@ -296,16 +578,18 @@ export const MemberPermissionScreen = ({ route }) => {
             : ''}
         </Text>
       </View>
-
-      {/* Quyền thiết bị đơn lẻ — luôn hiện để override */}
       <View style={styles.toggleGroup}>
-        <Text style={[styles.toggleLabel, { color: themeStyles.subText }]}>Riêng lẻ</Text>
+        <Text style={[styles.toggleLabel, { color: themeStyles.subText }]}>
+          Riêng lẻ
+        </Text>
         {updatingId === item._id ? (
           <ActivityIndicator size="small" color={themeStyles.primary} />
         ) : (
           <Switch
             value={item.devicePerm.can_control}
-            onValueChange={() => toggleDevicePermission(item._id, item.devicePerm.can_control)}
+            onValueChange={() =>
+              toggleDevicePermission(item._id, item.devicePerm.can_control)
+            }
             trackColor={{ true: '#A5D6A7' }}
             thumbColor={item.devicePerm.can_control ? '#4CAF50' : '#ccc'}
           />
@@ -316,39 +600,66 @@ export const MemberPermissionScreen = ({ route }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: themeStyles.background }]}>
-        <ActivityIndicator size="large" color={themeStyles.primary} style={{ marginTop: 40 }} />
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: themeStyles.background }]}
+      >
+        <ActivityIndicator
+          size="large"
+          color={themeStyles.primary}
+          style={{ marginTop: 40 }}
+        />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeStyles.background }]}>
-      <View style={[styles.memberHeader, { backgroundColor: themeStyles.card }]}>
-        <View style={[styles.avatarCircle, { backgroundColor: themeStyles.primary }]}>
-          <Text style={styles.avatarText}>{member.name?.charAt(0).toUpperCase() || 'U'}</Text>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: themeStyles.background }]}
+    >
+      <View
+        style={[styles.memberHeader, { backgroundColor: themeStyles.card }]}
+      >
+        <View
+          style={[
+            styles.avatarCircle,
+            { backgroundColor: themeStyles.primary },
+          ]}
+        >
+          <Text style={styles.avatarText}>
+            {member.name?.charAt(0).toUpperCase() || 'U'}
+          </Text>
         </View>
         <View>
-          <Text style={[styles.memberName, { color: themeStyles.text }]}>{member.name || 'Thành viên'}</Text>
-          <Text style={[styles.memberPhone, { color: themeStyles.subText }]}>{member.phone}</Text>
+          <Text style={[styles.memberName, { color: themeStyles.text }]}>
+            {member.name || 'Thành viên'}
+          </Text>
+          <Text style={[styles.memberPhone, { color: themeStyles.subText }]}>
+            {member.phone}
+          </Text>
         </View>
       </View>
 
-      {/* Ghi chú hướng dẫn */}
       <View style={[styles.noteBox, { backgroundColor: themeStyles.card }]}>
-        <MaterialCommunityIcons name="information-outline" size={16} color={themeStyles.primary} />
+        <MaterialCommunityIcons
+          name="information-outline"
+          size={16}
+          color={themeStyles.primary}
+        />
         <Text style={[styles.noteText, { color: themeStyles.subText }]}>
-          Cấp quyền theo phòng sẽ áp dụng cho tất cả thiết bị trong phòng. Toggle "Riêng lẻ" để cấp thêm quyền cho thiết bị ngoài phòng.
+          Cấp quyền theo phòng sẽ áp dụng cho tất cả thiết bị trong phòng.
+          Toggle "Riêng lẻ" để cấp thêm quyền cho thiết bị ngoài phòng.
         </Text>
       </View>
 
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item._id}
+        keyExtractor={item => item._id}
         renderSectionHeader={renderSectionHeader}
         renderItem={renderDevice}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<Text style={styles.emptyText}>Chưa có phòng hoặc thiết bị nào.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>Chưa có phòng hoặc thiết bị nào.</Text>
+        }
         stickySectionHeadersEnabled={false}
       />
     </SafeAreaView>
@@ -361,14 +672,42 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
   addBox: { margin: 16, borderRadius: 14, padding: 16, elevation: 2 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  input: { flex: 1, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14 },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 14,
+  },
   addBtn: { borderRadius: 8, paddingHorizontal: 18, paddingVertical: 10 },
   addBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  card: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, marginBottom: 8, elevation: 2 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 8,
+    elevation: 2,
+  },
   deviceCard: { marginLeft: 12 },
-  avatarCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   avatarText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  memberHeader: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14, margin: 16, borderRadius: 14, elevation: 2 },
+  memberHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 14,
+    margin: 16,
+    borderRadius: 14,
+    elevation: 2,
+  },
   memberInfo: { flex: 1, marginLeft: 12 },
   memberName: { fontSize: 15, fontWeight: 'bold' },
   memberPhone: { fontSize: 13, marginTop: 2 },
@@ -376,12 +715,32 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 4 },
   actionBtn: { padding: 6 },
   emptyText: { textAlign: 'center', marginTop: 50, color: '#999' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 4, marginTop: 8 },
-  sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    marginTop: 8,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
   sectionHeaderText: { fontSize: 15, fontWeight: '700' },
   roomToggles: { flexDirection: 'row', gap: 12 },
   toggleGroup: { alignItems: 'center', gap: 2 },
   toggleLabel: { fontSize: 10, fontWeight: '600' },
-  noteBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 16, marginBottom: 8, padding: 12, borderRadius: 10 },
+  noteBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 10,
+  },
   noteText: { flex: 1, fontSize: 12, lineHeight: 18 },
 });

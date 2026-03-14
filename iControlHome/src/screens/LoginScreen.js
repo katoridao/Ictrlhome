@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import api from '../database/api';
 
 const LoginScreen = ({ navigation }) => {
@@ -19,6 +20,27 @@ const LoginScreen = ({ navigation }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Load saved credentials khi component mount
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      try {
+        const savedPhone = await AsyncStorage.getItem('saved_phone');
+        const savedPassword = await AsyncStorage.getItem('saved_password');
+        const savedRemember = await AsyncStorage.getItem('remember_me');
+
+        if (savedPhone && savedPassword) {
+          setPhone(savedPhone);
+          setPassword(savedPassword);
+          setRememberMe(savedRemember === 'true');
+        }
+      } catch (error) {
+        console.error('Error loading saved credentials:', error);
+      }
+    };
+    loadSavedCredentials();
+  }, []);
 
   const handleLogin = async () => {
     const cleanPhone = phone.trim();
@@ -57,6 +79,18 @@ const LoginScreen = ({ navigation }) => {
         await AsyncStorage.setItem('user_info', JSON.stringify(userMatched));
         await AsyncStorage.setItem('phone', userMatched.phone);
         await AsyncStorage.setItem('user_role', userMatched.role);
+
+        // Lưu credentials nếu "Nhớ mật khẩu" được chọn
+        if (rememberMe) {
+          await AsyncStorage.setItem('saved_phone', phone);
+          await AsyncStorage.setItem('saved_password', password);
+          await AsyncStorage.setItem('remember_me', 'true');
+        } else {
+          // Xóa saved credentials nếu không chọn "Nhớ mật khẩu"
+          await AsyncStorage.removeItem('saved_phone');
+          await AsyncStorage.removeItem('saved_password');
+          await AsyncStorage.removeItem('remember_me');
+        }
 
         // FIX: Luôn lưu house_id = "H001" vì backend đang hardcode H001
         const houseId = response.data.house_id || 'H001';
@@ -143,6 +177,18 @@ const LoginScreen = ({ navigation }) => {
         </View>
 
         <TouchableOpacity
+          style={styles.rememberContainer}
+          onPress={() => setRememberMe(!rememberMe)}
+        >
+          <MaterialCommunityIcons
+            name={rememberMe ? 'checkbox-marked' : 'checkbox-blank-outline'}
+            size={20}
+            color={rememberMe ? '#7C8CFF' : '#999'}
+          />
+          <Text style={styles.rememberText}>Ghi nhớ mật khẩu</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.button, loading && { opacity: 0.7 }]}
           onPress={handleLogin}
           disabled={loading}
@@ -204,6 +250,18 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   buttonText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
+  rememberContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    marginTop: 6,
+  },
+  rememberText: {
+    color: '#555',
+    fontSize: 13,
+    marginLeft: 8,
+    fontWeight: '500',
+  },
   footer: { alignItems: 'center', marginTop: 40 },
   register: { color: '#3A8DFF', fontWeight: '600', marginBottom: 6 },
   forgot: { color: '#555', fontSize: 13 },
