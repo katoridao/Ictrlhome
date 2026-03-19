@@ -171,7 +171,7 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
     if (status) {
       const existed = await DeviceUsage.findOne({
         device_id: device._id,
-        end_time: { $exists: false },
+        end_time: null,
       });
       if (!existed) {
         await DeviceUsage.create({ device_id: device._id, start_time: now });
@@ -179,13 +179,14 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
     } else {
       const lastUsage = await DeviceUsage.findOne({
         device_id: device._id,
-        end_time: { $exists: false },
+        end_time: null,
       }).sort({ start_time: -1 });
 
       if (lastUsage) {
         const durationMs = now - lastUsage.start_time;
         const durationMinutes = durationMs / (1000 * 60);
-        const energyKwh = (device.power_watt * durationMinutes) / (1000 * 60);
+        const runtimeSeconds = Math.floor(durationMs / 1000);
+        const energyKwh = (device.power_watt * runtimeSeconds) / 3600000;
         lastUsage.end_time = now;
         lastUsage.duration_minutes = Math.round(durationMinutes * 100) / 100;
         lastUsage.energy_kwh = energyKwh;

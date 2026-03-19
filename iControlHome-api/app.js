@@ -11,6 +11,8 @@ require("dotenv").config();
 // 1. IMPORT DATABASE & WORKER
 const db = require("./config/database");
 const { initAutomationWorker } = require("./services/smartService");
+const Device = require("./models/Device");
+const DeviceUsage = require("./models/DeviceUsage");
 
 // 2. IMPORT MODELS & MIDDLEWARE
 const Notification = require("./models/Notification");
@@ -43,9 +45,89 @@ const io = new Server(httpServer, {
 
 // Gắn io vào app
 app.set("io", io);
+// Một số route/service đang dùng global.io để emit
+global.io = io;
+
+// ===============================
+// REALTIME EMITTER: device-runtime
+// - 1 interval duy nhất cho toàn server (không tạo theo từng client)
+// - payload giống API /device-usages/realtime
+// ===============================
+let runtimeEmitterTimer = null;
+
+const buildRealtimeDevicePayload = async () => {
+  const devices = await Device.find();
+
+  const result = await Promise.all(
+    devices.map(async (device) => {
+      const deviceIsOn = !!device.status;
+
+      const closedUsages = await DeviceUsage.find({
+        device_id: device._id,
+        end_time: { $ne: null },
+      });
+
+      let totalSeconds = 0;
+      let totalEnergy = 0;
+
+      closedUsages.forEach((u) => {
+        const durationMinutes =
+          typeof u.duration_minutes === "number" && u.duration_minutes > 0
+            ? u.duration_minutes
+            : (new Date(u.end_time) - new Date(u.start_time)) / (1000 * 60);
+        totalSeconds += Math.floor(durationMinutes * 60);
+        totalEnergy += u.energy_kwh || 0;
+      });
+
+      const openUsage = await DeviceUsage.findOne({
+        device_id: device._id,
+        end_time: null,
+      }).sort({ start_time: -1 });
+
+      let isActive = false;
+
+      if (openUsage && deviceIsOn) {
+        const runtimeNow = Math.floor(
+          (Date.now() - new Date(openUsage.start_time)) / 1000
+        );
+        totalSeconds += runtimeNow;
+        totalEnergy += (device.power_watt * runtimeNow) / 3600000;
+        isActive = true;
+      }
+
+      return {
+        device_id: device._id,
+        device_name: device.name,
+        power_watt: device.power_watt,
+        runtime_seconds: totalSeconds,
+        energy_kwh: totalEnergy,
+        isActive,
+      };
+    })
+  );
+
+  return result;
+};
+
+const startRuntimeEmitter = () => {
+  if (runtimeEmitterTimer) return;
+
+  runtimeEmitterTimer = setInterval(async () => {
+    try {
+      // Nếu không có ai connect thì khỏi tốn query DB
+      if (io.engine.clientsCount === 0) return;
+
+      const devices = await buildRealtimeDevicePayload();
+      io.emit("device-runtime", devices);
+    } catch (err) {
+      console.log("[Realtime] emit device-runtime error:", err.message);
+    }
+  }, 1000);
+};
 
 io.on("connection", (socket) => {
   console.log(`[Socket] Client kết nối: ${socket.id}`);
+  startRuntimeEmitter();
 
   socket.on("join_house", ({ house_id }) => {
     if (!house_id) return;

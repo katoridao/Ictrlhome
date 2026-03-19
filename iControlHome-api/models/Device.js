@@ -47,6 +47,18 @@ const DeviceSchema = new mongoose.Schema(
       default: false, // false = OFF
     },
 
+    // Tổng thời gian/kWh đã tích lũy qua nhiều lần bật/tắt
+    total_runtime_seconds: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    total_energy_kwh: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     house_id: {
       type: String,
       ref: "House",
