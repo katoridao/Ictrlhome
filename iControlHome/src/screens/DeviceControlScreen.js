@@ -79,11 +79,15 @@ export default function DeviceControlScreen({ route }) {
 
     setLoading(true);
     try {
+      // Đồng bộ backend (backend sẽ gọi ESP32 nếu là thiết bị đèn)
       const response = await api.put(`/devices/${device._id}/status`, {
         status: newStatus,
       });
 
       if (response.status === 200) {
+        if (response.data?.esp32) {
+          console.log('[ESP32] Result from backend:', response.data.esp32);
+        }
         setStatus(newStatus);
         Toast.show({
           type: 'success',
@@ -94,9 +98,10 @@ export default function DeviceControlScreen({ route }) {
         });
       }
     } catch (error) {
-      const message = error.response
-        ? 'Không thể cập nhật trạng thái'
-        : 'Vui lòng kiểm tra Server hoặc WiFi';
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail?.error ||
+        'Không thể cập nhật trạng thái';
       Toast.show({ type: 'error', text1: 'Lỗi', text2: message });
     } finally {
       setLoading(false);
@@ -120,6 +125,10 @@ export default function DeviceControlScreen({ route }) {
         <View style={styles.infoRow}>
           <Text style={styles.label}>Mã ESP32:</Text>
           <Text style={styles.value}>{device.esp32_id}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>ESP32 IP:</Text>
+          <Text style={styles.value}>{device.esp32_ip || 'Chưa cấu hình'}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.label}>Công suất:</Text>

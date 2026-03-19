@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   TouchableWithoutFeedback,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,7 +21,7 @@ import api from '../database/api';
 import { connectSocket, getSocket } from '../database/socket';
 
 export default function RoomScreen({ navigation }) {
-  const { styles: themeStyles } = useTheme();
+  const { theme, styles: themeStyles } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [rooms, setRooms] = useState([]);
@@ -264,8 +265,15 @@ export default function RoomScreen({ navigation }) {
     <View
       style={[styles.container, { backgroundColor: themeStyles.background }]}
     >
+      <StatusBar
+        barStyle={theme === 'DARK' ? 'light-content' : 'dark-content'}
+        backgroundColor={themeStyles.primary}
+      />
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <Text style={styles.sortText}>Sắp xếp</Text>
+        <Image
+          source={require('../../public/img/room.png')}
+          style={styles.headerIcon}
+        />
         <Text style={styles.headerTitle}>Phòng</Text>
         {isOwner ? (
           <TouchableOpacity
@@ -450,25 +458,34 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     height: 70,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    paddingHorizontal: 16,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  sortText: { color: '#fff' },
-  body: { padding: 16 },
+  headerIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#fff',
+    marginRight: 10,
+  },
+  headerTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', flex: 1 },
+  body: { padding: 16, paddingBottom: 24 },
   roomItem: {
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
   roomLeft: { flex: 1 },
   roomName: { fontSize: 16, fontWeight: '600' },
@@ -477,7 +494,7 @@ const styles = StyleSheet.create({
   toggleAllBtn: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 10,
     minWidth: 48,
     alignItems: 'center',
   },

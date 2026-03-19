@@ -68,13 +68,16 @@ export default function SettingScreen({ navigation }) {
       />
 
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
+        <Image
+          source={require('../../public/img/setting.png')}
+          style={styles.headerIcon}
+        />
         <Text style={styles.headerTitle}>Cài đặt</Text>
-        <View style={{ width: 22 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
         <TouchableOpacity
-          style={styles.userBox}
+          style={[styles.userBox, { backgroundColor: themeStyles.card }]}
           activeOpacity={0.9}
           onPress={() =>
             navigation.navigate('Profile', {
@@ -188,19 +191,25 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     height: 70,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    paddingHorizontal: 16,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
+  headerIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#fff',
+    marginRight: 10,
   },
   headerTitle: {
     color: '#fff',
     fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
-    flex: 1,
+    fontWeight: 'bold',
   },
   body: { padding: 16, paddingBottom: 40 },
   userBox: {
@@ -208,8 +217,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 16,
-    backgroundColor: '#fff',
     marginBottom: 24,
+    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
   avatar: { width: 50, height: 50, borderRadius: 26, marginRight: 14 },
   userName: { fontSize: 18, fontWeight: '700' },
