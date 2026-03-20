@@ -11,7 +11,39 @@ const {
   checkHouseMembership,
 } = require("../middlewares/auth");
 
-// Helper: kiểm tra can_control cho MEMBER
+const normalizeEsp32Url = (hostOrIp, on) => {
+  const raw = String(hostOrIp || "").trim();
+  if (!raw) return null;
+  const hasScheme = raw.startsWith("http://") || raw.startsWith("https://");
+  const base = hasScheme ? raw : `http://${raw}`;
+  return `${base}${on ? "/on" : "/off"}`;
+};
+
+const callEsp32 = async ({ esp32_ip, on, timeoutMs = 8000 }) => {
+  const url = normalizeEsp32Url(esp32_ip, on);
+  if (!url) return { ok: true, skipped: true };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    console.log("[ESP32] Calling:", url);
+    const res = await fetch(url, { method: "GET", signal: controller.signal });
+    const text = await res.text().catch(() => "");
+    if (!res.ok) {
+      return { ok: false, status: res.status, text };
+    }
+    const normalized = String(text || "").trim();
+    if (normalized && normalized.toUpperCase() !== "OK") {
+      return { ok: false, status: res.status, text: normalized };
+    }
+    return { ok: true, text: normalized || "OK" };
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e) };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 const resolveCanControl = async (userId, device) => {
   if (device.room_id) {
     const roomId = device.room_id._id || device.room_id;
@@ -75,7 +107,7 @@ router.get("/", authenticate, checkHouseMembership, async (req, res) => {
 // 2. Tạo thiết bị mới (Chỉ OWNER)
 router.post("/", authenticate, isOwner, async (req, res) => {
   try {
-    const { name, type, esp32_id, room_id, power_watt } = req.body;
+    const { name, type, esp32_id, esp32_ip, room_id, power_watt } = req.body;
 
     if (!name || !type || !esp32_id || power_watt == null) {
       return res
@@ -87,6 +119,7 @@ router.post("/", authenticate, isOwner, async (req, res) => {
       name: name.trim(),
       type,
       esp32_id,
+      esp32_ip: esp32_ip ? String(esp32_ip).trim() : null,
       house_id: "H001",
       room_id: room_id || null,
       power_watt,
@@ -119,11 +152,18 @@ router.post("/", authenticate, isOwner, async (req, res) => {
 // 3. Cập nhật thông tin thiết bị (Chỉ OWNER)
 router.put("/:id", authenticate, isOwner, async (req, res) => {
   try {
-    const { name, type, esp32_id, room_id, power_watt } = req.body;
+    const { name, type, esp32_id, esp32_ip, room_id, power_watt } = req.body;
 
     const updatedDevice = await Device.findOneAndUpdate(
       { _id: req.params.id, house_id: "H001" },
-      { name: name?.trim(), type, esp32_id, room_id, power_watt },
+      {
+        name: name?.trim(),
+        type,
+        esp32_id,
+        esp32_ip: esp32_ip ? String(esp32_ip).trim() : null,
+        room_id,
+        power_watt,
+      },
       { new: true },
     ).populate("room_id", "name permissions");
 
@@ -156,6 +196,33 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
   try {
     const { status } = req.body;
     const userId = req.user._id;
+    let esp32Result = null;
+
+    const current = await Device.findOne({
+      _id: req.params.id,
+      house_id: "H001",
+    });
+
+    if (!current)
+      return res.status(404).json({ message: "Không tìm thấy thiết bị" });
+
+    const isLight =
+      String(current.type || "").toLowerCase() === "light" ||
+      String(current.type || "").toLowerCase() === "đèn";
+
+    if (isLight && current.esp32_ip) {
+      esp32Result = await callEsp32({
+        esp32_ip: current.esp32_ip,
+        on: !!status,
+      });
+
+      if (!esp32Result.ok) {
+        return res.status(502).json({
+          message: "ESP32 không phản hồi hoặc lỗi",
+          detail: esp32Result,
+        });
+      }
+    }
 
     const device = await Device.findOneAndUpdate(
       { _id: req.params.id, house_id: "H001" },
@@ -215,7 +282,7 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
       });
     }
 
-    res.json({ device });
+    res.json({ device, esp32: esp32Result });
   } catch (error) {
     console.error("[Device Status] Error:", error);
     res.status(500).json({ message: "Lỗi server" });

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+<<<<<<< HEAD
 
 
 
@@ -13,6 +14,9 @@ const BASE_URL = 'http://10.24.48.21:3000/api';
 
 
 
+=======
+const BASE_URL = 'http://192.168.100.91:3000/api';
+>>>>>>> c547314de25da4fed32daa204c9506f6c5546484
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -39,8 +43,6 @@ api.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      // Token hết hạn hoặc không hợp lệ
-      // Có thể navigate về màn hình Login ở đây nếu cần
       console.warn('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại.');
     }
     return Promise.reject(error);

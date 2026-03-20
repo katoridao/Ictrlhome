@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
+import moment from 'moment';
 
 const TIME_FILTERS = ['Hôm nay', '7 ngày trước', '30 ngày trước'];
 const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt', 'Cảm biến'];
@@ -280,13 +281,9 @@ function HistoryItem({
 
   const formatDate = date => {
     if (!date) return '';
-    const d = new Date(date);
-    const h = String(d.getHours()).padStart(2, '0');
-    const m = String(d.getMinutes()).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const mon = String(d.getMonth() + 1).padStart(2, '0');
-    const y = d.getFullYear();
-    return `${h}:${m} ${day}/${mon}/${y}`;
+    // Đồng bộ hiển thị theo "giờ thật" (VN UTC+7), không phụ thuộc timezone của emulator
+    // created_at từ backend thường là ISO (UTC). Dùng utc() + utcOffset(7) để ra giờ VN ổn định.
+    return moment.utc(date).utcOffset(7).format('HH:mm DD/MM/YYYY');
   };
 
   const actionText = action === 'ON' ? 'Đã Bật' : 'Đã Tắt';

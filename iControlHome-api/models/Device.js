@@ -36,6 +36,12 @@ const DeviceSchema = new mongoose.Schema(
       unique: true,
     },
 
+    esp32_ip: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
     power_watt: {
       type: Number,
       required: true,
@@ -44,10 +50,9 @@ const DeviceSchema = new mongoose.Schema(
 
     status: {
       type: Boolean,
-      default: false, // false = OFF
+      default: false,
     },
 
-    // Tổng thời gian/kWh đã tích lũy qua nhiều lần bật/tắt
     total_runtime_seconds: {
       type: Number,
       default: 0,

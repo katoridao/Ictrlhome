@@ -31,10 +31,12 @@ router.post("/update-profile", authenticate, async (req, res) => {
 router.post("/register", async (req, res) => {
   try {
     const { name, phone, password } = req.body;
-    if (!name || !phone || !password) return res.status(400).json({ message: "Thiếu thông tin" });
+    if (!name || !phone || !password)
+      return res.status(400).json({ message: "Thiếu thông tin" });
 
     const existingUser = await User.findOne({ phone: phone.trim() });
-    if (existingUser) return res.status(400).json({ message: "Số điện thoại đã tồn tại" });
+    if (existingUser)
+      return res.status(400).json({ message: "Số điện thoại đã tồn tại" });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -44,7 +46,7 @@ router.post("/register", async (req, res) => {
       phone: phone.trim(),
       password: hashedPassword,
       role: "MEMBER",
-      settings: { theme: "LIGHT", language: "VI" }
+      settings: { theme: "LIGHT", language: "VI" },
     });
 
     await newUser.save();
@@ -55,9 +57,6 @@ router.post("/register", async (req, res) => {
 });
 
 // 3. LOGIN (Sửa house_id để không bị lỗi Network Error/DB Error)
-// ... các phần import giữ nguyên ...
-
-// ... (Giữ nguyên các phần import của bạn) ...
 
 router.post("/login", async (req, res) => {
   try {
@@ -75,7 +74,13 @@ router.post("/login", async (req, res) => {
     res.json({
       message: "Đăng nhập thành công",
       token,
-      user: { _id: user._id, name: user.name, phone: user.phone }
+      user: {
+        _id: user._id,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        settings: user.settings,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });

@@ -40,6 +40,7 @@ const AddDeviceModal = ({ navigation, route }) => {
   const [esp32Id, setEsp32Id] = useState(
     editDevice?.esp32_id || editDevice?.esp32Id || '',
   );
+  const [esp32Ip, setEsp32Ip] = useState(editDevice?.esp32_ip || '');
   const [powerWatt, setPowerWatt] = useState(
     editDevice?.power_watt ? String(editDevice.power_watt) : '',
   );
@@ -97,6 +98,7 @@ const AddDeviceModal = ({ navigation, route }) => {
         name: name.trim(),
         type,
         esp32_id: esp32Id.trim(),
+        esp32_ip: esp32Ip.trim() || null,
         power_watt: parseInt(powerWatt) || 0,
         house_id: houseId,
         status: false,
@@ -237,6 +239,20 @@ const AddDeviceModal = ({ navigation, route }) => {
             onChangeText={setEsp32Id}
             autoCapitalize="characters"
           />
+
+          {type === 'light' && (
+            <>
+              <Text style={styles.label}>IP ESP32 (WiFi LAN)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ví dụ: 192.168.100.239"
+                value={esp32Ip}
+                onChangeText={setEsp32Ip}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </>
+          )}
 
           <View style={styles.footer}>
             <TouchableOpacity
