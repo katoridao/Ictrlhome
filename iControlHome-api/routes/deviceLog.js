@@ -25,7 +25,13 @@ router.get("/", authenticate, checkHouseMembership, async (req, res) => {
     const devices = await Device.find(deviceFilter).select("_id");
     const deviceIds = devices.map((d) => d._id);
 
-    filter.device_id = { $in: deviceIds };
+    if (device_type && device_type !== "Tất cả") {
+      // Khi có lọc loại thiết bị thì chỉ giữ log của đúng các device tương ứng.
+      filter.device_id = { $in: deviceIds };
+    } else {
+      // Không lọc loại: lấy theo house_id trực tiếp (log mới) + fallback theo device_id (log cũ).
+      filter.$or = [{ house_id }, { device_id: { $in: deviceIds } }];
+    }
 
     // lọc thời gian
     if (period === "day") {

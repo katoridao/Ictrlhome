@@ -94,7 +94,7 @@ export default function SettingScreen({ navigation }) {
             <Text style={[styles.userName, { color: themeStyles.text }]}>
               {userData?.name || 'Đang tải...'}
             </Text>
-            <Text style={styles.userEmail}>
+            <Text style={[styles.userPhone, { color: themeStyles.text }]}>
               {userData?.phone || 'Chưa cập nhật'}
             </Text>
           </View>
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 50, height: 50, borderRadius: 26, marginRight: 14 },
   userName: { fontSize: 18, fontWeight: '700' },
-  userEmail: { fontSize: 14 },
+  userPhone: { fontSize: 14 },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '600',

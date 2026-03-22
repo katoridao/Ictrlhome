@@ -14,6 +14,13 @@ const DeviceLogSchema = new mongoose.Schema(
       default: null,
     },
 
+    house_id: {
+      type: String,
+      ref: "House",
+      default: "H001",
+      required: true,
+    },
+
     action: {
       type: String,
       enum: ["ON", "OFF"],

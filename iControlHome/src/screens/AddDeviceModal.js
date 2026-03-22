@@ -20,7 +20,6 @@ import api from '../database/api';
 const DEVICE_TYPES = [
   { label: 'Đèn', value: 'light', icon: 'lightbulb-on' },
   { label: 'Quạt', value: 'fan', icon: 'fan' },
-  { label: 'Cảm biến', value: 'sensor', icon: 'molecule' },
 ];
 
 const AddDeviceModal = ({ navigation, route }) => {
@@ -240,19 +239,15 @@ const AddDeviceModal = ({ navigation, route }) => {
             autoCapitalize="characters"
           />
 
-          {type === 'light' && (
-            <>
-              <Text style={styles.label}>IP ESP32 (WiFi LAN)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ví dụ: 192.168.100.239"
-                value={esp32Ip}
-                onChangeText={setEsp32Ip}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </>
-          )}
+          <Text style={styles.label}>IP ESP32 (WiFi LAN)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Ví dụ: 192.168.100.239"
+            value={esp32Ip}
+            onChangeText={setEsp32Ip}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
           <View style={styles.footer}>
             <TouchableOpacity
