@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -12,75 +12,75 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import api from '../database/api';
+import { LanguageContext } from '../context/LanguageContext';
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useContext(LanguageContext);
 
   const handleResetPassword = async () => {
-  const cleanPhone = phone.trim();
-  const cleanNew = newPassword.trim();
-  const cleanConfirm = confirmPassword.trim();
+    const cleanPhone = phone.trim();
+    const cleanNew = newPassword.trim();
+    const cleanConfirm = confirmPassword.trim();
 
-  if (!cleanPhone || !cleanNew || !cleanConfirm) {
-    Toast.show({
-      type: 'error',
-      text1: 'Thông báo',
-      text2: 'Vui lòng nhập đầy đủ thông tin',
-    });
-    return;
-  }
+    if (!cleanPhone || !cleanNew || !cleanConfirm) {
+      Toast.show({
+        type: 'error',
+        text1: t.notification,
+        text2: t.fill_all_info,
+      });
+      return;
+    }
 
-  if (cleanNew !== cleanConfirm) {
-    Toast.show({
-      type: 'error',
-      text1: 'Lỗi',
-      text2: 'Mật khẩu xác nhận không khớp',
-    });
-    return;
-  }
+    if (cleanNew !== cleanConfirm) {
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: t.password_not_match,
+      });
+      return;
+    }
 
-  if (cleanNew.length < 6) {
-    Toast.show({
-      type: 'error',
-      text1: 'Lỗi',
-      text2: 'Mật khẩu phải có ít nhất 6 ký tự',
-    });
-    return;
-  }
+    if (cleanNew.length < 6) {
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: t.min_password_length,
+      });
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const response = await api.post('/forgot-password', {
-      phone: cleanPhone,
-      newPassword: cleanNew,
-      confirmPassword: cleanConfirm,
-    });
+      const response = await api.post('/forgot-password', {
+        phone: cleanPhone,
+        newPassword: cleanNew,
+        confirmPassword: cleanConfirm,
+      });
 
-    Toast.show({
-      type: 'success',
-      text1: 'Thành công',
-      text2: response.data.message || 'Đặt lại mật khẩu thành công',
-    });
+      Toast.show({
+        type: 'success',
+        text1: t.success,
+        text2: response.data.message || t.reset_password,
+      });
 
-    navigation.navigate('Login');
-  } catch (error) {
-    console.log("RESET ERROR:", error?.response?.data || error.message);
+      navigation.navigate('Login');
+    } catch (error) {
+      console.log('RESET ERROR:', error?.response?.data || error.message);
 
-    Toast.show({
-      type: 'error',
-      text1: 'Thất bại',
-      text2:
-        error?.response?.data?.message ||
-        'Không thể kết nối đến server',
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: error?.response?.data?.message || 'Không thể kết nối đến server',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ImageBackground
@@ -107,12 +107,12 @@ export default function ForgotPasswordScreen({ navigation }) {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.appName}>Khôi phục mật khẩu</Text>
+          <Text style={styles.appName}>{t.forgot_password_title}</Text>
         </View>
 
         <View style={styles.form}>
           <TextInput
-            placeholder="Số điện thoại đã đăng ký"
+            placeholder={t.registered_phone}
             placeholderTextColor="#888"
             keyboardType="phone-pad"
             style={styles.input}
@@ -122,7 +122,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           />
 
           <TextInput
-            placeholder="Mật khẩu mới"
+            placeholder={t.new_password_set}
             placeholderTextColor="#888"
             secureTextEntry
             style={styles.input}
@@ -132,7 +132,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           />
 
           <TextInput
-            placeholder="Xác nhận mật khẩu mới"
+            placeholder={t.confirm_new_password}
             placeholderTextColor="#888"
             secureTextEntry
             style={styles.input}
@@ -149,7 +149,7 @@ export default function ForgotPasswordScreen({ navigation }) {
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>ĐẶT LẠI MẬT KHẨU</Text>
+              <Text style={styles.buttonText}>{t.reset_password}</Text>
             )}
           </TouchableOpacity>
 
@@ -157,7 +157,7 @@ export default function ForgotPasswordScreen({ navigation }) {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backText}>Quay lại đăng nhập</Text>
+            <Text style={styles.backText}>{t.back_to_login}</Text>
           </TouchableOpacity>
         </View>
       </View>

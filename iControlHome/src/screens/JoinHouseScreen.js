@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, StatusBar,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 
 export default function JoinHouseScreen({ navigation }) {
   const { styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
   const [adminPhone, setAdminPhone] = useState('');
   const [joinPassword, setJoinPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +24,7 @@ export default function JoinHouseScreen({ navigation }) {
 
   const handleJoin = async () => {
     if (!adminPhone.trim() || !joinPassword) {
-      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Vui lòng nhập đầy đủ thông tin' });
+      Toast.show({ type: 'error', text1: t.error, text2: t.fill_all_info });
       return;
     }
 
@@ -30,8 +37,8 @@ export default function JoinHouseScreen({ navigation }) {
 
       Toast.show({
         type: 'success',
-        text1: 'Thành công',
-        text2: response.data.message || 'Đã tham gia nhà thành công!',
+        text1: t.success,
+        text2: response.data.message || t.join_house_success,
         visibilityTime: 2500,
       });
 
@@ -45,45 +52,68 @@ export default function JoinHouseScreen({ navigation }) {
 
       setTimeout(() => navigation.replace('Main'), 1500);
     } catch (error) {
-      const msg = error.response?.data?.message || 'Không thể tham gia nhà. Kiểm tra lại thông tin.';
-      Toast.show({ type: 'error', text1: 'Thất bại', text2: msg });
+      const msg =
+        error.response?.data?.message ||
+        'Không thể tham gia nhà. Kiểm tra lại thông tin.';
+      Toast.show({ type: 'error', text1: t.error, text2: msg });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeStyles.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={themeStyles.primary} />
+    <View
+      style={[styles.container, { backgroundColor: themeStyles.background }]}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={themeStyles.primary}
+      />
 
       {/* Header */}
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+        >
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tham gia nhà</Text>
+        <Text style={styles.headerTitle}>{t.join_house_title}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.body}>
         {/* Icon minh hoạ */}
-        <View style={[styles.iconBox, { backgroundColor: themeStyles.primary + '18' }]}>
+        <View
+          style={[
+            styles.iconBox,
+            { backgroundColor: themeStyles.primary + '18' },
+          ]}
+        >
           <Text style={styles.iconEmoji}>🏠</Text>
         </View>
 
         <Text style={[styles.title, { color: themeStyles.text }]}>
-          Nhập thông tin chủ nhà
+          {t.admin_info}
         </Text>
         <Text style={[styles.subtitle, { color: themeStyles.subText }]}>
-          Liên hệ admin để lấy số điện thoại và mật khẩu xác nhận
+          {t.contact_admin}
         </Text>
 
         {/* Form */}
         <View style={[styles.formBox, { backgroundColor: themeStyles.card }]}>
-          <Text style={[styles.label, { color: themeStyles.subText }]}>Số điện thoại admin</Text>
+          <Text style={[styles.label, { color: themeStyles.subText }]}>
+            {t.admin_phone}
+          </Text>
           <TextInput
-            style={[styles.input, { color: themeStyles.text, borderColor: themeStyles.border || '#ddd' }]}
-            placeholder="Nhập số điện thoại chủ nhà"
+            style={[
+              styles.input,
+              {
+                color: themeStyles.text,
+                borderColor: themeStyles.border || '#ddd',
+              },
+            ]}
+            placeholder={t.enter_phone}
             placeholderTextColor={themeStyles.subText}
             value={adminPhone}
             onChangeText={setAdminPhone}
@@ -91,11 +121,18 @@ export default function JoinHouseScreen({ navigation }) {
             editable={!loading}
           />
 
-          <Text style={[styles.label, { color: themeStyles.subText }]}>Mật khẩu tham gia nhà</Text>
-          <View style={[styles.passwordRow, { borderColor: themeStyles.border || '#ddd' }]}>
+          <Text style={[styles.label, { color: themeStyles.subText }]}>
+            {t.join_password}
+          </Text>
+          <View
+            style={[
+              styles.passwordRow,
+              { borderColor: themeStyles.border || '#ddd' },
+            ]}
+          >
             <TextInput
               style={[styles.passwordInput, { color: themeStyles.text }]}
-              placeholder="Nhập mật khẩu tham gia nhà"
+              placeholder={t.join_password}
               placeholderTextColor={themeStyles.subText}
               value={joinPassword}
               onChangeText={setJoinPassword}
@@ -104,25 +141,35 @@ export default function JoinHouseScreen({ navigation }) {
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
               <Text style={{ color: themeStyles.primary, fontSize: 13 }}>
-                {showPassword ? 'Ẩn' : 'Hiện'}
+                {showPassword ? t.hide : t.show}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.joinBtn, { backgroundColor: themeStyles.primary }, loading && { opacity: 0.7 }]}
+          style={[
+            styles.joinBtn,
+            { backgroundColor: themeStyles.primary },
+            loading && { opacity: 0.7 },
+          ]}
           onPress={handleJoin}
           disabled={loading}
         >
-          {loading
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.joinBtnText}>THAM GIA NHÀ</Text>
-          }
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.joinBtnText}>{t.join_house_btn}</Text>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelBtn}>
-          <Text style={[styles.cancelText, { color: themeStyles.subText }]}>Hủy bỏ</Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.cancelBtn}
+        >
+          <Text style={[styles.cancelText, { color: themeStyles.subText }]}>
+            {t.cancel_action}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -132,36 +179,79 @@ export default function JoinHouseScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    height: 70, flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, elevation: 4,
+    height: 70,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    elevation: 4,
   },
   backBtn: { width: 40, justifyContent: 'center' },
   backText: { color: '#fff', fontSize: 22 },
-  headerTitle: { flex: 1, color: '#fff', fontSize: 18, fontWeight: '600', textAlign: 'center' },
+  headerTitle: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   body: { flex: 1, padding: 24, alignItems: 'center' },
   iconBox: {
-    width: 90, height: 90, borderRadius: 45,
-    justifyContent: 'center', alignItems: 'center', marginTop: 20, marginBottom: 16,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 16,
   },
   iconEmoji: { fontSize: 42 },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 28, paddingHorizontal: 10 },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 28,
+    paddingHorizontal: 10,
+  },
   formBox: {
-    width: '100%', borderRadius: 16, padding: 20, elevation: 2, marginBottom: 20,
+    width: '100%',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 2,
+    marginBottom: 20,
   },
   label: { fontSize: 12, fontWeight: '600', marginBottom: 6, marginTop: 4 },
   input: {
-    borderWidth: 1, borderRadius: 8, paddingHorizontal: 14,
-    height: 48, fontSize: 14, marginBottom: 16,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    height: 48,
+    fontSize: 14,
+    marginBottom: 16,
   },
   passwordRow: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    height: 48,
   },
   passwordInput: { flex: 1, fontSize: 14 },
   joinBtn: {
-    width: '100%', height: 52, borderRadius: 12,
-    justifyContent: 'center', alignItems: 'center', elevation: 3,
+    width: '100%',
+    height: 52,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
   },
   joinBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   cancelBtn: { marginTop: 16 },

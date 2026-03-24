@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 import { connectSocket, getSocket } from '../database/socket';
 
@@ -25,6 +26,7 @@ import { connectSocket, getSocket } from '../database/socket';
  */
 export const ManageMembersScreen = ({ navigation }) => {
   const { styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [phone, setPhone] = useState('');
@@ -40,8 +42,8 @@ export const ManageMembersScreen = ({ navigation }) => {
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể tải danh sách thành viên.',
+        text1: t.error,
+        text2: t.cannot_load_members,
       });
     } finally {
       setLoading(false);
@@ -99,8 +101,8 @@ export const ManageMembersScreen = ({ navigation }) => {
     if (!cleanPhone) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Vui lòng nhập số điện thoại',
+        text1: t.error,
+        text2: t.enter_phone,
       });
       return;
     }
@@ -111,7 +113,7 @@ export const ManageMembersScreen = ({ navigation }) => {
       });
       Toast.show({
         type: 'success',
-        text1: 'Thành công',
+        text1: t.success,
         text2: response.data.message,
       });
       setPhone('');
@@ -119,8 +121,8 @@ export const ManageMembersScreen = ({ navigation }) => {
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: error.response?.data?.message || 'Không thể thêm thành viên',
+        text1: t.error,
+        text2: error.response?.data?.message || t.cannot_add_member,
       });
     } finally {
       setAdding(false);
@@ -130,12 +132,12 @@ export const ManageMembersScreen = ({ navigation }) => {
   const handleRemoveMember = member => {
     // Giữ lại: đây là confirm dialog cần người dùng xác nhận
     Alert.alert(
-      'Xóa thành viên',
-      `Bạn có chắc muốn xóa ${member.name || member.phone}?`,
+      t.delete_member_title,
+      t.confirm_delete_member.replace('{name}', member.name || member.phone),
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t.cancel, style: 'cancel' },
         {
-          text: 'Xóa',
+          text: t.delete,
           style: 'destructive',
           onPress: async () => {
             try {
@@ -145,14 +147,17 @@ export const ManageMembersScreen = ({ navigation }) => {
               setMembers(response.data.house.members || []);
               Toast.show({
                 type: 'success',
-                text1: 'Đã xóa',
-                text2: `${member.name || member.phone} đã bị xóa khỏi nhà.`,
+                text1: t.success,
+                text2: t.member_removed_msg.replace(
+                  '{name}',
+                  member.name || member.phone,
+                ),
               });
             } catch (error) {
               Toast.show({
                 type: 'error',
-                text1: 'Lỗi',
-                text2: error.response?.data?.message || 'Không thể xóa',
+                text1: t.error,
+                text2: error.response?.data?.message || t.cannot_add_member,
               });
             }
           },
@@ -177,7 +182,7 @@ export const ManageMembersScreen = ({ navigation }) => {
         }
       >
         <Text style={[styles.memberName, { color: themeStyles.text }]}>
-          {item.name || 'Thành viên'}
+          {item.name || t.default_member_name}
         </Text>
         <Text style={[styles.memberPhone, { color: themeStyles.subText }]}>
           {item.phone}
@@ -216,7 +221,7 @@ export const ManageMembersScreen = ({ navigation }) => {
     >
       <View style={[styles.addBox, { backgroundColor: themeStyles.card }]}>
         <Text style={[styles.sectionTitle, { color: themeStyles.text }]}>
-          Thêm thành viên
+          {t.add_member}
         </Text>
         <View style={styles.inputRow}>
           <TextInput
@@ -224,7 +229,7 @@ export const ManageMembersScreen = ({ navigation }) => {
               styles.input,
               { color: themeStyles.text, borderColor: themeStyles.subText },
             ]}
-            placeholder="Nhập số điện thoại..."
+            placeholder={t.enter_phone_to_add}
             placeholderTextColor={themeStyles.subText}
             value={phone}
             onChangeText={setPhone}
@@ -242,7 +247,7 @@ export const ManageMembersScreen = ({ navigation }) => {
             {adding ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.addBtnText}>Thêm</Text>
+              <Text style={styles.addBtnText}>{t.add}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -254,7 +259,7 @@ export const ManageMembersScreen = ({ navigation }) => {
           { color: themeStyles.text, marginHorizontal: 16 },
         ]}
       >
-        Danh sách thành viên ({members.length})
+        {t.member_list} ({members.length})
       </Text>
       <FlatList
         data={members}
@@ -262,7 +267,7 @@ export const ManageMembersScreen = ({ navigation }) => {
         renderItem={renderMemberItem}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Chưa có thành viên nào.</Text>
+          <Text style={styles.emptyText}>{t.no_members}</Text>
         }
         onRefresh={fetchMembers}
         refreshing={loading}
@@ -277,6 +282,7 @@ export const ManageMembersScreen = ({ navigation }) => {
 export const MemberPermissionScreen = ({ route }) => {
   const { member } = route.params;
   const { styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
@@ -325,7 +331,7 @@ export const MemberPermissionScreen = ({ route }) => {
       if (unassigned.length > 0) {
         builtSections.push({
           roomId: null,
-          title: 'Thiết bị chưa gán phòng',
+          title: t.unassigned_devices,
           type: 'unassigned',
           roomPerm: null,
           data: unassigned.map(d => {
@@ -477,8 +483,8 @@ export const MemberPermissionScreen = ({ route }) => {
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể cập nhật quyền phòng',
+        text1: t.error,
+        text2: t.cannot_update_permission,
       });
     } finally {
       setUpdatingId(null);
@@ -506,8 +512,8 @@ export const MemberPermissionScreen = ({ route }) => {
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể cập nhật quyền thiết bị',
+        text1: t.error,
+        text2: t.cannot_update_device_permission,
       });
     } finally {
       setUpdatingId(null);
@@ -535,7 +541,7 @@ export const MemberPermissionScreen = ({ route }) => {
         <View style={styles.roomToggles}>
           <View style={styles.toggleGroup}>
             <Text style={[styles.toggleLabel, { color: themeStyles.subText }]}>
-              Điều khiển
+              {t.control}
             </Text>
             {updatingId === `room_${section.roomId}_can_control` ? (
               <ActivityIndicator size="small" color={themeStyles.primary} />
@@ -574,13 +580,13 @@ export const MemberPermissionScreen = ({ route }) => {
         <Text style={{ color: themeStyles.subText, fontSize: 11 }}>
           {item.type ? item.type.toUpperCase() : 'UNKNOWN'}
           {section.type === 'room' && section.roomPerm?.can_control
-            ? '  •  Có quyền từ phòng'
+            ? `  \u2022  ${t.permission_from_room}`
             : ''}
         </Text>
       </View>
       <View style={styles.toggleGroup}>
         <Text style={[styles.toggleLabel, { color: themeStyles.subText }]}>
-          Riêng lẻ
+          {t.individual}
         </Text>
         {updatingId === item._id ? (
           <ActivityIndicator size="small" color={themeStyles.primary} />
@@ -631,7 +637,7 @@ export const MemberPermissionScreen = ({ route }) => {
         </View>
         <View>
           <Text style={[styles.memberName, { color: themeStyles.text }]}>
-            {member.name || 'Thành viên'}
+            {member.name || t.default_member_name}
           </Text>
           <Text style={[styles.memberPhone, { color: themeStyles.subText }]}>
             {member.phone}
@@ -646,8 +652,7 @@ export const MemberPermissionScreen = ({ route }) => {
           color={themeStyles.primary}
         />
         <Text style={[styles.noteText, { color: themeStyles.subText }]}>
-          Cấp quyền theo phòng sẽ áp dụng cho tất cả thiết bị trong phòng.
-          Toggle "Riêng lẻ" để cấp thêm quyền cho thiết bị ngoài phòng.
+          {t.room_permission_note}
         </Text>
       </View>
 
@@ -658,7 +663,7 @@ export const MemberPermissionScreen = ({ route }) => {
         renderItem={renderDevice}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Chưa có phòng hoặc thiết bị nào.</Text>
+          <Text style={styles.emptyText}>{t.no_rooms_or_devices}</Text>
         }
         stickySectionHeadersEnabled={false}
       />

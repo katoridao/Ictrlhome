@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useRef,
   useEffect,
+  useContext,
 } from 'react';
 import {
   View,
@@ -21,12 +22,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 import { connectSocket, getSocket } from '../database/socket';
 
 export default function RoomDetailScreen({ route, navigation }) {
   const { room } = route.params;
   const { styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [togglingAll, setTogglingAll] = useState(false);
@@ -165,8 +168,8 @@ export default function RoomDetailScreen({ route, navigation }) {
     } catch (e) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể cập nhật tất cả thiết bị',
+        text1: t.error,
+        text2: t.update_all_devices_error,
       });
     } finally {
       setTogglingAll(false);
@@ -192,8 +195,8 @@ export default function RoomDetailScreen({ route, navigation }) {
     } catch (e) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể cập nhật thiết bị đã chọn',
+        text1: t.error,
+        text2: t.update_selected_devices_error,
       });
     } finally {
       setTogglingSelected(false);
@@ -202,10 +205,10 @@ export default function RoomDetailScreen({ route, navigation }) {
 
   const handleDeleteDevice = deviceId => {
     // Giữ lại: đây là confirm dialog cần người dùng xác nhận
-    Alert.alert('Xác nhận', 'Gỡ thiết bị khỏi phòng?', [
-      { text: 'Hủy', style: 'cancel' },
+    Alert.alert(t.confirm, t.confirm_remove_device, [
+      { text: t.cancel, style: 'cancel' },
       {
-        text: 'Gỡ bỏ',
+        text: t.remove_device,
         style: 'destructive',
         onPress: async () => {
           try {
@@ -216,8 +219,8 @@ export default function RoomDetailScreen({ route, navigation }) {
           } catch (e) {
             Toast.show({
               type: 'error',
-              text1: 'Lỗi',
-              text2: 'Không thể gỡ thiết bị.',
+              text1: t.error,
+              text2: t.remove_device_error,
             });
           }
         },
@@ -296,7 +299,7 @@ export default function RoomDetailScreen({ route, navigation }) {
         {!hasPermission && (
           <View style={styles.lockedOverlay}>
             <Text style={styles.lockIcon}>🔒</Text>
-            <Text style={styles.lockText}>Chưa được{'\n'}cấp quyền</Text>
+            <Text style={styles.lockText}>{t.no_permission}</Text>
           </View>
         )}
         <View style={styles.deviceInfo}>
@@ -392,7 +395,7 @@ export default function RoomDetailScreen({ route, navigation }) {
                   style={styles.quickIcon}
                 />
                 <Text style={styles.quickBtnText}>
-                  {allOn ? 'Tắt tất cả' : 'Bật tất cả'}
+                  {allOn ? t.turn_off_all : t.turn_on_all}
                 </Text>
               </>
             )}
@@ -403,7 +406,7 @@ export default function RoomDetailScreen({ route, navigation }) {
             activeOpacity={0.8}
           >
             <Text style={styles.selectModeBtnIcon}>☑</Text>
-            <Text style={styles.selectModeBtnText}>Chọn</Text>
+            <Text style={styles.selectModeBtnText}>{t.select_action}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -413,18 +416,18 @@ export default function RoomDetailScreen({ route, navigation }) {
           style={[styles.selectHeader, { backgroundColor: themeStyles.card }]}
         >
           <TouchableOpacity onPress={exitSelectMode} style={styles.cancelBtn}>
-            <Text style={styles.cancelBtnText}>✕ Hủy</Text>
+            <Text style={styles.cancelBtnText}>{t.cancel_selection}</Text>
           </TouchableOpacity>
           <Text style={[styles.selectCount, { color: themeStyles.text }]}>
             {selectedIds.size > 0
-              ? `Đã chọn ${selectedIds.size} thiết bị`
-              : 'Chạm để chọn thiết bị'}
+              ? t.selected_devices_count.replace('{count}', selectedIds.size)
+              : t.tap_to_select}
           </Text>
           <TouchableOpacity onPress={selectAll} style={styles.selectAllBtn}>
             <Text style={styles.selectAllText}>
               {selectedIds.size === controllableDevices.length
-                ? 'Bỏ chọn'
-                : 'Tất cả'}
+                ? t.deselect
+                : t.all}
             </Text>
           </TouchableOpacity>
         </View>
@@ -448,7 +451,7 @@ export default function RoomDetailScreen({ route, navigation }) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={{ color: themeStyles.subText }}>
-                Chưa có thiết bị nào trong phòng này.
+                {t.no_devices_in_room_detail}
               </Text>
             </View>
           }
@@ -479,8 +482,8 @@ export default function RoomDetailScreen({ route, navigation }) {
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Text style={styles.toolbarBtnIcon}>🌙</Text>
-                <Text style={styles.toolbarBtnText}>Tắt</Text>
+                <Text style={styles.toolbarBtnIcon}>{t.night_mode}</Text>
+                <Text style={styles.toolbarBtnText}>{t.turn_off}</Text>
                 {selectedIds.size > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>{selectedIds.size}</Text>
@@ -506,8 +509,8 @@ export default function RoomDetailScreen({ route, navigation }) {
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Text style={styles.toolbarBtnIcon}>☀️</Text>
-                <Text style={styles.toolbarBtnText}>Bật</Text>
+                <Text style={styles.toolbarBtnIcon}>{t.day_mode}</Text>
+                <Text style={styles.toolbarBtnText}>{t.turn_on}</Text>
                 {selectedIds.size > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>{selectedIds.size}</Text>

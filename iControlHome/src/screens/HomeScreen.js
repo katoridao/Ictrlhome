@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useContext } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../database/api';
@@ -26,12 +27,29 @@ const SHEET_HEIGHT = 260;
 
 export default function HomeScreen({ navigation }) {
   const { styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState('MEMBER');
   const [isMember, setIsMember] = useState(null);
   const [userData, setUserData] = useState(null);
   const [houseData, setHouseData] = useState(null);
+
+  const getDisplayHouseName = rawName => {
+    const name = String(rawName || '').trim();
+    if (!name) return t.home;
+
+    const normalized = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // If DB returns a default/system name, show localized label instead.
+    const defaultNames = ['nha chinh', 'main house', 'my home', 'home'];
+    return defaultNames.includes(normalized) ? t.home : name;
+  };
 
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -76,8 +94,6 @@ export default function HomeScreen({ navigation }) {
       const onMemberAdded = refreshHomeData;
       const onMemberRemoved = refreshHomeData;
 
-      // đăng ký socket cho tự động hoá
-
       const setupSocket = async () => {
         try {
           const socket = await connectSocket();
@@ -103,8 +119,6 @@ export default function HomeScreen({ navigation }) {
           socket.off('member_added').on('member_added', onMemberAdded);
           socket.off('member_removed').on('member_removed', onMemberRemoved);
 
-          // socket on tự động hoá
-
           console.log('[HomeScreen] Socket listeners registered');
         } catch (err) {
           console.error('[HomeScreen] Socket setup error:', err);
@@ -129,8 +143,6 @@ export default function HomeScreen({ navigation }) {
           socket.off('room_deleted');
           socket.off('member_added');
           socket.off('member_removed');
-
-          // socket off tự động hoá
         }
       };
     }, []),
@@ -325,7 +337,7 @@ export default function HomeScreen({ navigation }) {
               ]}
               numberOfLines={1}
             >
-              {item.room_id?.name || 'Chưa gắn phòng'}
+              {item.room_id?.name || t.not_assigned_room}
             </Text>
           </View>
         </View>
@@ -341,7 +353,7 @@ export default function HomeScreen({ navigation }) {
       style={[styles.container, { backgroundColor: themeStyles.background }]}
     >
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <Text style={styles.houseName}>{houseData?.name || 'Nhà của tôi'}</Text>
+        <Text style={styles.houseName}>{getDisplayHouseName(houseData?.name)}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {userRole === 'OWNER' && (
             <TouchableOpacity
@@ -385,7 +397,7 @@ export default function HomeScreen({ navigation }) {
         ) : notJoined ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: themeStyles.text }]}>
-              Bạn chưa tham gia nhà nào
+              {t.not_joined_house}
             </Text>
             <TouchableOpacity
               style={[
@@ -397,10 +409,8 @@ export default function HomeScreen({ navigation }) {
             >
               <Text style={styles.joinHouseIcon}>🏠</Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.joinHouseTitle}>Tham gia nhà</Text>
-                <Text style={styles.joinHouseSub}>
-                  Nhập thông tin chủ nhà để kết nối
-                </Text>
+                <Text style={styles.joinHouseTitle}>{t.join_house}</Text>
+                <Text style={styles.joinHouseSub}>{t.enter_admin_info}</Text>
               </View>
               <Text style={{ color: '#fff', fontSize: 20 }}>›</Text>
             </TouchableOpacity>
@@ -408,9 +418,7 @@ export default function HomeScreen({ navigation }) {
         ) : devices.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: themeStyles.text }]}>
-              {isOwner
-                ? 'Chưa có thiết bị nào'
-                : 'Chưa có thiết bị nào trong nhà'}
+              {isOwner ? t.no_devices : t.no_devices_in_house}
             </Text>
             {isOwner && (
               <TouchableOpacity
@@ -420,7 +428,7 @@ export default function HomeScreen({ navigation }) {
                 ]}
                 onPress={() => navigation.navigate('AddDevice')}
               >
-                <Text style={styles.addBtnText}>Thêm ngay</Text>
+                <Text style={styles.addBtnText}>{t.add_now}</Text>
               </TouchableOpacity>
             )}
           </View>
