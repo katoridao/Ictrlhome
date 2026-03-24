@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -17,11 +17,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 import { connectSocket, getSocket } from '../database/socket';
 
 export default function RoomScreen({ navigation }) {
   const { theme, styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
   const [modalVisible, setModalVisible] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [rooms, setRooms] = useState([]);
@@ -192,8 +194,8 @@ export default function RoomScreen({ navigation }) {
         if (!houseId) {
           Toast.show({
             type: 'error',
-            text1: 'Lỗi',
-            text2: 'Vui lòng chọn nhà trước.',
+            text1: t.error,
+            text2: t.select_house,
           });
           return;
         }
@@ -205,24 +207,28 @@ export default function RoomScreen({ navigation }) {
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: error.response?.data?.message || 'Không thể lưu phòng',
+        text1: t.error,
+        text2: error.response?.data?.message || t.cannot_delete_room,
       });
     }
   };
 
   const handleDelete = async id => {
-    Alert.alert('Xác nhận', 'Xóa phòng này?', [
-      { text: 'Hủy', style: 'cancel' },
+    Alert.alert(t.confirm, t.confirm_delete_room, [
+      { text: t.cancel, style: 'cancel' },
       {
-        text: 'Xóa',
+        text: t.delete,
         style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/rooms/del/${id}`);
             fetchRooms();
           } catch (e) {
-            Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể xóa' });
+            Toast.show({
+              type: 'error',
+              text1: t.error,
+              text2: t.cannot_delete_room,
+            });
           }
         },
       },
@@ -253,8 +259,8 @@ export default function RoomScreen({ navigation }) {
     } catch (e) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể cập nhật thiết bị',
+        text1: t.error,
+        text2: t.update_all_devices_error,
       });
     } finally {
       setTogglingRoomId(null);
@@ -274,7 +280,7 @@ export default function RoomScreen({ navigation }) {
           source={require('../../public/img/room.png')}
           style={styles.headerIcon}
         />
-        <Text style={styles.headerTitle}>Phòng</Text>
+        <Text style={styles.headerTitle}>{t.tab_room}</Text>
         {isOwner ? (
           <TouchableOpacity
             onPress={() => {
@@ -301,6 +307,7 @@ export default function RoomScreen({ navigation }) {
             <RoomItem
               key={room._id}
               room={room}
+              t={t}
               themeStyles={themeStyles}
               navigation={navigation}
               isOwner={isOwner}
@@ -326,10 +333,10 @@ export default function RoomScreen({ navigation }) {
                 style={[styles.modalBox, { backgroundColor: themeStyles.card }]}
               >
                 <Text style={[styles.modalTitle, { color: themeStyles.text }]}>
-                  {isEdit ? 'Sửa tên phòng' : 'Thêm phòng'}
+                  {isEdit ? t.edit_room : t.add_room}
                 </Text>
                 <TextInput
-                  placeholder="Nhập tên phòng"
+                  placeholder={t.enter_room_name}
                   placeholderTextColor={themeStyles.subText}
                   style={[
                     styles.input,
@@ -352,7 +359,9 @@ export default function RoomScreen({ navigation }) {
                     onPress={() => setModalVisible(false)}
                     style={{ padding: 10 }}
                   >
-                    <Text style={{ color: themeStyles.subText }}>Hủy</Text>
+                    <Text style={{ color: themeStyles.subText }}>
+                      {t.cancel}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleSave}
@@ -361,7 +370,7 @@ export default function RoomScreen({ navigation }) {
                     <Text
                       style={{ color: themeStyles.primary, fontWeight: 'bold' }}
                     >
-                      Lưu
+                      {t.save}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -376,6 +385,7 @@ export default function RoomScreen({ navigation }) {
 
 function RoomItem({
   room,
+  t,
   onEdit,
   onDelete,
   onToggleAll,
@@ -398,8 +408,8 @@ function RoomItem({
         </Text>
         <Text style={[styles.roomSub, { color: themeStyles.subText }]}>
           {hasDevices
-            ? `${room.onCount}/${room.totalDevices} thiết bị đang bật`
-            : 'Chưa có thiết bị'}
+            ? `${room.onCount}/${room.totalDevices} ${t.devices_on}`
+            : t.no_devices_in_room}
         </Text>
       </View>
 
@@ -419,7 +429,9 @@ function RoomItem({
             {toggling ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.toggleAllText}>{allOn ? 'Tắt' : 'Bật'}</Text>
+              <Text style={styles.toggleAllText}>
+                {allOn ? t.turn_off : t.turn_on}
+              </Text>
             )}
           </TouchableOpacity>
         )}

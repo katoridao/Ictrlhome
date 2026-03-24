@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,12 @@ import {
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 
 export default function ScriptScreen({ navigation }) {
   const { theme, styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
   const [scripts, setScripts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,19 +96,19 @@ export default function ScriptScreen({ navigation }) {
 
   const handleDelete = (id, name) => {
     Alert.alert(
-      'Xoá kịch bản',
-      `Bạn có chắc chắn muốn xoá kịch bản "${name || 'không xác định'}"?`,
+      t.confirm_delete_script,
+      t.delete_schedule_confirm.replace('{name}', name || 'không xác định'),
       [
-        { text: 'Huỷ', style: 'cancel' },
+        { text: t.cancel, style: 'cancel' },
         {
-          text: 'Xoá',
+          text: t.delete,
           style: 'destructive',
           onPress: async () => {
             try {
               await api.delete(`/automations/${id}`);
               setScripts(prev => prev.filter(item => item._id !== id));
             } catch (err) {
-              Alert.alert('Lỗi', 'Không thể xoá kịch bản');
+              Alert.alert(t.error, t.cannot_delete_script);
             }
           },
         },
@@ -131,7 +133,7 @@ export default function ScriptScreen({ navigation }) {
           source={require('../../public/img/script.png')}
           style={styles.headerIcon}
         />
-        <Text style={styles.headerTitle}>Tự động hoá</Text>
+        <Text style={styles.headerTitle}>{t.tab_script}</Text>
 
         {/* QUAN TRỌNG: Đã sửa tên thành 'Automation' để khớp với App.js */}
         <TouchableOpacity onPress={() => navigation.navigate('Automation')}>
@@ -164,6 +166,7 @@ export default function ScriptScreen({ navigation }) {
               key={item._id}
               item={item}
               themeStyles={themeStyles}
+              t={t}
               isPastTriggered={
                 item.enabled === false ||
                 hasTriggeredEarlierToday(item.trigger_time, nowMinutes)
@@ -189,9 +192,7 @@ export default function ScriptScreen({ navigation }) {
           ))
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={{ color: '#999', fontSize: 16 }}>
-              Chưa có kịch bản tự động nào
-            </Text>
+            <Text style={{ color: '#999', fontSize: 16 }}>{t.no_scripts}</Text>
           </View>
         )}
       </ScrollView>
@@ -206,6 +207,7 @@ function ScriptItem({
   onDelete,
   isPastTriggered,
   onToggleAutoDelete,
+  t,
 }) {
   const isON = item.action === 'ON';
   const [toggleAutoDelete, setToggleAutoDelete] = useState(
@@ -226,19 +228,19 @@ function ScriptItem({
         </Text>
 
         <View style={styles.infoRow}>
-          <Text style={styles.subLabel}>Thiết bị: </Text>
+          <Text style={styles.subLabel}>{t.device}: </Text>
           <Text style={[styles.valText, { color: themeStyles.text }]}>
             {item.device_id?.name || 'N/A'}
           </Text>
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.subLabel}>Lịch trình: </Text>
+          <Text style={styles.subLabel}>{t.schedule}: </Text>
           <Text style={[styles.timeHighlight, { color: themeStyles.primary }]}>
             ⏰ {item.trigger_time}
           </Text>
           {isPastTriggered && (
-            <Text style={styles.pastLabel}>Đã kích hoạt</Text>
+            <Text style={styles.pastLabel}>{t.activated}</Text>
           )}
           <View
             style={[
@@ -253,7 +255,7 @@ function ScriptItem({
                 fontWeight: 'bold',
               }}
             >
-              {isON ? 'BẬT' : 'TẮT'}
+              {isON ? t.on : t.off}
             </Text>
           </View>
         </View>
@@ -264,7 +266,7 @@ function ScriptItem({
             style={styles.userIcon}
           />
           <Text style={styles.creatorName}>
-            Người tạo: {item.user_id?.name || 'Hệ thống'}
+            {t.created_by}: {item.user_id?.name || t.system}
           </Text>
         </View>
 
@@ -292,7 +294,7 @@ function ScriptItem({
               )}
             </View>
             <Text style={[styles.autoDeleteLabel, { color: themeStyles.text }]}>
-              Xoá khi hoàn thành
+              {t.delete_on_complete}
             </Text>
           </TouchableOpacity>
         </View>

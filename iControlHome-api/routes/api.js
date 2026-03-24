@@ -86,6 +86,49 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Lỗi server" });
   }
 });
+
+// 3.1 UPDATE USER SETTINGS (theme/language) - per account sync
+router.post("/update-settings", authenticate, async (req, res) => {
+  try {
+    const { theme, language } = req.body;
+
+    if (!theme && !language) {
+      return res
+        .status(400)
+        .json({ message: "Thiếu dữ liệu cài đặt để cập nhật" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
+
+    if (!user.settings) user.settings = { theme: "LIGHT", language: "VI" };
+
+    if (theme) {
+      const normalizedTheme = String(theme).toUpperCase();
+      if (!["LIGHT", "DARK"].includes(normalizedTheme)) {
+        return res.status(400).json({ message: "Theme không hợp lệ" });
+      }
+      user.settings.theme = normalizedTheme;
+    }
+
+    if (language) {
+      const normalizedLanguage = String(language).toUpperCase();
+      if (!["VI", "EN"].includes(normalizedLanguage)) {
+        return res.status(400).json({ message: "Language không hợp lệ" });
+      }
+      user.settings.language = normalizedLanguage;
+    }
+
+    await user.save();
+
+    return res.json({
+      message: "Cập nhật cài đặt thành công",
+      settings: user.settings,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi server" });
+  }
+});
 // 4. CHANGE PASSWORD (Bắt buộc dùng authenticate)
 router.post("/change-password", authenticate, async (req, res) => {
   try {

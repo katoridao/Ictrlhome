@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import api from '../database/api';
+import { LanguageContext } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 const LoginScreen = ({ navigation }) => {
+  const { t, changeLanguage } = useContext(LanguageContext);
+  const { changeTheme } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -47,8 +51,8 @@ const LoginScreen = ({ navigation }) => {
     if (!cleanPhone || !password) {
       Toast.show({
         type: 'error',
-        text1: 'Thông báo',
-        text2: 'Vui lòng nhập đầy đủ thông tin',
+        text1: t.notification,
+        text2: t.fill_all_info,
       });
       return;
     }
@@ -98,10 +102,17 @@ const LoginScreen = ({ navigation }) => {
         await AsyncStorage.setItem('current_house_id', houseId);
         await AsyncStorage.setItem('current_house_name', houseName);
 
+        // Sync app settings with this account immediately after login.
+        await changeTheme(userMatched.settings.theme, { syncRemote: false });
+        await changeLanguage(
+          userMatched.settings.language === 'EN' ? 'en' : 'vi',
+          { syncRemote: false },
+        );
+
         Toast.show({
           type: 'success',
-          text1: 'Thành công',
-          text2: `Chào mừng ${userMatched.name || userMatched.phone}!`,
+          text1: t.success,
+          text2: `${t.welcome} ${userMatched.name || userMatched.phone}!`,
         });
 
         navigation.replace('Main');
@@ -109,7 +120,7 @@ const LoginScreen = ({ navigation }) => {
         const errorMsg =
           response.data?.message || 'Phản hồi từ server không hợp lệ';
         console.error('Invalid response:', response.data);
-        Toast.show({ type: 'error', text1: 'Thất bại', text2: errorMsg });
+        Toast.show({ type: 'error', text1: t.error, text2: errorMsg });
       }
     } catch (error) {
       const errorMessage =
@@ -120,7 +131,7 @@ const LoginScreen = ({ navigation }) => {
         data: error.response?.data,
         errorFull: error.message,
       });
-      Toast.show({ type: 'error', text1: 'Thất bại', text2: errorMessage });
+      Toast.show({ type: 'error', text1: t.error, text2: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -145,12 +156,12 @@ const LoginScreen = ({ navigation }) => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.appName}>Đăng nhập</Text>
+          <Text style={styles.appName}>{t.login}</Text>
         </View>
 
         <View style={styles.input}>
           <TextInput
-            placeholder="Nhập số điện thoại"
+            placeholder={t.enter_phone}
             placeholderTextColor="#666"
             style={styles.textInput}
             keyboardType="phone-pad"
@@ -162,7 +173,7 @@ const LoginScreen = ({ navigation }) => {
 
         <View style={styles.input}>
           <TextInput
-            placeholder="Nhập mật khẩu"
+            placeholder={t.enter_password}
             placeholderTextColor="#666"
             secureTextEntry={!showPassword}
             style={styles.textInput}
@@ -172,7 +183,9 @@ const LoginScreen = ({ navigation }) => {
             editable={!loading}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Text style={styles.showText}>{showPassword ? 'Ẩn' : 'Hiện'}</Text>
+            <Text style={styles.showText}>
+              {showPassword ? t.hide : t.show}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -185,7 +198,7 @@ const LoginScreen = ({ navigation }) => {
             size={20}
             color={rememberMe ? '#7C8CFF' : '#999'}
           />
-          <Text style={styles.rememberText}>Ghi nhớ mật khẩu</Text>
+          <Text style={styles.rememberText}>{t.remember_password}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -196,7 +209,7 @@ const LoginScreen = ({ navigation }) => {
           {loading ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.buttonText}>TIẾP TỤC</Text>
+            <Text style={styles.buttonText}>{t.continue}</Text>
           )}
         </TouchableOpacity>
 
@@ -205,13 +218,13 @@ const LoginScreen = ({ navigation }) => {
             style={styles.register}
             onPress={() => navigation.navigate('Register')}
           >
-            ĐĂNG KÝ TÀI KHOẢN
+            {t.create_account}
           </Text>
           <Text
             style={styles.forgot}
             onPress={() => navigation.navigate('ForgotPassword')}
           >
-            Quên mật khẩu
+            {t.forgot_password}
           </Text>
         </View>
       </View>

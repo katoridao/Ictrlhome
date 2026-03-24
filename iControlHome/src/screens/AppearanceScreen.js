@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,15 @@ import {
   Image,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 
 export default function AppearanceScreen({ navigation }) {
   const { theme, changeTheme, styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
 
   const options = [
-    { label: 'Sáng', desc: 'Dễ nhìn, phù hợp ban ngày', value: 'LIGHT' },
-    { label: 'Tối', desc: 'Dịu mắt, phù hợp ban đêm', value: 'DARK' },
+    { label: t.light, desc: t.easy_to_read, value: 'LIGHT' },
+    { label: t.dark, desc: t.comfortable_night, value: 'DARK' },
   ];
 
   return (
@@ -29,23 +31,28 @@ export default function AppearanceScreen({ navigation }) {
         backgroundColor={themeStyles.primary}
       />
 
-      <View style={[localStyles.header, { backgroundColor: themeStyles.primary }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.75}>
+      <View
+        style={[localStyles.header, { backgroundColor: themeStyles.primary }]}
+      >
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.75}
+        >
           <Image
             source={require('../../public/img/back.png')}
             style={localStyles.backIcon}
           />
         </TouchableOpacity>
-        <Text style={localStyles.headerTitle}>Giao diện</Text>
+        <Text style={localStyles.headerTitle}>{t.appearance}</Text>
         <View style={{ width: 22 }} />
       </View>
 
       <View style={localStyles.body}>
         <Text style={[localStyles.title, { color: themeStyles.text }]}>
-          Chọn chế độ hiển thị
+          {t.choose_display_mode}
         </Text>
         <Text style={[localStyles.subtitle, { color: themeStyles.subText }]}>
-          Áp dụng ngay cho toàn bộ ứng dụng.
+          {t.apply_instantly}
         </Text>
 
         <View style={localStyles.grid}>
@@ -65,16 +72,28 @@ export default function AppearanceScreen({ navigation }) {
                   localStyles.optionCard,
                   {
                     backgroundColor: themeStyles.card,
-                    borderColor: selected ? themeStyles.primary : themeStyles.border,
+                    borderColor: selected
+                      ? themeStyles.primary
+                      : themeStyles.border,
                   },
                 ]}
               >
                 <View style={localStyles.optionHeader}>
                   <View>
-                    <Text style={[localStyles.optionTitle, { color: themeStyles.text }]}>
+                    <Text
+                      style={[
+                        localStyles.optionTitle,
+                        { color: themeStyles.text },
+                      ]}
+                    >
                       {item.label}
                     </Text>
-                    <Text style={[localStyles.optionDesc, { color: themeStyles.subText }]}>
+                    <Text
+                      style={[
+                        localStyles.optionDesc,
+                        { color: themeStyles.subText },
+                      ]}
+                    >
                       {item.desc}
                     </Text>
                   </View>
@@ -83,8 +102,12 @@ export default function AppearanceScreen({ navigation }) {
                     style={[
                       localStyles.checkDot,
                       {
-                        borderColor: selected ? themeStyles.primary : themeStyles.border,
-                        backgroundColor: selected ? themeStyles.primary : 'transparent',
+                        borderColor: selected
+                          ? themeStyles.primary
+                          : themeStyles.border,
+                        backgroundColor: selected
+                          ? themeStyles.primary
+                          : 'transparent',
                       },
                     ]}
                   >
@@ -95,20 +118,45 @@ export default function AppearanceScreen({ navigation }) {
                 <View
                   style={[
                     localStyles.preview,
-                    { backgroundColor: previewBg, borderColor: themeStyles.border },
+                    {
+                      backgroundColor: previewBg,
+                      borderColor: themeStyles.border,
+                    },
                   ]}
                 >
-                  <View style={[localStyles.previewHeader, { backgroundColor: '#3B9CFF' }]} />
+                  <View
+                    style={[
+                      localStyles.previewHeader,
+                      { backgroundColor: '#3B9CFF' },
+                    ]}
+                  />
                   <View style={localStyles.previewContent}>
-                    <View style={[localStyles.previewCard, { backgroundColor: previewCard }]}>
-                      <Text style={[localStyles.previewText, { color: previewText }]}>
-                        Thiết bị
+                    <View
+                      style={[
+                        localStyles.previewCard,
+                        { backgroundColor: previewCard },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          localStyles.previewText,
+                          { color: previewText },
+                        ]}
+                      >
+                        {t.device}
                       </Text>
-                      <Text style={[localStyles.previewSub, { color: previewSub }]}>
-                        Trạng thái: ON
+                      <Text
+                        style={[localStyles.previewSub, { color: previewSub }]}
+                      >
+                        {t.device_status}: {t.on}
                       </Text>
                     </View>
-                    <View style={[localStyles.previewCardSmall, { backgroundColor: previewCard }]} />
+                    <View
+                      style={[
+                        localStyles.previewCardSmall,
+                        { backgroundColor: previewCard },
+                      ]}
+                    />
                   </View>
                 </View>
               </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -14,9 +14,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import api from '../database/api';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 
 const ProfileScreen = ({ navigation, route }) => {
   const { theme, styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
 
   const [phone, setPhone] = useState('');
   const [fullName, setFullName] = useState('');
@@ -42,71 +44,66 @@ const ProfileScreen = ({ navigation, route }) => {
   }, []);
 
   const handleUpdateAll = async () => {
-  if (!fullName.trim()) {
-    Toast.show({
-      type: 'error',
-      text1: 'Lỗi',
-      text2: 'Họ tên không được để trống',
-    });
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    // 🔥 Cập nhật tên (khớp với backend)
-    const response = await api.post('/update-profile', {
-      phone,
-      name: fullName.trim(), // ✅ đổi fullName thành name
-    });
-
-    const updatedUser = response.data.user;
-
-    // Cập nhật lại AsyncStorage
-    await AsyncStorage.setItem(
-      'user_info',
-      JSON.stringify(updatedUser)
-    );
-
-    // 🔥 Nếu có nhập đổi mật khẩu
-    if (oldPassword || newPassword || confirmPassword) {
-      if (!oldPassword || !newPassword || !confirmPassword) {
-        throw new Error('Vui lòng nhập đầy đủ thông tin mật khẩu');
-      }
-
-      if (newPassword !== confirmPassword) {
-        throw new Error('Mật khẩu xác nhận không khớp');
-      }
-
-      await api.post('/change-password', {
-        phone,
-        oldPassword,
-        newPassword,
+    if (!fullName.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: t.name_required,
       });
+      return;
     }
 
-    Toast.show({
-      type: 'success',
-      text1: 'Thành công',
-      text2: 'Thông tin đã được cập nhật!',
-    });
+    try {
+      setLoading(true);
 
-    setTimeout(() => navigation.goBack(), 1000);
-  } catch (error) {
-    const msg =
-      error.response?.data?.message ||
-      error.message ||
-      'Lỗi cập nhật';
+      // 🔥 Cập nhật tên (khớp với backend)
+      const response = await api.post('/update-profile', {
+        phone,
+        name: fullName.trim(), // ✅ đổi fullName thành name
+      });
 
-    Toast.show({
-      type: 'error',
-      text1: 'Thất bại',
-      text2: msg,
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      const updatedUser = response.data.user;
+
+      // Cập nhật lại AsyncStorage
+      await AsyncStorage.setItem('user_info', JSON.stringify(updatedUser));
+
+      // 🔥 Nếu có nhập đổi mật khẩu
+      if (oldPassword || newPassword || confirmPassword) {
+        if (!oldPassword || !newPassword || !confirmPassword) {
+          throw new Error(t.fill_all_info);
+        }
+
+        if (newPassword !== confirmPassword) {
+          throw new Error(t.password_not_match);
+        }
+
+        await api.post('/change-password', {
+          phone,
+          oldPassword,
+          newPassword,
+        });
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: t.success,
+        text2: t.profile_updated,
+      });
+
+      setTimeout(() => navigation.goBack(), 1000);
+    } catch (error) {
+      const msg =
+        error.response?.data?.message || error.message || 'Lỗi cập nhật';
+
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: msg,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -123,7 +120,7 @@ const ProfileScreen = ({ navigation, route }) => {
             style={styles.avatar}
           />
           <TouchableOpacity style={styles.cameraBtn}>
-            <Text style={styles.cameraText}>SỬA</Text>
+            <Text style={styles.cameraText}>{t.edit_profile}</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.headerName}>{fullName}</Text>
@@ -132,10 +129,10 @@ const ProfileScreen = ({ navigation, route }) => {
 
       <View style={styles.form}>
         <Text style={[styles.sectionLabel, { color: themeStyles.primary }]}>
-          THÔNG TIN TÀI KHOẢN
+          {t.account_info}
         </Text>
         <Text style={[styles.fieldLabel, { color: themeStyles.subText }]}>
-          Số điện thoại
+          {t.phone}
         </Text>
         <TextInput
           style={[
@@ -150,7 +147,7 @@ const ProfileScreen = ({ navigation, route }) => {
           editable={false}
         />
         <Text style={[styles.fieldLabel, { color: themeStyles.subText }]}>
-          Họ và tên
+          {t.full_name}
         </Text>
         <TextInput
           style={[
@@ -170,7 +167,7 @@ const ProfileScreen = ({ navigation, route }) => {
           style={[styles.divider, { backgroundColor: themeStyles.border }]}
         />
         <Text style={[styles.sectionLabel, { color: themeStyles.primary }]}>
-          ĐỔI MẬT KHẨU
+          {t.change_password}
         </Text>
         <TextInput
           style={[
@@ -183,7 +180,7 @@ const ProfileScreen = ({ navigation, route }) => {
           ]}
           value={oldPassword}
           onChangeText={setOldPassword}
-          placeholder="Mật khẩu cũ"
+          placeholder={t.old_password}
           secureTextEntry
           placeholderTextColor={themeStyles.subText}
         />
@@ -198,7 +195,7 @@ const ProfileScreen = ({ navigation, route }) => {
           ]}
           value={newPassword}
           onChangeText={setNewPassword}
-          placeholder="Mật khẩu mới"
+          placeholder={t.new_password}
           secureTextEntry
           placeholderTextColor={themeStyles.subText}
         />
@@ -213,7 +210,7 @@ const ProfileScreen = ({ navigation, route }) => {
           ]}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          placeholder="Xác nhận mật khẩu"
+          placeholder={t.confirm_password}
           secureTextEntry
           placeholderTextColor={themeStyles.subText}
         />
@@ -230,7 +227,7 @@ const ProfileScreen = ({ navigation, route }) => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.btnText}>LƯU TẤT CẢ</Text>
+            <Text style={styles.btnText}>{t.save_all}</Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
@@ -238,7 +235,7 @@ const ProfileScreen = ({ navigation, route }) => {
           style={styles.btnCancel}
         >
           <Text style={[styles.cancelText, { color: themeStyles.subText }]}>
-            Quay lại
+            {t.back}
           </Text>
         </TouchableOpacity>
       </View>

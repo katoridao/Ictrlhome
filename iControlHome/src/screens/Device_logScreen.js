@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -13,15 +13,17 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 import moment from 'moment';
 import { connectSocket, getSocket } from '../database/socket';
 
-const TIME_FILTERS = ['Hôm nay', '7 ngày trước', '30 ngày trước'];
-const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt'];
-
 export default function Device_logScreen() {
   const { theme, styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
+
+  const TIME_FILTERS = [t.today, t.last_7_days, t.last_30_days];
+  const DEVICE_FILTERS = [t.all, t.device_type_light, t.device_type_fan];
 
   const [openFilter, setOpenFilter] = useState(null);
   const [historyData, setHistoryData] = useState([]);
@@ -29,18 +31,13 @@ export default function Device_logScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const isFocused = useIsFocused();
 
-  const [device, setDevice] = useState('Tất cả');
-  const [time, setTime] = useState('Hôm nay');
+  const [device, setDevice] = useState(t.all);
+  const [time, setTime] = useState(t.today);
 
   const getDeviceTypeValue = deviceName => {
-    switch (deviceName) {
-      case 'Đèn':
-        return 'light';
-      case 'Quạt':
-        return 'fan';
-      default:
-        return 'Tất cả';
-    }
+    if (deviceName === t.device_type_light) return 'light';
+    if (deviceName === t.device_type_fan) return 'fan';
+    return t.all;
   };
 
   const fetchData = useCallback(async () => {
@@ -49,19 +46,19 @@ export default function Device_logScreen() {
 
     const params = { house_id: houseId };
 
-    if (time === 'Hôm nay') params.period = 'day';
-    if (time === '7 ngày trước') params.period = 'week';
-    if (time === '30 ngày trước') params.period = 'month';
+    if (time === t.today) params.period = 'day';
+    if (time === t.last_7_days) params.period = 'week';
+    if (time === t.last_30_days) params.period = 'month';
 
     // thêm loại thiết bị vào params
-    if (device !== 'Tất cả') {
+    if (device !== t.all) {
       params.device_type = getDeviceTypeValue(device);
     }
 
     const response = await api.get('/device-logs', { params });
 
     return response.data.logs || [];
-  }, [time, device]);
+  }, [time, device, t]);
 
   useEffect(() => {
     if (isFocused) {
@@ -151,7 +148,7 @@ export default function Device_logScreen() {
           source={require('../../public/img/history.png')}
           style={styles.headerIcon}
         />
-        <Text style={styles.headerTitle}>Nhật ký thiết bị</Text>
+        <Text style={styles.headerTitle}>{t.device_log}</Text>
       </View>
 
       {/* FILTER */}
@@ -235,19 +232,20 @@ export default function Device_logScreen() {
                 style={styles.emptyIcon}
               />
               <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
-                Chưa có nhật ký hoạt động nào
+                {t.no_log}
               </Text>
             </View>
           }
           renderItem={({ item }) => (
             <HistoryItem
               type={item.device?.type}
-              deviceName={item.device?.name || 'Thiết bị đã xóa'}
-              roomName={item.device?.room?.name || 'Không rõ phòng'}
-              userName={item.user?.name || 'Người dùng'}
+              deviceName={item.device?.name || t.deleted_device}
+              roomName={item.device?.room?.name || t.unknown_room}
+              userName={item.user?.name || t.user}
               time={item.created_at}
               action={item.action}
               themeStyles={themeStyles}
+              t={t}
             />
           )}
         />
@@ -309,6 +307,7 @@ function HistoryItem({
   time,
   action,
   themeStyles,
+  t,
 }) {
   const getIcon = deviceType => {
     switch (deviceType) {
@@ -328,7 +327,7 @@ function HistoryItem({
     return moment.utc(date).utcOffset(7).format('HH:mm DD/MM/YYYY');
   };
 
-  const actionText = action === 'ON' ? 'Đã Bật' : 'Đã Tắt';
+  const actionText = action === 'ON' ? t.turned_on : t.turned_off;
   const actionColor = action === 'ON' ? '#4CAF50' : '#F44336';
   const actionIcon = action === 'ON' ? '🟢' : '🔴';
 

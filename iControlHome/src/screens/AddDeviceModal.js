@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -15,14 +15,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 
-const DEVICE_TYPES = [
-  { label: 'Đèn', value: 'light', icon: 'lightbulb-on' },
-  { label: 'Quạt', value: 'fan', icon: 'fan' },
-];
+// DEVICE_TYPES will be created dynamically with translations in the component
 
 const AddDeviceModal = ({ navigation, route }) => {
+  const { t } = useContext(LanguageContext);
+  const DEVICE_TYPES = [
+    { label: t.device_type_light, value: 'light', icon: 'lightbulb-on' },
+    { label: t.device_type_fan, value: 'fan', icon: 'fan' },
+  ];
   const editDevice = route.params?.device;
   const isEditMode = !!editDevice;
 
@@ -83,7 +86,7 @@ const AddDeviceModal = ({ navigation, route }) => {
       Toast.show({
         type: 'error',
         text1: 'Thông báo',
-        text2: 'Vui lòng nhập đầy đủ thông tin',
+        text2: t.fill_all_info,
       });
       return;
     }
@@ -113,7 +116,7 @@ const AddDeviceModal = ({ navigation, route }) => {
       if (response.status === 200 || response.status === 201) {
         Toast.show({
           type: 'success',
-          text1: 'Thành công',
+          text1: t.success,
           text2: isEditMode
             ? 'Đã cập nhật thông tin!'
             : 'Đã thêm thiết bị mới!',
@@ -123,7 +126,7 @@ const AddDeviceModal = ({ navigation, route }) => {
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
+        text1: t.error,
         text2: error.response?.data?.message || 'Lỗi server',
       });
     } finally {
@@ -139,18 +142,18 @@ const AddDeviceModal = ({ navigation, route }) => {
       >
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.header}>
-            {isEditMode ? 'Chỉnh Sửa Thiết Bị' : 'Thêm Thiết Bị Mới'}
+            {isEditMode ? t.edit_device : t.add_new_device}
           </Text>
 
-          <Text style={styles.label}>Tên thiết bị</Text>
+          <Text style={styles.label}>{t.device_name}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ví dụ: Đèn phòng khách"
+            placeholder={t.device_name_placeholder}
             value={name}
             onChangeText={setName}
           />
 
-          <Text style={styles.label}>Chọn phòng (Tùy chọn)</Text>
+          <Text style={styles.label}>{t.select_room}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -169,7 +172,7 @@ const AddDeviceModal = ({ navigation, route }) => {
                   selectedRoomId === null && styles.roomTextActive,
                 ]}
               >
-                Chưa có phòng
+                {t.no_rooms}
               </Text>
             </TouchableOpacity>
             {rooms.map(room => (
@@ -193,7 +196,7 @@ const AddDeviceModal = ({ navigation, route }) => {
             ))}
           </ScrollView>
 
-          <Text style={styles.label}>Chọn loại thiết bị</Text>
+          <Text style={styles.label}>{t.select_device_type}</Text>
           <View style={styles.typeRow}>
             {DEVICE_TYPES.map(item => (
               <TouchableOpacity
@@ -221,28 +224,28 @@ const AddDeviceModal = ({ navigation, route }) => {
             ))}
           </View>
 
-          <Text style={styles.label}>Công suất (W)</Text>
+          <Text style={styles.label}>{t.power_consumption}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ví dụ: 50"
+            placeholder={t.power_consumption_placeholder}
             value={powerWatt}
             onChangeText={setPowerWatt}
             keyboardType="numeric"
           />
 
-          <Text style={styles.label}>ID ESP32</Text>
+          <Text style={styles.label}>{t.device_id}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ví dụ: ESP32_01"
+            placeholder={t.device_id_placeholder}
             value={esp32Id}
             onChangeText={setEsp32Id}
             autoCapitalize="characters"
           />
 
-          <Text style={styles.label}>IP ESP32 (WiFi LAN)</Text>
+          <Text style={styles.label}>{t.device_ip}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ví dụ: 192.168.100.239"
+            placeholder={t.device_ip_placeholder}
             value={esp32Ip}
             onChangeText={setEsp32Ip}
             autoCapitalize="none"
@@ -254,7 +257,7 @@ const AddDeviceModal = ({ navigation, route }) => {
               style={styles.cancelBtn}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.cancelBtnText}>Hủy bỏ</Text>
+              <Text style={styles.cancelBtnText}>{t.cancel_action}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.saveBtn}
@@ -265,7 +268,7 @@ const AddDeviceModal = ({ navigation, route }) => {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.saveBtnText}>
-                  {isEditMode ? 'Cập nhật' : 'Lưu thiết bị'}
+                  {isEditMode ? t.update_device : t.save_device}
                 </Text>
               )}
             </TouchableOpacity>

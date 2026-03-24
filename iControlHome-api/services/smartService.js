@@ -2,8 +2,34 @@ const cron = require("node-cron");
 const Automation = require("../models/Automation");
 const Device = require("../models/Device");
 const DeviceLog = require("../models/DeviceLog");
+const DeviceUsage = require("../models/DeviceUsage");
 const { createNotification } = require("./notificationService");
 const moment = require("moment");
+
+// Gọi HTTP trực tiếp tới ESP32 (giống route device.js)
+const normalizeEsp32Url = (hostOrIp, on) => {
+  const raw = String(hostOrIp || "").trim();
+  if (!raw) return null;
+  const hasScheme = raw.startsWith("http://") || raw.startsWith("https://");
+  const base = hasScheme ? raw : `http://${raw}`;
+  return `${base}${on ? "/on" : "/off"}`;
+};
+
+const callEsp32 = async ({ esp32_ip, on, timeoutMs = 8000 }) => {
+  const url = normalizeEsp32Url(esp32_ip, on);
+  if (!url) return { ok: true, skipped: true };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { method: "GET", signal: controller.signal });
+    const text = await res.text().catch(() => "");
+    clearTimeout(timer);
+    return res.ok ? { ok: true } : { ok: false, status: res.status, text };
+  } catch (e) {
+    clearTimeout(timer);
+    return { ok: false, error: e?.message || String(e) };
+  }
+};
 
 const initAutomationWorker = () => {
   cron.schedule("* * * * *", async () => {
@@ -34,7 +60,37 @@ const initAutomationWorker = () => {
         // 3. Cập nhật DB
         await Device.findByIdAndUpdate(device._id, { status: shouldBeOn });
 
-        // 3.1 Ghi log lịch sử để màn Device Log hiển thị hành động tự động hoá
+        // 3.2 Cập nhật DeviceUsage (giống manual toggle)
+        const now = new Date();
+        if (shouldBeOn) {
+          const existed = await DeviceUsage.findOne({
+            device_id: device._id,
+            end_time: null,
+          });
+          if (!existed) {
+            await DeviceUsage.create({
+              device_id: device._id,
+              start_time: now,
+            });
+          }
+        } else {
+          const lastUsage = await DeviceUsage.findOne({
+            device_id: device._id,
+            end_time: null,
+          }).sort({ start_time: -1 });
+          if (lastUsage) {
+            const durationMs = now - lastUsage.start_time;
+            const runtimeSeconds = Math.floor(durationMs / 1000);
+            lastUsage.end_time = now;
+            lastUsage.duration_minutes =
+              Math.round((durationMs / (1000 * 60)) * 100) / 100;
+            lastUsage.energy_kwh =
+              (device.power_watt * runtimeSeconds) / 3600000;
+            await lastUsage.save();
+          }
+        }
+
+        // 3.3 Ghi log lịch sử để màn Device Log hiển thị hành động tự động hoá
         await DeviceLog.create({
           device_id: device._id,
           user_id: task.user_id || null,
@@ -42,14 +98,26 @@ const initAutomationWorker = () => {
           action: shouldBeOn ? "ON" : "OFF",
         });
 
-        // 4. GỬI LỆNH THỰC TẾ (Sửa theo Socket.io của bạn)
-        if (global.io) {
-          global.io.emit("device_control", {
-            esp32_id: device.esp32_id,
-            status: shouldBeOn,
+        // 4. GỬI LỆNH THỰC TẾ TỚI ESP32 QUA HTTP
+        if (device.esp32_ip) {
+          const esp32Result = await callEsp32({
+            esp32_ip: device.esp32_ip,
+            on: shouldBeOn,
           });
+          if (!esp32Result.ok && !esp32Result.skipped) {
+            console.warn(
+              `[Worker] ESP32 ${device.esp32_id} không phản hồi:`,
+              esp32Result,
+            );
+          } else {
+            console.log(
+              `[Worker] Đã gửi lệnh HTTP ${task.action} tới ESP32 ${device.esp32_id} (${device.esp32_ip})`,
+            );
+          }
+        }
 
-          // Emit cho app để cập nhật realtime trạng thái thiết bị.
+        // 5. Emit socket cho app để cập nhật realtime trạng thái thiết bị
+        if (global.io) {
           global.io
             .to(device.house_id || "H001")
             .emit("device_status_changed", {
@@ -60,13 +128,9 @@ const initAutomationWorker = () => {
 
           // Trigger refresh for screens listening to generic device log updates.
           global.io.emit("device-update");
-
-          console.log(
-            `[SOCKET] Đã gửi lệnh ${task.action} tới ${device.esp32_id}`,
-          );
         }
 
-        // 5. Thông báo & Tắt kịch bản nếu chạy 1 lần
+        // 6. Thông báo & Tắt kịch bản nếu chạy 1 lần
         const logMsg = `Tự động: Đã ${shouldBeOn ? "BẬT" : "TẮT"} ${device.name}`;
         if (task.user_id) await createNotification(task.user_id, logMsg);
 

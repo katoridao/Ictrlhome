@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,13 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 
 export default function SettingScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const { theme, styles: themeStyles } = useTheme();
+  const { t, language } = useContext(LanguageContext);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,11 +37,10 @@ export default function SettingScreen({ navigation }) {
   );
 
   const handleLogout = () => {
-    // Giữ lại: đây là confirm dialog cần người dùng xác nhận
-    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn thoát khỏi ứng dụng?', [
-      { text: 'Hủy', style: 'cancel' },
+    Alert.alert(t.logout_title, t.logout_msg, [
+      { text: t.cancel, style: 'cancel' },
       {
-        text: 'Đồng ý',
+        text: t.confirm,
         onPress: async () => {
           await AsyncStorage.multiRemove([
             'user_info',
@@ -72,7 +72,7 @@ export default function SettingScreen({ navigation }) {
           source={require('../../public/img/setting.png')}
           style={styles.headerIcon}
         />
-        <Text style={styles.headerTitle}>Cài đặt</Text>
+        <Text style={styles.headerTitle}>{t.settings}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -92,10 +92,10 @@ export default function SettingScreen({ navigation }) {
           />
           <View style={{ flex: 1 }}>
             <Text style={[styles.userName, { color: themeStyles.text }]}>
-              {userData?.name || 'Đang tải...'}
+              {userData?.name || t.loading}
             </Text>
             <Text style={[styles.userPhone, { color: themeStyles.text }]}>
-              {userData?.phone || 'Chưa cập nhật'}
+              {userData?.phone || t.not_updated}
             </Text>
           </View>
           <Image
@@ -104,57 +104,51 @@ export default function SettingScreen({ navigation }) {
           />
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Ứng dụng</Text>
+        <Text style={styles.sectionTitle}>{t.section_app}</Text>
         <View
           style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}
         >
           <SettingItem
             icon={require('../../public/img/notification.png')}
-            label="Thông báo"
+            label={t.notifications}
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('NotificationSetting')}
           />
           <SettingItem
             icon={require('../../public/img/moon.png')}
-            label="Giao diện"
-            value={theme === 'DARK' ? 'Tối' : 'Sáng'}
+            label={t.appearance}
+            value={theme === 'DARK' ? t.dark : t.light}
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('AppearanceScreen')}
           />
           <SettingItem
             icon={require('../../public/img/device_usage.png')}
-            label="Thống kê tiêu thụ"
+            label={t.statistics}
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('StatisticsScreen')}
           />
           <SettingItem
             icon={require('../../public/img/language.png')}
-            label="Ngôn ngữ"
-            value="Vie/Eng"
+            label={t.language}
+            value={language === 'vi' ? t.vietnamese : t.english}
             noBorder
             textColor={themeStyles.text}
-            onPress={() =>
-              Toast.show({
-                type: 'info',
-                text1: 'Thông báo',
-                text2: 'Tính năng đang phát triển',
-              })
-            }
+            onPress={() => navigation.navigate('LanguageSetting')}
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Khác</Text>
+        <Text style={styles.sectionTitle}>{t.section_other}</Text>
         <View
           style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}
         >
           <SettingItem
             icon={require('../../public/img/help.png')}
-            label="Trợ giúp"
+            label={t.help}
             textColor={themeStyles.text}
           />
           <SettingItem
             icon={require('../../public/img/logout.png')}
-            label="Đăng xuất"
+            label={t.logout}
             noBorder
             textColor={themeStyles.text}
             onPress={handleLogout}
