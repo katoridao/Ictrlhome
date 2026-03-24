@@ -16,9 +16,11 @@ import moment from 'moment';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../database/api';
 import { LanguageContext } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 const MainAutomationScreen = ({ navigation }) => {
   const { t } = useContext(LanguageContext);
+  const { styles: themeStyles } = useTheme();
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [name, setName] = useState('');
@@ -101,32 +103,64 @@ const MainAutomationScreen = ({ navigation }) => {
     }
   };
 
-  if (loading) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
+  if (loading)
+    return (
+      <ActivityIndicator
+        size="large"
+        color={themeStyles.primary}
+        style={[styles.loader, { backgroundColor: themeStyles.background }]}
+      />
+    );
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.headerTitle}>{t.automation_setup}</Text>
-      <Text style={styles.label}>{t.script_name}:</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: themeStyles.background }]}
+    >
+      <Text style={[styles.headerTitle, { color: themeStyles.text }]}>
+        {t.automation_setup}
+      </Text>
+      <Text style={[styles.label, { color: themeStyles.text }]}>
+        {t.script_name}:
+      </Text>
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          {
+            borderColor: themeStyles.border,
+            color: themeStyles.text,
+          },
+        ]}
         value={name}
         onChangeText={setName}
         placeholder={t.automation_name_placeholder}
+        placeholderTextColor={themeStyles.subText}
       />
 
-      <Text style={styles.label}>{t.select_date_time}:</Text>
+      <Text style={[styles.label, { color: themeStyles.text }]}>
+        {t.select_date_time}:
+      </Text>
       <TouchableOpacity
-        style={styles.timePickerBtn}
+        style={[
+          styles.timePickerBtn,
+          {
+            backgroundColor: themeStyles.card,
+            borderColor: themeStyles.border,
+          },
+        ]}
         onPress={() => {
           setMode('date');
           setShowPicker(true);
         }}
       >
         <View>
-          <Text>🗓 {moment(date).format('DD/MM/YYYY')}</Text>
-          <Text style={styles.timeText}>⏰ {moment(date).format('HH:mm')}</Text>
+          <Text style={{ color: themeStyles.text }}>
+            🗓 {moment(date).format('DD/MM/YYYY')}
+          </Text>
+          <Text style={[styles.timeText, { color: themeStyles.text }]}>
+            ⏰ {moment(date).format('HH:mm')}
+          </Text>
         </View>
-        <Text style={{ color: '#2196F3', fontWeight: 'bold' }}>
+        <Text style={{ color: themeStyles.primary, fontWeight: 'bold' }}>
           {t.change_action}
         </Text>
       </TouchableOpacity>
@@ -142,7 +176,9 @@ const MainAutomationScreen = ({ navigation }) => {
         />
       )}
 
-      <Text style={styles.label}>{t.select_device_action}:</Text>
+      <Text style={[styles.label, { color: themeStyles.text }]}>
+        {t.select_device_action}:
+      </Text>
       <View style={styles.deviceList}>
         {devices.length > 0 ? (
           devices.map(dev => (
@@ -150,30 +186,39 @@ const MainAutomationScreen = ({ navigation }) => {
               key={dev._id}
               style={[
                 styles.deviceItem,
+                {
+                  borderColor: themeStyles.border,
+                  backgroundColor: themeStyles.card,
+                },
                 selectedDevice === dev._id && styles.deviceSelected,
               ]}
               onPress={() => setSelectedDevice(dev._id)}
             >
               <Text
-                style={{ color: selectedDevice === dev._id ? '#FFF' : '#333' }}
+                style={{
+                  color: selectedDevice === dev._id ? '#FFF' : themeStyles.text,
+                }}
               >
                 {dev.name}
               </Text>
             </TouchableOpacity>
           ))
         ) : (
-          <Text style={{ color: 'red' }}>{t.no_devices_available}.</Text>
+          <Text style={{ color: '#F44336' }}>{t.no_devices_available}.</Text>
         )}
       </View>
 
       <View style={styles.switchRow}>
-        <Text>
+        <Text style={{ color: themeStyles.text }}>
           {t.action}: {status ? t.on : t.off}
         </Text>
         <Switch value={status} onValueChange={setStatus} />
       </View>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={createAuto}>
+      <TouchableOpacity
+        style={[styles.saveBtn, { backgroundColor: themeStyles.primary }]}
+        onPress={createAuto}
+      >
         <Text style={{ color: '#FFF', fontWeight: 'bold' }}>
           {t.save_automation}
         </Text>
@@ -184,14 +229,15 @@ const MainAutomationScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
+  loader: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
   label: { marginTop: 20, fontWeight: 'bold' },
-  input: { borderBottomWidth: 1, borderColor: '#ccc', padding: 8 },
+  input: { borderBottomWidth: 1, padding: 8 },
   timePickerBtn: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 15,
-    backgroundColor: '#eee',
+    borderWidth: 1,
     borderRadius: 8,
     marginTop: 10,
   },
