@@ -20,7 +20,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../database/api';
 import { connectSocket, getSocket } from '../database/socket';
-import { useSocketEvents } from '../database/socketEvents';
 
 const { width } = Dimensions.get('window');
 const SHEET_HEIGHT = 260;
@@ -32,6 +31,7 @@ export default function HomeScreen({ navigation }) {
   const [userRole, setUserRole] = useState('MEMBER');
   const [isMember, setIsMember] = useState(null);
   const [userData, setUserData] = useState(null);
+  const [houseData, setHouseData] = useState(null);
 
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -41,6 +41,10 @@ export default function HomeScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       let mounted = true;
+      const refreshHomeData = () => {
+        if (!mounted) return;
+        fetchDevices();
+      };
 
       const onStatusChanged = ({ device_id, status }) => {
         if (!mounted) return;
@@ -64,15 +68,13 @@ export default function HomeScreen({ navigation }) {
         if (!mounted) return;
         setDevices(prev => prev.filter(d => d._id !== device_id));
       };
-      const onPermissionUpdated = () => {
-        if (!mounted) return;
-        fetchDevices();
-      };
-
-      const onPermissionRemoved = () => {
-        if (!mounted) return;
-        fetchDevices();
-      };
+      const onPermissionUpdated = refreshHomeData;
+      const onPermissionRemoved = refreshHomeData;
+      const onRoomAdded = refreshHomeData;
+      const onRoomUpdated = refreshHomeData;
+      const onRoomDeleted = refreshHomeData;
+      const onMemberAdded = refreshHomeData;
+      const onMemberRemoved = refreshHomeData;
 
       // đăng ký socket cho tự động hoá
 
@@ -95,6 +97,12 @@ export default function HomeScreen({ navigation }) {
             .off('permission_removed')
             .on('permission_removed', onPermissionRemoved);
 
+          socket.off('room_added').on('room_added', onRoomAdded);
+          socket.off('room_updated').on('room_updated', onRoomUpdated);
+          socket.off('room_deleted').on('room_deleted', onRoomDeleted);
+          socket.off('member_added').on('member_added', onMemberAdded);
+          socket.off('member_removed').on('member_removed', onMemberRemoved);
+
           // socket on tự động hoá
 
           console.log('[HomeScreen] Socket listeners registered');
@@ -116,6 +124,11 @@ export default function HomeScreen({ navigation }) {
           socket.off('device_deleted');
           socket.off('permission_updated');
           socket.off('permission_removed');
+          socket.off('room_added');
+          socket.off('room_updated');
+          socket.off('room_deleted');
+          socket.off('member_added');
+          socket.off('member_removed');
 
           // socket off tự động hoá
         }
@@ -199,6 +212,8 @@ export default function HomeScreen({ navigation }) {
       }
       const response = await api.get('/devices');
       setDevices(response.data.devices || []);
+      const houseResponse = await api.get('/houses');
+      setHouseData(houseResponse.data);
     } catch (error) {
       console.error('Lỗi tải thiết bị:', error.message);
     } finally {
@@ -326,7 +341,7 @@ export default function HomeScreen({ navigation }) {
       style={[styles.container, { backgroundColor: themeStyles.background }]}
     >
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <Text style={styles.houseName}>Nhà của tôi</Text>
+        <Text style={styles.houseName}>{houseData?.name || 'Nhà của tôi'}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {userRole === 'OWNER' && (
             <TouchableOpacity

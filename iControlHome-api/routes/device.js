@@ -206,11 +206,7 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
     if (!current)
       return res.status(404).json({ message: "Không tìm thấy thiết bị" });
 
-    const isLight =
-      String(current.type || "").toLowerCase() === "light" ||
-      String(current.type || "").toLowerCase() === "đèn";
-
-    if (isLight && current.esp32_ip) {
+    if (current.esp32_ip) {
       esp32Result = await callEsp32({
         esp32_ip: current.esp32_ip,
         on: !!status,
@@ -264,6 +260,7 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
     await DeviceLog.create({
       device_id: device._id,
       user_id: userId,
+      house_id: device.house_id,
       action: status ? "ON" : "OFF",
     });
 

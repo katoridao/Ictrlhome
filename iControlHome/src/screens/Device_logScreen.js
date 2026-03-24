@@ -15,9 +15,10 @@ import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import api from '../database/api';
 import moment from 'moment';
+import { connectSocket, getSocket } from '../database/socket';
 
 const TIME_FILTERS = ['Hôm nay', '7 ngày trước', '30 ngày trước'];
-const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt', 'Cảm biến'];
+const DEVICE_FILTERS = ['Tất cả', 'Đèn', 'Quạt'];
 
 export default function Device_logScreen() {
   const { theme, styles: themeStyles } = useTheme();
@@ -37,8 +38,6 @@ export default function Device_logScreen() {
         return 'light';
       case 'Quạt':
         return 'fan';
-      case 'Cảm biến':
-        return 'sensor';
       default:
         return 'Tất cả';
     }
@@ -82,6 +81,46 @@ export default function Device_logScreen() {
 
       loadData();
     }
+  }, [isFocused, fetchData]);
+
+  useEffect(() => {
+    if (!isFocused) return;
+
+    let mounted = true;
+
+    const refreshLogsRealtime = async () => {
+      if (!mounted) return;
+      try {
+        const data = await fetchData();
+        if (!mounted) return;
+        setHistoryData(data);
+      } catch (error) {
+        console.error('Lỗi cập nhật realtime nhật ký:', error);
+      }
+    };
+
+    const setupSocket = async () => {
+      try {
+        const socket = await connectSocket();
+
+        socket
+          .off('device_status_changed')
+          .on('device_status_changed', refreshLogsRealtime);
+        socket.off('device-update').on('device-update', refreshLogsRealtime);
+      } catch (error) {
+        console.error('Lỗi kết nối socket nhật ký:', error);
+      }
+    };
+
+    setupSocket();
+
+    return () => {
+      mounted = false;
+      const socket = getSocket();
+      if (!socket) return;
+      socket.off('device_status_changed');
+      socket.off('device-update');
+    };
   }, [isFocused, fetchData]);
 
   const onRefresh = useCallback(async () => {
@@ -250,7 +289,12 @@ function DropdownOption({ label, active, onPress, themeStyles }) {
       ]}
       onPress={onPress}
     >
-      <Text style={{ color: themeStyles.text, fontWeight: active ? 'bold' : 'normal' }}>
+      <Text
+        style={{
+          color: themeStyles.text,
+          fontWeight: active ? 'bold' : 'normal',
+        }}
+      >
         {label}
       </Text>
     </TouchableOpacity>
@@ -281,8 +325,6 @@ function HistoryItem({
 
   const formatDate = date => {
     if (!date) return '';
-    // Đồng bộ hiển thị theo "giờ thật" (VN UTC+7), không phụ thuộc timezone của emulator
-    // created_at từ backend thường là ISO (UTC). Dùng utc() + utcOffset(7) để ra giờ VN ổn định.
     return moment.utc(date).utcOffset(7).format('HH:mm DD/MM/YYYY');
   };
 
@@ -291,7 +333,12 @@ function HistoryItem({
   const actionIcon = action === 'ON' ? '🟢' : '🔴';
 
   return (
-    <View style={[styles.historyItem, { backgroundColor: themeStyles.card, shadowColor: themeStyles.text }]}>
+    <View
+      style={[
+        styles.historyItem,
+        { backgroundColor: themeStyles.card, shadowColor: themeStyles.text },
+      ]}
+    >
       <Image source={getIcon(type)} style={styles.deviceIcon} />
       <View style={styles.itemContent}>
         <View style={styles.itemHeader}>
@@ -304,14 +351,20 @@ function HistoryItem({
         </View>
 
         <View style={styles.itemRow}>
-          <Image source={require('../../public/img/room.png')} style={styles.smallIcon} />
+          <Image
+            source={require('../../public/img/room.png')}
+            style={styles.smallIcon}
+          />
           <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
             {roomName}
           </Text>
         </View>
-        
+
         <View style={styles.itemRow}>
-          <Image source={require('../../public/img/user.png')} style={styles.smallIcon} />
+          <Image
+            source={require('../../public/img/user.png')}
+            style={styles.smallIcon}
+          />
           <Text style={{ color: themeStyles.subText, fontSize: 12 }}>
             {userName}
           </Text>
@@ -441,7 +494,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginTop: 4,
   },
-  
+
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',

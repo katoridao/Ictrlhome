@@ -7,7 +7,7 @@ const { authenticate } = require("../middlewares/auth");
 router.get("/", authenticate, async (req, res) => {
   try {
     const list = await Automation.find()
-      .populate("device_id", "name status") 
+      .populate("device_id", "name status")
       .populate("user_id", "name");
     res.json(list);
   } catch (error) {
@@ -18,11 +18,16 @@ router.get("/", authenticate, async (req, res) => {
 // 2. TẠO MỚI (PHẢI CÓ authenticate ĐỂ LẤY USER_ID)
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { name, device_id, action, trigger_time, repeat_type, house_id } = req.body;
+    const { name, device_id, action, trigger_time, repeat_type, house_id } =
+      req.body;
 
     // KIỂM TRA: Nếu không có req.user từ middleware auth.js, dừng lại ngay
     if (!req.user || !req.user._id) {
-        return res.status(401).json({ message: "Không xác định được người dùng. Hãy đăng nhập lại!" });
+      return res
+        .status(401)
+        .json({
+          message: "Không xác định được người dùng. Hãy đăng nhập lại!",
+        });
     }
 
     const newAuto = new Automation({
@@ -33,29 +38,59 @@ router.post("/", authenticate, async (req, res) => {
       trigger_time: trigger_time,
       house_id: house_id || "H001",
       repeat_type: repeat_type || "DAILY",
-      enabled: true
+      enabled: true,
     });
 
     const savedData = await newAuto.save();
     console.log("✅ Lưu kịch bản thành công:", savedData.name);
     res.status(201).json(savedData);
-
   } catch (error) {
     console.error("❌ LỖI LƯU KỊCH BẢN:", error.message);
-    res.status(400).json({ 
-      message: "Dữ liệu không hợp lệ: " + error.message 
+    res.status(400).json({
+      message: "Dữ liệu không hợp lệ: " + error.message,
     });
   }
 });
 
 // 3. XOÁ KỊCH BẢN
 router.delete("/:id", authenticate, async (req, res) => {
-    try {
-        await Automation.findByIdAndDelete(req.params.id);
-        res.json({ message: "Đã xoá kịch bản" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+  try {
+    await Automation.findByIdAndDelete(req.params.id);
+    res.json({ message: "Đã xoá kịch bản" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 3.5. CẬP NHẬT KỊCH BẢN (toggle auto_delete, v.v.)
+router.put("/:id", authenticate, async (req, res) => {
+  try {
+    const {
+      auto_delete_on_trigger,
+      name,
+      action,
+      trigger_time,
+      repeat_type,
+      enabled,
+    } = req.body;
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (action !== undefined) updateData.action = action;
+    if (trigger_time !== undefined) updateData.trigger_time = trigger_time;
+    if (repeat_type !== undefined) updateData.repeat_type = repeat_type;
+    if (enabled !== undefined) updateData.enabled = enabled;
+    if (auto_delete_on_trigger !== undefined)
+      updateData.auto_delete_on_trigger = auto_delete_on_trigger;
+
+    const updated = await Automation.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true },
+    );
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 module.exports = router;

@@ -7,28 +7,31 @@ import machine
 import gc
 from machine import Pin
 
-# ===== CONFIG =====
+# config
 SSID = "4evauni"
 PWD = "0niichansuki"
 PORT = 8080
 
-# ===== LED =====
+# led
 led_main = Pin(2, Pin.OUT)
 
 leds = {
-    "led1": Pin(21, Pin.OUT),
+    # red
+    "led1": Pin(21, Pin.OUT), 
+    # green
     "led2": Pin(22, Pin.OUT),
+    # yellow
     "led3": Pin(23, Pin.OUT)
 }
 
 for led in leds.values():
     led.off()
 
-# ===== HTTP RESPONSE =====
+# responses
 RESP_OK = b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nOK"
 RESP_404 = b"HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nNOT_FOUND"
 
-# ===== WIFI =====
+# wifi connect
 def wifi_connect():
     wlan = network.WLAN(network.STA_IF)
 
@@ -56,12 +59,12 @@ def wifi_connect():
     return wlan
 
 
-# ===== HANDLE REQUEST =====
+# handle incoming request
 def handle_request(req):
     try:
         line = req.split(b"\r\n")[0]
 
-        # ===== MAIN LED =====
+        # main led
         if line.startswith(b"GET /on"):
             led_main.on()
             return True
@@ -70,7 +73,7 @@ def handle_request(req):
             led_main.off()
             return True
 
-        # ===== ALL LED =====
+        # all leds
         if line.startswith(b"GET /all/on"):
             for led in leds.values():
                 led.on()
@@ -81,7 +84,7 @@ def handle_request(req):
                 led.off()
             return True
 
-        # ===== INDIVIDUAL LED =====
+        # individual leds
         for name in leds:
             name_b = name.encode()
 
@@ -99,7 +102,7 @@ def handle_request(req):
     return False
 
 
-# ===== START =====
+# startup
 wifi = wifi_connect()
 print("Connected:", wifi.ifconfig())
 
@@ -120,7 +123,7 @@ s.settimeout(2)
 print("Server running on port", PORT)
 
 
-# ===== MAIN LOOP =====
+# main loop
 while True:
     cl = None
     try:

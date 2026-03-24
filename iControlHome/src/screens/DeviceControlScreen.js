@@ -11,7 +11,6 @@ import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../database/api';
 import { connectSocket, getSocket } from '../database/socket';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DeviceControlScreen({ route }) {
   const { device } = route.params;
