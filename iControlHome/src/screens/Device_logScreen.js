@@ -34,6 +34,39 @@ export default function Device_logScreen() {
   const [device, setDevice] = useState(t.all);
   const [time, setTime] = useState(t.today);
 
+  // ── THÊM: trạng thái kiểm tra đã vào nhà chưa (giống HomeScreen) ──
+  const [userRole, setUserRole] = useState('MEMBER');
+  const [isMember, setIsMember] = useState(null);
+  const [memberChecked, setMemberChecked] = useState(false);
+
+  // Kiểm tra membership mỗi khi màn hình được focus
+  useEffect(() => {
+    if (!isFocused) return;
+
+    const checkMembership = async () => {
+      try {
+        const role = await AsyncStorage.getItem('user_role');
+        setUserRole(role || 'MEMBER');
+        try {
+          const res = await api.get('/houses/check-member');
+          setIsMember(res.data.is_member);
+        } catch (e) {
+          setIsMember(true);
+        }
+      } catch (e) {
+        setIsMember(false);
+      } finally {
+        setMemberChecked(true);
+      }
+    };
+
+    checkMembership();
+  }, [isFocused]);
+
+  const isOwner = userRole === 'OWNER';
+  const notJoined = !isOwner && isMember === false;
+  // ─────────────────────────────────────────────────────────────────
+
   const getDeviceTypeValue = deviceName => {
     if (deviceName === t.device_type_light) return 'light';
     if (deviceName === t.device_type_fan) return 'fan';
@@ -50,7 +83,6 @@ export default function Device_logScreen() {
     if (time === t.last_7_days) params.period = 'week';
     if (time === t.last_30_days) params.period = 'month';
 
-    // thêm loại thiết bị vào params
     if (device !== t.all) {
       params.device_type = getDeviceTypeValue(device);
     }
@@ -61,7 +93,7 @@ export default function Device_logScreen() {
   }, [time, device, t]);
 
   useEffect(() => {
-    if (isFocused) {
+    if (isFocused && !notJoined) {
       const loadData = async () => {
         setLoading(true);
 
@@ -78,10 +110,10 @@ export default function Device_logScreen() {
 
       loadData();
     }
-  }, [isFocused, fetchData]);
+  }, [isFocused, fetchData, notJoined]);
 
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused || notJoined) return;
 
     let mounted = true;
 
@@ -118,7 +150,7 @@ export default function Device_logScreen() {
       socket.off('device_status_changed');
       socket.off('device-update');
     };
-  }, [isFocused, fetchData]);
+  }, [isFocused, fetchData, notJoined]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -151,104 +183,124 @@ export default function Device_logScreen() {
         <Text style={styles.headerTitle}>{t.device_log}</Text>
       </View>
 
-      {/* FILTER */}
-      <View style={styles.filterWrapper}>
-        <View style={styles.filterRow}>
-          <FilterItem
-            label={device}
-            active={openFilter === 'device'}
-            themeStyles={themeStyles}
-            onPress={() =>
-              setOpenFilter(openFilter === 'device' ? null : 'device')
-            }
-          />
-
-          <FilterItem
-            label={time}
-            active={openFilter === 'time'}
-            themeStyles={themeStyles}
-            onPress={() => setOpenFilter(openFilter === 'time' ? null : 'time')}
-          />
-        </View>
-
-        {openFilter && (
-          <View
-            style={[styles.dropdown, { backgroundColor: themeStyles.card }]}
-          >
-            {openFilter === 'device' &&
-              DEVICE_FILTERS.map(item => (
-                <DropdownOption
-                  key={item}
-                  label={item}
-                  active={device === item}
-                  themeStyles={themeStyles}
-                  onPress={() => {
-                    setDevice(item);
-                    setOpenFilter(null);
-                  }}
-                />
-              ))}
-
-            {openFilter === 'time' &&
-              TIME_FILTERS.map(item => (
-                <DropdownOption
-                  key={item}
-                  label={item}
-                  active={time === item}
-                  themeStyles={themeStyles}
-                  onPress={() => {
-                    setTime(item);
-                    setOpenFilter(null);
-                  }}
-                />
-              ))}
-          </View>
-        )}
-      </View>
-
-      {/* LIST */}
-      {loading ? (
+      {/* BODY: chưa vào nhà / đang kiểm tra / nội dung chính */}
+      {!memberChecked ? (
+        // Đang kiểm tra membership → hiển thị loading
         <ActivityIndicator
           size="large"
           color={themeStyles.primary}
           style={{ marginTop: 50 }}
         />
+      ) : notJoined ? (
+        // Chưa vào nhà → để trống
+        <View />
       ) : (
-        <FlatList
-          data={historyData}
-          keyExtractor={item => item._id}
-          contentContainerStyle={styles.body}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[themeStyles.primary]}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Image
-                source={require('../../public/img/history.png')}
-                style={styles.emptyIcon}
+        // Đã vào nhà → hiển thị filter + danh sách log
+        <>
+          {/* FILTER */}
+          <View style={styles.filterWrapper}>
+            <View style={styles.filterRow}>
+              <FilterItem
+                label={device}
+                active={openFilter === 'device'}
+                themeStyles={themeStyles}
+                onPress={() =>
+                  setOpenFilter(openFilter === 'device' ? null : 'device')
+                }
               />
-              <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
-                {t.no_log}
-              </Text>
+
+              <FilterItem
+                label={time}
+                active={openFilter === 'time'}
+                themeStyles={themeStyles}
+                onPress={() =>
+                  setOpenFilter(openFilter === 'time' ? null : 'time')
+                }
+              />
             </View>
-          }
-          renderItem={({ item }) => (
-            <HistoryItem
-              type={item.device?.type}
-              deviceName={item.device?.name || t.deleted_device}
-              roomName={item.device?.room?.name || t.unknown_room}
-              userName={item.user?.name || t.user}
-              time={item.created_at}
-              action={item.action}
-              themeStyles={themeStyles}
-              t={t}
+
+            {openFilter && (
+              <View
+                style={[styles.dropdown, { backgroundColor: themeStyles.card }]}
+              >
+                {openFilter === 'device' &&
+                  DEVICE_FILTERS.map(item => (
+                    <DropdownOption
+                      key={item}
+                      label={item}
+                      active={device === item}
+                      themeStyles={themeStyles}
+                      onPress={() => {
+                        setDevice(item);
+                        setOpenFilter(null);
+                      }}
+                    />
+                  ))}
+
+                {openFilter === 'time' &&
+                  TIME_FILTERS.map(item => (
+                    <DropdownOption
+                      key={item}
+                      label={item}
+                      active={time === item}
+                      themeStyles={themeStyles}
+                      onPress={() => {
+                        setTime(item);
+                        setOpenFilter(null);
+                      }}
+                    />
+                  ))}
+              </View>
+            )}
+          </View>
+
+          {/* LIST */}
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color={themeStyles.primary}
+              style={{ marginTop: 50 }}
+            />
+          ) : (
+            <FlatList
+              data={historyData}
+              keyExtractor={item => item._id}
+              contentContainerStyle={styles.body}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[themeStyles.primary]}
+                />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Image
+                    source={require('../../public/img/history.png')}
+                    style={styles.emptyIcon}
+                  />
+                  <Text
+                    style={[styles.emptyText, { color: themeStyles.subText }]}
+                  >
+                    {t.no_log}
+                  </Text>
+                </View>
+              }
+              renderItem={({ item }) => (
+                <HistoryItem
+                  type={item.device?.type}
+                  deviceName={item.device?.name || t.deleted_device}
+                  roomName={item.device?.room?.name || t.unknown_room}
+                  userName={item.user?.name || t.user}
+                  time={item.created_at}
+                  action={item.action}
+                  themeStyles={themeStyles}
+                  t={t}
+                />
+              )}
             />
           )}
-        />
+        </>
       )}
     </View>
   );
@@ -509,5 +561,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
+    marginBottom: 15,
   },
+
 });
