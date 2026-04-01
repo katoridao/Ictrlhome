@@ -29,6 +29,10 @@ import JoinHouseScreen from './src/screens/JoinHouseScreen';
 // Import Screens - Member Management & Permissions
 import { ManageMembersScreen, MemberPermissionScreen } from './src/screens/MemberManagement';
 
+// Import Screens - People & Entry/Exit Management
+import PeopleScreen from './src/screens/PeopleScreen';
+import EntryExitScreen from './src/screens/EntryExitScreen';
+
 // Import Navigation - Tab
 import MainTab from './src/navigation/MainTab';
 
@@ -120,6 +124,30 @@ export default function App() {
             options={{
               headerShown: true,
               title: 'Phân quyền thiết bị',
+              headerStyle: { backgroundColor: '#2196F3' },
+              headerTintColor: '#fff',
+              headerTitleAlign: 'center'
+            }}
+          />
+
+          {/* People & Entry/Exit */}
+          <Stack.Screen
+            name="PeopleScreen"
+            component={PeopleScreen}
+            options={{
+              headerShown: true,
+              title: 'Danh sách khuôn mặt',
+              headerStyle: { backgroundColor: '#2196F3' },
+              headerTintColor: '#fff',
+              headerTitleAlign: 'center'
+            }}
+          />
+          <Stack.Screen
+            name="EntryExitScreen"
+            component={EntryExitScreen}
+            options={{
+              headerShown: true,
+              title: 'Lịch sử ra/vào',
               headerStyle: { backgroundColor: '#2196F3' },
               headerTintColor: '#fff',
               headerTitleAlign: 'center'
