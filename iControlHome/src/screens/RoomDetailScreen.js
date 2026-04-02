@@ -229,12 +229,10 @@ export default function RoomDetailScreen({ route, navigation }) {
   };
 
   const getDeviceIcon = type => {
-    switch (type?.toLowerCase()) {
+    switch (type) {
       case 'light':
-      case 'đèn':
         return require('../../public/img/light.png');
       case 'fan':
-      case 'quạt':
         return require('../../public/img/fan.png');
       default:
         return require('../../public/img/device_default.png');
@@ -324,16 +322,7 @@ export default function RoomDetailScreen({ route, navigation }) {
           >
             <Image
               source={getDeviceIcon(item.type)}
-              style={[
-                styles.deviceIcon,
-                {
-                  tintColor: hasPermission
-                    ? isActive
-                      ? '#4CAF50'
-                      : '#9E9E9E'
-                    : '#BDBDBD',
-                },
-              ]}
+              style={styles.deviceIcon}
             />
           </View>
           <View style={{ marginLeft: 12, flex: 1 }}>

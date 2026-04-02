@@ -41,9 +41,6 @@ const AddDeviceModal = ({ navigation, route }) => {
   );
   const [name, setName] = useState(editDevice?.name || '');
   const [type, setType] = useState(editDevice?.type || 'light');
-  const [esp32Id, setEsp32Id] = useState(
-    editDevice?.esp32_id || editDevice?.esp32Id || '',
-  );
   const [esp32Ip, setEsp32Ip] = useState(editDevice?.esp32_ip || '');
   const [powerWatt, setPowerWatt] = useState(
     editDevice?.power_watt ? String(editDevice.power_watt) : '',
@@ -84,7 +81,7 @@ const AddDeviceModal = ({ navigation, route }) => {
   }, []);
 
   const handleSave = async () => {
-    if (!name.trim() || !esp32Id.trim()) {
+    if (!name.trim()) {
       Toast.show({
         type: 'error',
         text1: 'Thông báo',
@@ -101,7 +98,6 @@ const AddDeviceModal = ({ navigation, route }) => {
         room_id: selectedRoomId,
         name: name.trim(),
         type,
-        esp32_id: esp32Id.trim(),
         esp32_ip: esp32Ip.trim() || null,
         power_watt: parseInt(powerWatt) || 0,
         house_id: houseId,
@@ -293,25 +289,6 @@ const AddDeviceModal = ({ navigation, route }) => {
             value={powerWatt}
             onChangeText={setPowerWatt}
             keyboardType="numeric"
-          />
-
-          <Text style={[styles.label, { color: themeStyles.text }]}>
-            {t.device_id}
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: themeStyles.border,
-                backgroundColor: themeStyles.card,
-                color: themeStyles.text,
-              },
-            ]}
-            placeholder={t.device_id_placeholder}
-            placeholderTextColor={themeStyles.subText}
-            value={esp32Id}
-            onChangeText={setEsp32Id}
-            autoCapitalize="characters"
           />
 
           <Text style={[styles.label, { color: themeStyles.text }]}>

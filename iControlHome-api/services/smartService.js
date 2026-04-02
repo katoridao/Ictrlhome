@@ -106,12 +106,12 @@ const initAutomationWorker = () => {
           });
           if (!esp32Result.ok && !esp32Result.skipped) {
             console.warn(
-              `[Worker] ESP32 ${device.esp32_id} không phản hồi:`,
+              `[Worker] ESP32 ${device.esp32_ip} không phản hồi:`,
               esp32Result,
             );
           } else {
             console.log(
-              `[Worker] Đã gửi lệnh HTTP ${task.action} tới ESP32 ${device.esp32_id} (${device.esp32_ip})`,
+              `[Worker] Đã gửi lệnh HTTP ${task.action} tới ESP32 (${device.esp32_ip})`,
             );
           }
         }

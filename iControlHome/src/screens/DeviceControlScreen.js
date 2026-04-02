@@ -143,17 +143,7 @@ export default function DeviceControlScreen({ route }) {
             {device.type}
           </Text>
         </View>
-        <View
-          style={[styles.infoRow, { borderBottomColor: themeStyles.border }]}
-        >
-          <Text style={[styles.label, { color: themeStyles.subText }]}>
-            {t.device_code_label}
-          </Text>
-          <Text style={[styles.value, { color: themeStyles.text }]}>
-            {device.esp32_id}
-          </Text>
-        </View>
-        <View
+        {/* <View
           style={[styles.infoRow, { borderBottomColor: themeStyles.border }]}
         >
           <Text style={[styles.label, { color: themeStyles.subText }]}>
@@ -162,7 +152,7 @@ export default function DeviceControlScreen({ route }) {
           <Text style={[styles.value, { color: themeStyles.text }]}>
             {device.esp32_ip || t.not_configured}
           </Text>
-        </View>
+        </View> */}
         <View
           style={[styles.infoRow, { borderBottomColor: themeStyles.border }]}
         >

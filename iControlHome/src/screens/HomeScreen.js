@@ -262,12 +262,10 @@ export default function HomeScreen({ navigation }) {
   };
 
   const getDeviceIcon = type => {
-    switch (type?.toLowerCase()) {
+    switch (type) {
       case 'light':
-      case 'đèn':
         return require('../../public/img/light.png');
       case 'fan':
-      case 'quạt':
         return require('../../public/img/fan.png');
       default:
         return require('../../public/img/device_default.png');
@@ -301,10 +299,7 @@ export default function HomeScreen({ navigation }) {
           >
             <Image
               source={getDeviceIcon(item.type)}
-              style={[
-                styles.deviceImage,
-                { tintColor: isActive ? '#4CAF50' : '#9E9E9E' },
-              ]}
+              style={styles.deviceImage}
               resizeMode="contain"
             />
           </View>
@@ -353,7 +348,9 @@ export default function HomeScreen({ navigation }) {
       style={[styles.container, { backgroundColor: themeStyles.background }]}
     >
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <Text style={styles.houseName}>{getDisplayHouseName(houseData?.name)}</Text>
+        <Text style={styles.houseName}>
+          {getDisplayHouseName(houseData?.name)}
+        </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {userRole === 'OWNER' && (
             <TouchableOpacity
@@ -482,7 +479,7 @@ export default function HomeScreen({ navigation }) {
               >
                 <Image
                   source={getDeviceIcon(selectedDevice.type)}
-                  style={[styles.sheetDeviceImage, { tintColor: '#4CAF50' }]}
+                  style={styles.sheetDeviceImage}
                   resizeMode="contain"
                 />
               </View>

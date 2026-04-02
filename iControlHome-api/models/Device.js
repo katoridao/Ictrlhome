@@ -29,13 +29,6 @@ const DeviceSchema = new mongoose.Schema(
       trim: true,
     },
 
-    esp32_id: {
-      type: String,
-      required: true,
-      trim: true,
-      unique: true,
-    },
-
     esp32_ip: {
       type: String,
       default: null,

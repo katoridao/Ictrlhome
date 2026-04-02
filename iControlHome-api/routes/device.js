@@ -107,18 +107,17 @@ router.get("/", authenticate, checkHouseMembership, async (req, res) => {
 // 2. Tạo thiết bị mới (Chỉ OWNER)
 router.post("/", authenticate, isOwner, async (req, res) => {
   try {
-    const { name, type, esp32_id, esp32_ip, room_id, power_watt } = req.body;
+    const { name, type, esp32_ip, room_id, power_watt } = req.body;
 
-    if (!name || !type || !esp32_id || power_watt == null) {
+    if (!name || !type || power_watt == null) {
       return res
         .status(400)
-        .json({ message: "Thiếu dữ liệu (name, type, esp32_id, power_watt)" });
+        .json({ message: "Thiếu dữ liệu (name, type, power_watt)" });
     }
 
     const device = await Device.create({
       name: name.trim(),
       type,
-      esp32_id,
       esp32_ip: esp32_ip ? String(esp32_ip).trim() : null,
       house_id: "H001",
       room_id: room_id || null,
@@ -152,14 +151,13 @@ router.post("/", authenticate, isOwner, async (req, res) => {
 // 3. Cập nhật thông tin thiết bị (Chỉ OWNER)
 router.put("/:id", authenticate, isOwner, async (req, res) => {
   try {
-    const { name, type, esp32_id, esp32_ip, room_id, power_watt } = req.body;
+    const { name, type, esp32_ip, room_id, power_watt } = req.body;
 
     const updatedDevice = await Device.findOneAndUpdate(
       { _id: req.params.id, house_id: "H001" },
       {
         name: name?.trim(),
         type,
-        esp32_id,
         esp32_ip: esp32_ip ? String(esp32_ip).trim() : null,
         room_id,
         power_watt,
