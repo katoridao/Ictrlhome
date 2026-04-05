@@ -2,51 +2,31 @@ import React, { useContext } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
-
-// Import Theme Provider
 import { ThemeProvider } from './src/context/ThemeContext';
-
-// Import Language Provider
 import {
   LanguageProvider,
   LanguageContext,
 } from './src/context/LanguageContext';
 import LanguageSettingScreen from './src/screens/Setting/LanguageSettingScreen';
-
-// Import Screens - Authentication & Onboarding
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
-
-// Import Screens - Device Management
 import AddDeviceModal from './src/screens/AddDeviceModal';
 import DeviceControlScreen from './src/screens/DeviceControlScreen';
-
-// Import Screens - Room Management
 import RoomDetailScreen from './src/screens/RoomDetailScreen';
-
-// Import Screens - Settings & Profile
 import NotificationSettingScreen from './src/screens/NotificationSettingScreen';
 import AppearanceScreen from './src/screens/AppearanceScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import StatisticsScreen from './src/screens/StatisticsScreen';
 import JoinHouseScreen from './src/screens/JoinHouseScreen';
-
-// Import Screens - Member Management & Permissions
 import {
   ManageMembersScreen,
   MemberPermissionScreen,
 } from './src/screens/MemberManagement';
-
-// Import Screens - People & Entry/Exit Management
 import PeopleScreen from './src/screens/PeopleScreen';
 import EntryExitScreen from './src/screens/EntryExitScreen';
-
-// Import Navigation - Tab
 import MainTab from './src/navigation/MainTab';
-
-// Automation Screen
 import MainAutomationScreen from './src/screens/MainAutomationScreen';
 
 const Stack = createNativeStackNavigator();
