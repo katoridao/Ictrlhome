@@ -39,6 +39,10 @@ import {
   MemberPermissionScreen,
 } from './src/screens/MemberManagement';
 
+// Import Screens - People & Entry/Exit Management
+import PeopleScreen from './src/screens/PeopleScreen';
+import EntryExitScreen from './src/screens/EntryExitScreen';
+
 // Import Navigation - Tab
 import MainTab from './src/navigation/MainTab';
 
@@ -139,6 +143,30 @@ function AppNavigator() {
           }}
         />
 
+        {/* People & Entry/Exit */}
+        <Stack.Screen
+          name="PeopleScreen"
+          component={PeopleScreen}
+          options={{
+            headerShown: true,
+            title: 'Danh sách khuôn mặt',
+            headerStyle: { backgroundColor: '#2196F3' },
+            headerTintColor: '#fff',
+            headerTitleAlign: 'center',
+          }}
+        />
+        <Stack.Screen
+          name="EntryExitScreen"
+          component={EntryExitScreen}
+          options={{
+            headerShown: true,
+            title: 'Lịch sử ra/vào',
+            headerStyle: { backgroundColor: '#2196F3' },
+            headerTintColor: '#fff',
+            headerTitleAlign: 'center',
+          }}
+        />
+
         <Stack.Screen
           name="LanguageSetting"
           component={LanguageSettingScreen}
@@ -153,7 +181,6 @@ export default function App() {
     <ThemeProvider>
       <LanguageProvider>
         <AppNavigator />
-
         <Toast />
       </LanguageProvider>
     </ThemeProvider>

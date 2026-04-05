@@ -26,6 +26,8 @@ const deviceLogRoutes = require("./routes/deviceLog");
 const deviceUsageRoutes = require("./routes/deviceUsage");
 const automationRoutes = require("./routes/automation");
 const apiRouter = require("./routes/api");
+const detectionRoutes = require("./routes/detection");
+const facesRoutes = require("./routes/faces");
 
 var app = express();
 
@@ -188,6 +190,8 @@ app.use("/api/devices", authenticate, deviceRoutes);
 app.use("/api/device-logs", authenticate, deviceLogRoutes);
 app.use("/api/device-usages", authenticate, deviceUsageRoutes);
 app.use("/api/automations", authenticate, automationRoutes);
+app.use("/api/camera", detectionRoutes);
+app.use("/api/camera", facesRoutes);
 
 /**
  * KHỞI CHẠY AUTOMATION WORKER

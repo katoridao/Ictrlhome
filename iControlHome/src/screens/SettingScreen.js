@@ -137,7 +137,26 @@ export default function SettingScreen({ navigation }) {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>{t.section_other}</Text>
+        <Text style={styles.sectionTitle}>Người ra vào nhà</Text>
+        <View
+          style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}
+        >
+          <SettingItem
+            icon={require('../../public/img/user.png')}
+            label="Danh sách khuôn mặt"
+            textColor={themeStyles.text}
+            onPress={() => navigation.navigate('PeopleScreen')}
+          />
+          <SettingItem
+            icon={require('../../public/img/history.png')}
+            label="Lịch sử ra/vào"
+            textColor={themeStyles.text}
+            onPress={() => navigation.navigate('EntryExitScreen')}
+            noBorder
+          />
+        </View>
+
+        <Text style={styles.sectionTitle}>Khác</Text>
         <View
           style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}
         >
