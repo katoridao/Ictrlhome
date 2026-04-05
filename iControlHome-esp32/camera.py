@@ -22,11 +22,7 @@ NOTIFY_COOLDOWN_SECONDS = 20
 REGISTER_COOLDOWN_SECONDS = 5
 CONFIRM_FRAMES = 3
 
-# ============
-# SERVER CONFIG
-# ============
-# Backend cua iControlHome-api dang chay voi port 3000
-SERVER_BASE_URL = "http://192.168.0.192:3000"  # doi sang IP may chay server neu khac may
+SERVER_BASE_URL = "http://192.168.100.91:3000"
 HOUSE_ID = "H001"
 
 # Token de camera/device dang ky (được server check ở /api/camera/save-device-token + auth)

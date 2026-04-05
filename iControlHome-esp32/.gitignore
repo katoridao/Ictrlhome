@@ -1,0 +1,58 @@
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Node.js
+**/node_modules/
+**/coverage/
+**/dist/
+**/.npm/
+
+# React Native / Android / iOS build artifacts
+**/.gradle/
+**/build/
+**/android/app/build/
+**/android/build/
+**/android/local.properties
+**/android/.cxx/
+**/ios/Pods/
+**/DerivedData/
+**/.metro-health-check*
+
+# Python
+**/venv/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# ESP32 / local runtime data
+.micropico/
+iControlHome-esp32/known_faces/
+
+# Temporary files
+*.tmp
+*.temp
