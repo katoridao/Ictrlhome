@@ -129,7 +129,7 @@ function AppNavigator() {
           component={PeopleScreen}
           options={{
             headerShown: true,
-            title: 'Danh sách khuôn mặt',
+            title: t.household_people,
             headerStyle: { backgroundColor: '#2196F3' },
             headerTintColor: '#fff',
             headerTitleAlign: 'center',
@@ -140,7 +140,7 @@ function AppNavigator() {
           component={EntryExitScreen}
           options={{
             headerShown: true,
-            title: 'Lịch sử ra/vào',
+            title: t.entry_exit_history,
             headerStyle: { backgroundColor: '#2196F3' },
             headerTintColor: '#fff',
             headerTitleAlign: 'center',

@@ -79,12 +79,19 @@ router.get("/statistics", async (req, res) => {
     const price = house.electricity.price_per_kwh || 0;
     const totalCost = totalKwh * price;
 
+    const estimatedTotalKwh = Number(totalKwh.toFixed(2));
+    const estimatedTotalCost = Math.round(totalCost);
+
     res.json({
       month: currentMonth,
       year: currentYear,
-      total_kwh: Number(totalKwh.toFixed(2)),
-      total_cost: Math.round(totalCost),
+      total_kwh: estimatedTotalKwh,
+      total_cost: estimatedTotalCost,
+      estimated_total_kwh: estimatedTotalKwh,
+      estimated_total_cost: estimatedTotalCost,
       price_per_kwh: price,
+      is_estimated: true,
+      note: "Chi phí điện được ước tính từ công suất cấu hình của thiết bị và đơn giá điện hiện tại.",
     });
   } catch (err) {
     res.status(500).json({ message: "Lỗi tính toán hóa đơn" });
@@ -260,13 +267,13 @@ router.delete("/remove-member", authenticate, isOwner, async (req, res) => {
     // ✅ Xóa toàn bộ device permissions của member này
     await Device.updateMany(
       { "permissions.user_id": member_id },
-      { $pull: { permissions: { user_id: member_id } } }
+      { $pull: { permissions: { user_id: member_id } } },
     );
 
     // ✅ Xóa toàn bộ room permissions của member này
     await Room.updateMany(
       { "permissions.user_id": member_id },
-      { $pull: { permissions: { user_id: member_id } } }
+      { $pull: { permissions: { user_id: member_id } } },
     );
 
     const io = req.app.get("io");

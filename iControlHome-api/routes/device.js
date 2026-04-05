@@ -376,11 +376,18 @@ router.get(
         0,
       );
 
+      const estimatedMinutes = Number(totalMinutes.toFixed(2));
+      const estimatedKwh = Number(totalKwh.toFixed(4));
+
       res.json({
         month: m,
         year: y,
-        total_minutes: Number(totalMinutes.toFixed(2)),
-        total_kwh: Number(totalKwh.toFixed(4)),
+        total_minutes: estimatedMinutes,
+        total_kwh: estimatedKwh,
+        estimated_total_minutes: estimatedMinutes,
+        estimated_total_kwh: estimatedKwh,
+        is_estimated: true,
+        note: "Các số liệu điện năng chỉ là ước tính dựa trên công suất cấu hình và thời gian hoạt động của thiết bị.",
       });
     } catch (error) {
       res.status(500).json({ message: "Lỗi server" });

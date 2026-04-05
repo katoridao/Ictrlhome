@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -16,29 +16,34 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 
 export default function PeopleScreen() {
   const { styles: themeStyles } = useTheme();
+  const { t } = useContext(LanguageContext);
   const [people, setPeople] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchPeople = useCallback(async () => {
     try {
-      const houseId = (await AsyncStorage.getItem('current_house_id')) || 'H001';
-      const response = await api.get('/camera/faces', { params: { house_id: houseId } });
+      const houseId =
+        (await AsyncStorage.getItem('current_house_id')) || 'H001';
+      const response = await api.get('/camera/faces', {
+        params: { house_id: houseId },
+      });
       setPeople(response.data.faces || []);
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể tải danh sách khuôn mặt.',
+        text1: t.error,
+        text2: t.unable_load_faces,
       });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,12 +59,12 @@ export default function PeopleScreen() {
 
   const handleDelete = person => {
     Alert.alert(
-      'Xóa khuôn mặt',
-      `Bạn có chắc muốn xóa "${person.name}" khỏi danh sách?`,
+      t.delete_face_title,
+      t.delete_face_confirm.replace('{name}', person.name),
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t.cancel, style: 'cancel' },
         {
-          text: 'Xóa',
+          text: t.delete,
           style: 'destructive',
           onPress: async () => {
             try {
@@ -67,14 +72,14 @@ export default function PeopleScreen() {
               setPeople(prev => prev.filter(p => p._id !== person._id));
               Toast.show({
                 type: 'success',
-                text1: 'Đã xóa',
-                text2: `${person.name} đã được xóa khỏi danh sách.`,
+                text1: t.success,
+                text2: t.deleted_face_message.replace('{name}', person.name),
               });
             } catch (error) {
               Toast.show({
                 type: 'error',
-                text1: 'Lỗi',
-                text2: error.response?.data?.message || 'Không thể xóa khuôn mặt.',
+                text1: t.error,
+                text2: error.response?.data?.message || t.unable_delete_face,
               });
             }
           },
@@ -91,7 +96,12 @@ export default function PeopleScreen() {
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.avatarImage} />
         ) : (
-          <View style={[styles.avatarCircle, { backgroundColor: themeStyles.primary }]}>
+          <View
+            style={[
+              styles.avatarCircle,
+              { backgroundColor: themeStyles.primary },
+            ]}
+          >
             <Text style={styles.avatarText}>
               {item.name?.charAt(0).toUpperCase() || '?'}
             </Text>
@@ -102,14 +112,18 @@ export default function PeopleScreen() {
             {item.name}
           </Text>
           <Text style={[styles.personMeta, { color: themeStyles.subText }]}>
-            Đã đăng ký: {formatDate(item.createdAt)}
+            {t.registered_on}: {formatDate(item.createdAt, t.unknown_time)}
           </Text>
         </View>
         <TouchableOpacity
           style={styles.deleteBtn}
           onPress={() => handleDelete(item)}
         >
-          <MaterialCommunityIcons name="account-remove" size={22} color="#F44336" />
+          <MaterialCommunityIcons
+            name="account-remove"
+            size={22}
+            color="#F44336"
+          />
         </TouchableOpacity>
       </View>
     );
@@ -121,8 +135,12 @@ export default function PeopleScreen() {
     >
       {/* HEADER */}
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <MaterialCommunityIcons name="face-recognition" size={24} color="#fff" />
-        <Text style={styles.headerTitle}>Người trong nhà</Text>
+        <MaterialCommunityIcons
+          name="face-recognition"
+          size={24}
+          color="#fff"
+        />
+        <Text style={styles.headerTitle}>{t.household_people}</Text>
       </View>
 
       {/* INFO BOX */}
@@ -133,7 +151,7 @@ export default function PeopleScreen() {
           color={themeStyles.primary}
         />
         <Text style={[styles.infoText, { color: themeStyles.subText }]}>
-          Danh sách khuôn mặt đã đăng ký trong nhà. Sử dụng camera để thêm người mới.
+          {t.people_info}
         </Text>
       </View>
 
@@ -165,10 +183,10 @@ export default function PeopleScreen() {
                 color="#ccc"
               />
               <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
-                Chưa có khuôn mặt nào được đăng ký.
+                {t.no_registered_faces}
               </Text>
               <Text style={[styles.emptyHint, { color: themeStyles.subText }]}>
-                Sử dụng camera để thêm người.
+                {t.use_camera_add_people}
               </Text>
             </View>
           }
@@ -178,8 +196,8 @@ export default function PeopleScreen() {
   );
 }
 
-function formatDate(date) {
-  if (!date) return 'Không rõ';
+function formatDate(date, fallback = '--') {
+  if (!date) return fallback;
   const d = new Date(date);
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');

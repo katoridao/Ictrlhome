@@ -4,10 +4,8 @@ const router = express.Router();
 const DeviceUsage = require("../models/DeviceUsage");
 const Device = require("../models/Device");
 
-
 router.post("/device-on/:deviceId", async (req, res) => {
   try {
-
     const deviceId = req.params.deviceId;
 
     const device = await Device.findById(deviceId);
@@ -48,7 +46,6 @@ router.post("/device-on/:deviceId", async (req, res) => {
     res.json({
       message: "Device turned ON",
     });
-
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -56,11 +53,8 @@ router.post("/device-on/:deviceId", async (req, res) => {
   }
 });
 
-
 router.post("/device-off/:deviceId", async (req, res) => {
-
   try {
-
     const deviceId = req.params.deviceId;
 
     const usage = await DeviceUsage.findOne({
@@ -76,11 +70,9 @@ router.post("/device-off/:deviceId", async (req, res) => {
 
     const now = new Date();
 
-    const runtime =
-      Math.floor((now - usage.start_time) / 1000);
+    const runtime = Math.floor((now - usage.start_time) / 1000);
 
-    const energy =
-      (usage.device_id.power_watt * runtime) / 3600000;
+    const energy = (usage.device_id.power_watt * runtime) / 3600000;
 
     usage.end_time = now;
     usage.duration_minutes = runtime / 60;
@@ -101,13 +93,11 @@ router.post("/device-off/:deviceId", async (req, res) => {
     res.json({
       message: "Device turned OFF",
     });
-
   } catch (error) {
     res.status(500).json({
       error: error.message,
     });
   }
-
 });
 
 // ===============================
@@ -115,7 +105,6 @@ router.post("/device-off/:deviceId", async (req, res) => {
 // ===============================
 router.get("/realtime", async (req, res) => {
   try {
-
     const devices = await Device.find();
 
     const result = [];
@@ -151,7 +140,7 @@ router.get("/realtime", async (req, res) => {
 
       if (openUsage && deviceIsOn) {
         const runtimeNow = Math.floor(
-          (Date.now() - new Date(openUsage.start_time)) / 1000
+          (Date.now() - new Date(openUsage.start_time)) / 1000,
         );
         totalSeconds += runtimeNow;
         totalEnergy += (device.power_watt * runtimeNow) / 3600000;
@@ -167,18 +156,24 @@ router.get("/realtime", async (req, res) => {
         power_watt: device.power_watt,
         runtime_seconds: runtime,
         energy_kwh: energy,
+        estimated_runtime_seconds: runtime,
+        estimated_energy_kwh: energy,
+        estimation_basis: "configured_power_and_runtime",
+        is_estimated: true,
         isActive,
       });
     }
 
-    res.json({ devices: result });
-
+    res.json({
+      devices: result,
+      is_estimated: true,
+      note: "Các số liệu điện năng hiển thị là ước tính dựa trên công suất cấu hình và thời gian hoạt động của thiết bị.",
+    });
   } catch (error) {
     res.status(500).json({
       error: error.message,
     });
   }
 });
-
 
 module.exports = router;

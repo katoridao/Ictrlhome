@@ -90,7 +90,7 @@ const buildRealtimeDevicePayload = async () => {
 
       if (openUsage && deviceIsOn) {
         const runtimeNow = Math.floor(
-          (Date.now() - new Date(openUsage.start_time)) / 1000
+          (Date.now() - new Date(openUsage.start_time)) / 1000,
         );
         totalSeconds += runtimeNow;
         totalEnergy += (device.power_watt * runtimeNow) / 3600000;
@@ -103,9 +103,13 @@ const buildRealtimeDevicePayload = async () => {
         power_watt: device.power_watt,
         runtime_seconds: totalSeconds,
         energy_kwh: totalEnergy,
+        estimated_runtime_seconds: totalSeconds,
+        estimated_energy_kwh: totalEnergy,
+        estimation_basis: "configured_power_and_runtime",
+        is_estimated: true,
         isActive,
       };
-    })
+    }),
   );
 
   return result;
@@ -137,7 +141,9 @@ io.on("connection", (socket) => {
     socket.join(house_id);
     const roomSize = io.sockets.adapter.rooms.get(house_id)?.size || 0;
 
-    console.log(`[Socket] ${socket.id} join house ${house_id} (${roomSize} clients)`);
+    console.log(
+      `[Socket] ${socket.id} join house ${house_id} (${roomSize} clients)`,
+    );
   });
 
   socket.on("leave_house", ({ house_id }) => {

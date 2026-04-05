@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,40 +13,57 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
 import moment from 'moment';
+import 'moment/locale/vi';
 
-const TIME_FILTERS = ['Hôm nay', '7 ngày trước', '30 ngày trước'];
-const STATUS_FILTERS = ['Tất cả', 'Đã nhận diện', 'Người lạ'];
+const TIME_FILTERS = ['day', 'week', 'month'];
+const STATUS_FILTERS = ['all', 'known', 'unknown'];
 
 export default function EntryExitScreen() {
   const { theme, styles: themeStyles } = useTheme();
+  const { t, language } = useContext(LanguageContext);
 
   const [openFilter, setOpenFilter] = useState(null);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [timeFilter, setTimeFilter] = useState('Hôm nay');
-  const [statusFilter, setStatusFilter] = useState('Tất cả');
+  const [timeFilter, setTimeFilter] = useState('day');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const getPeriodValue = filter => {
-    if (filter === 'Hôm nay') return 'day';
-    if (filter === '7 ngày trước') return 'week';
-    if (filter === '30 ngày trước') return 'month';
-    return 'day';
+  const getPeriodValue = filter => filter;
+
+  const getTimeFilterLabel = filter => {
+    if (filter === 'week') return t.last_7_days;
+    if (filter === 'month') return t.last_30_days;
+    return t.today;
   };
+
+  const getStatusFilterLabel = filter => {
+    if (filter === 'known') return t.recognized;
+    if (filter === 'unknown') return t.stranger;
+    return t.all;
+  };
+
+  useEffect(() => {
+    moment.locale(language === 'vi' ? 'vi' : 'en');
+  }, [language]);
 
   const fetchHistory = useCallback(async () => {
     try {
       setLoading(true);
       const params = { period: getPeriodValue(timeFilter) };
-      if (statusFilter === 'Đã nhận diện') params.status = 'known';
-      if (statusFilter === 'Người lạ') params.status = 'unknown';
+      if (statusFilter === 'known') params.status = 'known';
+      if (statusFilter === 'unknown') params.status = 'unknown';
 
       const response = await api.get('/camera/history', { params });
-      console.log('API Response:', JSON.stringify(response?.data)?.substring(0, 500));
-      
+      console.log(
+        'API Response:',
+        JSON.stringify(response?.data)?.substring(0, 500),
+      );
+
       // Xử lý response an toàn
       let rawData = [];
       if (response?.data) {
@@ -55,10 +72,11 @@ export default function EntryExitScreen() {
         } else if (Array.isArray(response.data.data)) {
           rawData = response.data.data;
         } else if (typeof response.data === 'object') {
-          rawData = Object.values(response.data).filter(v => Array.isArray(v))[0] || [];
+          rawData =
+            Object.values(response.data).filter(v => Array.isArray(v))[0] || [];
         }
       }
-      
+
       // Filter những record hợp lệ
       const validRecords = rawData.filter(r => r && typeof r === 'object');
       setRecords(validRecords);
@@ -96,10 +114,10 @@ export default function EntryExitScreen() {
       .filter(([_, data]) => Array.isArray(data) && data.length > 0)
       .map(([date, data]) => ({
         date,
-        title: formatGroupDate(date),
+        title: formatGroupDate(date, t),
         data,
       }));
-  }, [records]);
+  }, [records, t]);
 
   const renderRecord = ({ item }) => {
     try {
@@ -110,25 +128,34 @@ export default function EntryExitScreen() {
 
       const isKnown = item.status === 'known';
       const rawImage = item.image;
-      const imageUri = (rawImage && typeof rawImage === 'string') 
-        ? `data:image/jpeg;base64,${rawImage}` 
-        : null;
-      const actionText = isKnown ? 'Đã nhận diện' : 'Người lạ';
+      const imageUri =
+        rawImage && typeof rawImage === 'string'
+          ? `data:image/jpeg;base64,${rawImage}`
+          : null;
+      const actionText = isKnown ? t.recognized : t.stranger;
       const actionColor = isKnown ? '#4CAF50' : '#FF9800';
       const actionIcon = isKnown ? 'check-circle' : 'account-question';
-      
+
       // Xử lý thời gian an toàn
       const timeValue = item.time ? moment(item.time) : null;
-      const timeString = timeValue && timeValue.isValid() 
-        ? timeValue.format('HH:mm DD/MM/YYYY') 
-        : 'Không rõ thời gian';
+      const timeString =
+        timeValue && timeValue.isValid()
+          ? timeValue.format('HH:mm DD/MM/YYYY')
+          : t.unknown_time;
 
       return (
-        <View style={[styles.recordCard, { backgroundColor: themeStyles.card }]}>
+        <View
+          style={[styles.recordCard, { backgroundColor: themeStyles.card }]}
+        >
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.recordImage} />
           ) : (
-            <View style={[styles.recordAvatar, { backgroundColor: themeStyles.primary }]}>
+            <View
+              style={[
+                styles.recordAvatar,
+                { backgroundColor: themeStyles.primary },
+              ]}
+            >
               <MaterialCommunityIcons name="account" size={24} color="#fff" />
             </View>
           )}
@@ -136,16 +163,31 @@ export default function EntryExitScreen() {
           <View style={styles.recordContent}>
             <View style={styles.recordHeader}>
               <Text style={[styles.recordName, { color: themeStyles.text }]}>
-                {isKnown ? item.name : 'Người lạ'}
+                {isKnown ? item.name : t.stranger}
               </Text>
-              <View style={[styles.statusBadge, { backgroundColor: actionColor + '22' }]}>
-                <MaterialCommunityIcons name={actionIcon} size={13} color={actionColor} />
-                <Text style={[styles.statusText, { color: actionColor }]}>{actionText}</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: actionColor + '22' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={actionIcon}
+                  size={13}
+                  color={actionColor}
+                />
+                <Text style={[styles.statusText, { color: actionColor }]}>
+                  {actionText}
+                </Text>
               </View>
             </View>
 
             <View style={styles.recordRow}>
-              <MaterialCommunityIcons name="clock-outline" size={13} color={themeStyles.subText} />
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={13}
+                color={themeStyles.subText}
+              />
               <Text style={[styles.recordTime, { color: themeStyles.subText }]}>
                 {timeString}
               </Text>
@@ -153,9 +195,15 @@ export default function EntryExitScreen() {
 
             {isKnown && item.name && (
               <View style={styles.recordRow}>
-                <MaterialCommunityIcons name="home-account" size={13} color={themeStyles.subText} />
-                <Text style={[styles.recordMeta, { color: themeStyles.subText }]}>
-                  Đã đăng ký trong hệ thống
+                <MaterialCommunityIcons
+                  name="home-account"
+                  size={13}
+                  color={themeStyles.subText}
+                />
+                <Text
+                  style={[styles.recordMeta, { color: themeStyles.subText }]}
+                >
+                  {t.registered_in_system}
                 </Text>
               </View>
             )}
@@ -170,25 +218,36 @@ export default function EntryExitScreen() {
 
   const renderSection = ({ item }) => {
     if (!item || !Array.isArray(item.data)) return null;
-    
+
     // Filter các record không hợp lệ
     const validRecords = item.data.filter(r => r && typeof r === 'object');
-    
+
     return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <MaterialCommunityIcons name="calendar" size={16} color={themeStyles.primary} />
+          <MaterialCommunityIcons
+            name="calendar"
+            size={16}
+            color={themeStyles.primary}
+          />
           <Text style={[styles.sectionTitle, { color: themeStyles.primary }]}>
             {item.title}
           </Text>
-          <View style={[styles.countBadge, { backgroundColor: themeStyles.primary + '22' }]}>
+          <View
+            style={[
+              styles.countBadge,
+              { backgroundColor: themeStyles.primary + '22' },
+            ]}
+          >
             <Text style={[styles.countText, { color: themeStyles.primary }]}>
               {validRecords.length}
             </Text>
           </View>
         </View>
         {validRecords.map((record, index) => (
-          <View key={record._id ?? `record-${index}`}>{renderRecord({ item: record })}</View>
+          <View key={record._id ?? `record-${index}`}>
+            {renderRecord({ item: record })}
+          </View>
         ))}
       </View>
     );
@@ -201,20 +260,22 @@ export default function EntryExitScreen() {
       {/* HEADER */}
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
         <MaterialCommunityIcons name="history" size={24} color="#fff" />
-        <Text style={styles.headerTitle}>Lịch sử ra/vào</Text>
+        <Text style={styles.headerTitle}>{t.entry_exit_history}</Text>
       </View>
 
       {/* FILTER BAR */}
       <View style={styles.filterWrapper}>
         <View style={styles.filterRow}>
           <FilterItem
-            label={statusFilter}
+            label={getStatusFilterLabel(statusFilter)}
             active={openFilter === 'status'}
             themeStyles={themeStyles}
-            onPress={() => setOpenFilter(openFilter === 'status' ? null : 'status')}
+            onPress={() =>
+              setOpenFilter(openFilter === 'status' ? null : 'status')
+            }
           />
           <FilterItem
-            label={timeFilter}
+            label={getTimeFilterLabel(timeFilter)}
             active={openFilter === 'time'}
             themeStyles={themeStyles}
             onPress={() => setOpenFilter(openFilter === 'time' ? null : 'time')}
@@ -222,12 +283,14 @@ export default function EntryExitScreen() {
         </View>
 
         {openFilter && (
-          <View style={[styles.dropdown, { backgroundColor: themeStyles.card }]}>
+          <View
+            style={[styles.dropdown, { backgroundColor: themeStyles.card }]}
+          >
             {openFilter === 'status' &&
               STATUS_FILTERS.map(item => (
                 <DropdownOption
                   key={item}
-                  label={item}
+                  label={getStatusFilterLabel(item)}
                   active={statusFilter === item}
                   themeStyles={themeStyles}
                   onPress={() => {
@@ -240,7 +303,7 @@ export default function EntryExitScreen() {
               TIME_FILTERS.map(item => (
                 <DropdownOption
                   key={item}
-                  label={item}
+                  label={getTimeFilterLabel(item)}
                   active={timeFilter === item}
                   themeStyles={themeStyles}
                   onPress={() => {
@@ -256,22 +319,34 @@ export default function EntryExitScreen() {
       {/* SUMMARY STATS */}
       {!loading && records.length > 0 && (
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: themeStyles.card }]}>
-            <MaterialCommunityIcons name="account-check" size={20} color="#4CAF50" />
+          <View
+            style={[styles.statCard, { backgroundColor: themeStyles.card }]}
+          >
+            <MaterialCommunityIcons
+              name="account-check"
+              size={20}
+              color="#4CAF50"
+            />
             <Text style={[styles.statNum, { color: themeStyles.text }]}>
               {records.filter(r => r.status === 'known').length}
             </Text>
             <Text style={[styles.statLabel, { color: themeStyles.subText }]}>
-              Đã nhận diện
+              {t.recognized}
             </Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: themeStyles.card }]}>
-            <MaterialCommunityIcons name="account-question" size={20} color="#FF9800" />
+          <View
+            style={[styles.statCard, { backgroundColor: themeStyles.card }]}
+          >
+            <MaterialCommunityIcons
+              name="account-question"
+              size={20}
+              color="#FF9800"
+            />
             <Text style={[styles.statNum, { color: themeStyles.text }]}>
               {records.filter(r => r.status === 'unknown').length}
             </Text>
             <Text style={[styles.statLabel, { color: themeStyles.subText }]}>
-              Người lạ
+              {t.stranger}
             </Text>
           </View>
         </View>
@@ -301,7 +376,7 @@ export default function EntryExitScreen() {
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="door-open" size={80} color="#ccc" />
               <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
-                Chưa có ai ra/vào nhà.
+                {t.no_entry_exit_history}
               </Text>
             </View>
           }
@@ -343,7 +418,10 @@ function DropdownOption({ label, active, onPress, themeStyles }) {
       onPress={onPress}
     >
       <Text
-        style={{ color: themeStyles.text, fontWeight: active ? 'bold' : 'normal' }}
+        style={{
+          color: themeStyles.text,
+          fontWeight: active ? 'bold' : 'normal',
+        }}
       >
         {label}
       </Text>
@@ -351,11 +429,11 @@ function DropdownOption({ label, active, onPress, themeStyles }) {
   );
 }
 
-function formatGroupDate(dateStr) {
+function formatGroupDate(dateStr, t) {
   const today = moment().startOf('day');
   const date = moment(dateStr);
-  if (date.isSame(today, 'day')) return 'Hôm nay';
-  if (date.isSame(today.clone().subtract(1, 'day'), 'day')) return 'Hôm qua';
+  if (date.isSame(today, 'day')) return t.today;
+  if (date.isSame(today.clone().subtract(1, 'day'), 'day')) return t.yesterday;
   return date.format('dddd, DD/MM/YYYY');
 }
 
