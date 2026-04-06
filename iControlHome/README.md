@@ -1,18 +1,17 @@
 # iControlHome Mobile App
 
-This directory contains the React Native client for the HomeCtrlApp system. It is responsible for the mobile user experience, including authentication, room and device management, automation flows, notifications, and general account settings.
+This folder contains the React Native mobile client for the smart-home system. It is the app used for login, house management, device control, automation, camera history, notifications, and personal settings.
 
-> This README covers the mobile application only. For full-system setup, see the root `README.md`.
+## Main responsibilities
 
-## Scope
+The mobile app handles:
 
-The mobile app provides the user-facing interface for:
-
-- user login and registration
-- house and room management
-- device monitoring and control
-- automation and scheduling flows
-- profile, notification, and appearance settings
+- authentication and account flows
+- room and device management
+- device control and realtime updates
+- automation scheduling
+- notification settings and in-app alerts
+- people / camera history screens
 
 ## Tech stack
 
@@ -20,19 +19,47 @@ The mobile app provides the user-facing interface for:
 - React `19`
 - React Navigation
 - Async Storage
-- Firebase App
-- Socket.IO client
 - Axios
+- Socket.IO client
+- Firebase App + Firebase Messaging
+- Notifee for local notification rendering
 
-## Requirements
+## Prerequisites
 
-Before running the app locally, make sure the following are installed:
+Before running the app locally, install:
 
 - Node.js `>= 20`
 - npm
-- React Native development environment
-- Android Studio for Android builds
-- Xcode and CocoaPods for iOS builds on macOS
+- JDK `17` or compatible Android toolchain
+- Android Studio + Android SDK
+- ADB
+- Xcode + CocoaPods (only if building on iOS/macOS)
+
+## Important configuration before running
+
+Check these files and update them for your local network / environment:
+
+- `src/database/api.js` → `BASE_URL`
+- `src/database/socket.js` → `SOCKET_URL`
+- `android/app/google-services.json` → Android Firebase config
+- `ios/.../GoogleService-Info.plist` → iOS Firebase config (if using iOS)
+
+> The mobile app, backend API, and ESP32/camera service should usually be on the **same LAN** during local development.
+
+## Genymotion note (important for notifications)
+
+If you use **Genymotion**, you should install **GApps / Google Play Services**.
+
+Without GApps, Firebase Messaging cannot generate an FCM token and push notifications will fail with errors similar to:
+
+```text
+MISSING_INSTANCEID_SERVICE
+```
+
+Recommended options:
+
+- use a Genymotion image that already includes Google apps, or
+- manually install the matching **Open GApps** package for that Android version / architecture
 
 ## Installation
 
@@ -42,27 +69,33 @@ From the `iControlHome/` directory:
 npm install
 ```
 
-## Running the app
+If you use a physical Android device, you may also need:
 
-Start Metro:
+```bash
+adb reverse tcp:8081 tcp:8081
+```
+
+## Run the app
+
+Start Metro first:
 
 ```bash
 npm start
 ```
 
-Run on Android:
+Then run Android:
 
 ```bash
 npm run android
 ```
 
-Run on iOS:
+Or run iOS:
 
 ```bash
 npm run ios
 ```
 
-If you are building for iOS for the first time or after native dependency changes, install pods first:
+For iOS after native dependency changes:
 
 ```bash
 bundle install
@@ -72,42 +105,40 @@ bundle exec pod install
 ## Available scripts
 
 ```bash
-npm start      # Start Metro bundler
-npm run android # Build and run on Android
-npm run ios     # Build and run on iOS
-npm test        # Run tests
+npm start       # Start Metro bundler
+npm run android # Build and run Android app
+npm run ios     # Build and run iOS app
+npm test        # Run Jest tests
 npm run lint    # Run ESLint
 ```
 
-## Project layout
+## Folder layout
 
 ```text
 iControlHome/
 ├─ src/
-│  ├─ components/     # Reusable UI components
-│  ├─ context/        # Theme and language context
-│  ├─ database/       # API and socket integration
-│  ├─ languages/      # Localization resources
-│  ├─ navigation/     # Navigation configuration
-│  ├─ redux/          # State management
-│  └─ screens/        # Application screens
-├─ android/           # Android native project
-├─ ios/               # iOS native project
-└─ public/            # Static assets
+│  ├─ components/     # Reusable UI
+│  ├─ context/        # Theme + language context
+│  ├─ database/       # API and socket setup
+│  ├─ languages/      # Localization strings
+│  ├─ navigation/     # App navigation
+│  ├─ redux/          # State (if used)
+│  └─ screens/        # App screens
+├─ android/           # Native Android project
+├─ ios/               # Native iOS project
+└─ public/            # Static assets / images / sounds
 ```
-
-## Development notes
-
-- Keep API base URLs and environment-specific settings aligned with the backend service.
-- Socket-related changes should be reviewed together with the backend event contracts.
-- Avoid committing build output, temporary files, or local secrets.
-- Use the root-level documentation for repo-wide setup and deployment context.
 
 ## Troubleshooting
 
 If the app does not start correctly:
 
-1. confirm that `npm install` completed without errors
-2. ensure Metro is running before launching the app
-3. verify that Android SDK or Xcode is configured correctly
-4. clean and rebuild the native project if cached build artifacts cause issues
+1. run `npm install` again to make sure dependencies are present
+2. make sure Metro is running before launching the app
+3. confirm `BASE_URL` and `SOCKET_URL` point to a reachable backend
+4. if the device cannot connect to Metro, use `adb reverse tcp:8081 tcp:8081`
+5. if notifications do not work on Genymotion, install **GApps / Google Play Services** first
+
+## Security note
+
+Do not commit local secrets, Firebase credentials, or environment-specific files. The repository already ignores the main secret file patterns, but keep checking before each commit.

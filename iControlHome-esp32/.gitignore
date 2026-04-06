@@ -13,6 +13,12 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.*.example
+secrets.py
+serviceAccount*.json
+*.pem
+*.key
+*.crt
+*.p8
 
 # Logs
 *.log

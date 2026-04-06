@@ -1,21 +1,15 @@
 # iControlHome ESP32 and Camera Service
 
-This directory contains the hardware-side components of HomeCtrlApp, including the ESP32 control script and the Python-based camera and face-recognition service.
+This folder contains the hardware-side pieces of the project:
 
-## Scope
+- `main.py` → MicroPython HTTP control script for ESP32
+- `camera.py` → Python camera + face-recognition service
 
-This module covers two related parts:
+Together, these scripts let the smart-home backend control an ESP32 over Wi-Fi and receive camera / face-detection events.
 
-- `main.py`: MicroPython script for Wi-Fi based ESP32 control
-- `camera.py`: Python service for camera capture, face recognition, and backend integration
+## `main.py` (ESP32 control)
 
-## Components
-
-### `main.py`
-
-The ESP32 script exposes a lightweight HTTP interface for controlling LEDs over the local network.
-
-Supported routes include:
+The ESP32 script starts a small HTTP server on the board and exposes routes such as:
 
 - `/on` and `/off`
 - `/all/on` and `/all/off`
@@ -23,29 +17,41 @@ Supported routes include:
 - `/led2/on`, `/led2/off`
 - `/led3/on`, `/led3/off`
 
-The file also contains the Wi-Fi configuration and the port used by the device server.
+Before uploading `main.py`, update these values in the file:
 
-### `camera.py`
+- `SSID`
+- `PWD`
+- `PORT`
+
+> Make sure the ESP32 and backend / mobile app are on the **same Wi-Fi network**.
+
+## `camera.py` (camera recognition service)
 
 The camera service is responsible for:
 
-- reading frames from a local camera
-- matching faces against known or exported encodings
-- registering faces with the backend
+- reading frames from a webcam
+- matching faces with saved or exported encodings
+- registering new faces with the backend
 - sending detection events to the API server
 
-Important runtime settings such as `SERVER_BASE_URL`, `HOUSE_ID`, `DEVICE_TOKEN`, and `CAMERA_INDEX` are defined directly in the script.
+Before running `camera.py`, review and update:
+
+- `SERVER_BASE_URL`
+- `HOUSE_ID`
+- `DEVICE_TOKEN`
+- `CAMERA_INDEX`
 
 ## Requirements
 
-Before setup, make sure the following are installed:
+Install the following first:
 
-- Python `3.10`
+- Python `3.10` recommended
 - pip
-- ESP32 flashing tools such as `esptool`
-- camera access on the local machine
+- a working webcam
+- ESP32 board with MicroPython support
+- `esptool` or another flashing/upload tool
 
-## Python environment setup
+## Python setup for camera service
 
 From the `iControlHome-esp32/` directory:
 
@@ -58,26 +64,43 @@ pip install -r requirements.txt
 python camera.py
 ```
 
-## ESP32 flashing
+If the face-recognition stack is difficult to install on your machine, use a Python `3.10` environment first for the best compatibility.
 
-Install `esptool` if needed:
+## Upload / flash ESP32 script
+
+If needed, install `esptool`:
 
 ```bash
 pip install esptool
 ```
 
-Erase and flash the firmware:
+Typical flashing flow:
 
 ```bash
 python -m esptool --port COM5 erase-flash
 python -m esptool --chip esp32 --port COM5 write_flash -z 0x1000 esp32.bin
 ```
 
-Replace `COM5` with the actual serial port of your ESP32 board.
+Replace `COM5` with the actual serial port of your ESP32.
 
-## Development notes
+If you use **MicroPico**, **Thonny**, or another IDE that can upload files directly, you can simply send `main.py` to the board after editing the Wi-Fi credentials.
 
-- Use Python `3.10` for best compatibility with `dlib` and `face-recognition`.
-- Update network credentials and server URLs before running on a new environment.
-- Avoid committing local virtual environments, captured face data, or machine-specific settings.
-- Keep backend face endpoints and device token handling consistent with the API service.
+## Runtime checklist
+
+Before testing the full system, confirm that:
+
+1. backend API is already running
+2. ESP32 has connected to Wi-Fi and printed its IP address
+3. `camera.py` can reach the backend URL
+4. the IP stored in the backend device record matches the ESP32 IP
+
+## Security note
+
+Do not commit:
+
+- real Wi-Fi passwords
+- local tokens
+- captured face data you do not want to share
+- local venv / cache files
+
+The folder already ignores common secret and temporary file patterns, but always double-check before pushing to git.

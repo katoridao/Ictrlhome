@@ -1,10 +1,12 @@
 const express = require("express");
 const router = express.Router();
+const bcrypt = require("bcryptjs");
 const House = require("../models/House");
 const User = require("../models/User");
 const Device = require("../models/Device");
 const Room = require("../models/Room");
 const DeviceUsage = require("../models/DeviceUsage");
+const { notifyNewMemberJoined } = require("../services/notificationService");
 const { authenticate, isOwner, isMember } = require("../middlewares/auth");
 
 // GET /api/houses
@@ -140,6 +142,12 @@ router.post("/add-member", authenticate, isOwner, async (req, res) => {
       await user.save();
     }
 
+    await notifyNewMemberJoined({
+      houseId: "H001",
+      memberName: user.name,
+      memberPhone: user.phone,
+    });
+
     const updatedHouse = await House.findById("H001")
       .populate("owner_id", "name phone")
       .populate("members", "name phone");
@@ -216,6 +224,12 @@ router.post("/request-join", authenticate, async (req, res) => {
 
     house.members.push(requestingUser._id);
     await house.save();
+
+    await notifyNewMemberJoined({
+      houseId: "H001",
+      memberName: requestingUser.name,
+      memberPhone: requestingUser.phone,
+    });
 
     const io = req.app.get("io");
     if (io) {
@@ -366,6 +380,12 @@ router.post("/join", authenticate, async (req, res) => {
 
     house.members.push(memberId);
     await house.save();
+
+    await notifyNewMemberJoined({
+      houseId: "H001",
+      memberName: req.user.name,
+      memberPhone: req.user.phone,
+    });
 
     res.json({ message: "Tham gia nhà thành công! Bạn đã được kết nối." });
   } catch (err) {

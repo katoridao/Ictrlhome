@@ -8,11 +8,18 @@ const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.header("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Không có quyền truy cập, vui lòng đăng nhập" });
+      return res
+        .status(401)
+        .json({ message: "Không có quyền truy cập, vui lòng đăng nhập" });
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return res.status(500).json({ message: "Thiếu cấu hình JWT_SECRET" });
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "smart_home_secret_key");
+    const decoded = jwt.verify(token, jwtSecret);
 
     const user = await User.findById(decoded._id || decoded.id);
     if (!user) {
@@ -29,7 +36,11 @@ const authenticate = async (req, res, next) => {
 // 2. Chỉ OWNER
 const isOwner = (req, res, next) => {
   if (req.user && req.user.role === "OWNER") return next();
-  return res.status(403).json({ message: "Chỉ chủ nhà (OWNER) mới có quyền thực hiện hành động này" });
+  return res
+    .status(403)
+    .json({
+      message: "Chỉ chủ nhà (OWNER) mới có quyền thực hiện hành động này",
+    });
 };
 
 // 3. Kiểm tra quyền điều khiển thiết bị
@@ -50,18 +61,20 @@ const canControlDevice = async (req, res, next) => {
       const room = await Room.findById(device.room_id);
       if (room) {
         const roomPerm = room.permissions.find(
-          (p) => p.user_id.toString() === userId.toString()
+          (p) => p.user_id.toString() === userId.toString(),
         );
         if (roomPerm?.can_control) return next();
       }
     }
 
     const devicePerm = device.permissions.find(
-      (p) => p.user_id.toString() === userId.toString()
+      (p) => p.user_id.toString() === userId.toString(),
     );
     if (devicePerm?.can_control) return next();
 
-    return res.status(403).json({ message: "Bạn không có quyền điều khiển thiết bị này" });
+    return res
+      .status(403)
+      .json({ message: "Bạn không có quyền điều khiển thiết bị này" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi hệ thống khi kiểm tra quyền" });
   }
@@ -73,16 +86,16 @@ const canViewDevice = async (userId, device) => {
     const room = await Room.findById(device.room_id);
     if (room) {
       const roomPerm = room.permissions.find(
-        (p) => p.user_id.toString() === userId.toString()
+        (p) => p.user_id.toString() === userId.toString(),
       );
       if (roomPerm?.can_view || roomPerm?.can_control) return true;
     }
   }
 
   const devicePerm = device.permissions.find(
-    (p) => p.user_id.toString() === userId.toString()
+    (p) => p.user_id.toString() === userId.toString(),
   );
-  return !!(devicePerm?.can_control);
+  return !!devicePerm?.can_control;
 };
 
 // 5. Kiểm tra user có trong house.members không
@@ -112,4 +125,10 @@ const checkHouseMembership = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate, isOwner, canControlDevice, canViewDevice, checkHouseMembership };
+module.exports = {
+  authenticate,
+  isOwner,
+  canControlDevice,
+  canViewDevice,
+  checkHouseMembership,
+};

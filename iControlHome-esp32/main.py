@@ -7,7 +7,7 @@ import machine
 import gc
 from machine import Pin
 
-# config
+# config (set local Wi-Fi credentials before flashing to ESP32)
 SSID = "4evauni"
 PWD = "0niichansuki"
 PORT = 8080

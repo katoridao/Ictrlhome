@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
@@ -28,6 +28,7 @@ import PeopleScreen from './src/screens/PeopleScreen';
 import EntryExitScreen from './src/screens/EntryExitScreen';
 import MainTab from './src/navigation/MainTab';
 import MainAutomationScreen from './src/screens/MainAutomationScreen';
+import { bootstrapNotifications } from './src/services/notificationService';
 
 const Stack = createNativeStackNavigator();
 
@@ -157,6 +158,12 @@ function AppNavigator() {
 }
 
 export default function App() {
+  useEffect(() => {
+    bootstrapNotifications().catch(error => {
+      console.warn('[Notification] Bootstrap warning:', error?.message);
+    });
+  }, []);
+
   return (
     <ThemeProvider>
       <LanguageProvider>

@@ -16,6 +16,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import api from '../database/api';
 import { LanguageContext } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { registerNotificationToken } from '../services/notificationService';
 
 const LoginScreen = ({ navigation }) => {
   const { t, changeLanguage } = useContext(LanguageContext);
@@ -76,6 +77,7 @@ const LoginScreen = ({ navigation }) => {
             theme: userData.settings?.theme || 'LIGHT',
             language: userData.settings?.language || 'VI',
           },
+          notification_settings: userData.notification_settings || {},
         };
 
         // Lưu token để các request sau tự động đính kèm Authorization header
@@ -108,6 +110,15 @@ const LoginScreen = ({ navigation }) => {
           userMatched.settings.language === 'EN' ? 'en' : 'vi',
           { syncRemote: false },
         );
+
+        try {
+          await registerNotificationToken();
+        } catch (notificationError) {
+          console.warn(
+            '[Login] Không thể đăng ký FCM token:',
+            notificationError?.message,
+          );
+        }
 
         Toast.show({
           type: 'success',

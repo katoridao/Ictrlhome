@@ -1,49 +1,39 @@
 const express = require("express");
 const router = express.Router();
 const Detection = require("../models/Detection");
-const admin = require("firebase-admin");
+const { notifyCameraDetection } = require("../services/notificationService");
 
-let userToken = "";
-
-/**
- *  SAVE TOKEN
- */
 router.post("/save-token", async (req, res) => {
-  try {
-    userToken = req.body.token;
-    res.json({ message: "Token saved" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  return res.json({
+    message:
+      "Endpoint này đã được thay thế bằng /api/notification-token để lưu FCM token theo từng user.",
+  });
 });
 
-/**
- *  DETECT FACE (từ Python)
- */
 router.post("/detect", async (req, res) => {
   try {
-    const { name, image } = req.body;
+    const { name, image, house_id = "H001", time } = req.body;
 
-    const status = name === "Unknown" ? "unknown" : "known";
+    const normalizedName = String(name || "Unknown").trim() || "Unknown";
+    const status = normalizedName === "Unknown" ? "unknown" : "known";
 
-    // lưu DB
     const detection = await Detection.create({
-      name,
+      house_id,
+      name: normalizedName,
       image,
       status,
+      time: time ? new Date(time) : new Date(),
     });
 
-    // gửi notification
-    if (userToken) {
-      await admin.messaging().send({
-        notification: {
-          title: "Camera AI",
-          body:
-            status === "known"
-              ? `${name} vừa vào nhà`
-              : "Phát hiện người lạ!",
-        },
-        token: userToken,
+    await notifyCameraDetection({
+      houseId: house_id,
+      personName: normalizedName,
+      isKnown: status === "known",
+    });
+
+    if (global.io) {
+      global.io.to(String(house_id)).emit("camera_detection", {
+        detection,
       });
     }
 
@@ -54,32 +44,28 @@ router.post("/detect", async (req, res) => {
   }
 });
 
-/**
- * GET HISTORY (co loc theo period va status)
- */
 router.get("/history", async (req, res) => {
   try {
-    const { period, status } = req.query;
-    const query = {};
+    const { period, status, house_id = "H001" } = req.query;
+    const query = { house_id };
 
-    if (status === 'known') query.status = 'known';
-    if (status === 'unknown') query.status = 'unknown';
+    if (status === "known") query.status = "known";
+    if (status === "unknown") query.status = "unknown";
 
     let data = await Detection.find(query).sort({ time: -1 });
 
-    // Filter by period
-    if (period === 'day') {
+    if (period === "day") {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
-      data = data.filter(d => new Date(d.time) >= start);
-    } else if (period === 'week') {
+      data = data.filter((d) => new Date(d.time) >= start);
+    } else if (period === "week") {
       const start = new Date();
       start.setDate(start.getDate() - 7);
-      data = data.filter(d => new Date(d.time) >= start);
-    } else if (period === 'month') {
+      data = data.filter((d) => new Date(d.time) >= start);
+    } else if (period === "month") {
       const start = new Date();
       start.setDate(start.getDate() - 30);
-      data = data.filter(d => new Date(d.time) >= start);
+      data = data.filter((d) => new Date(d.time) >= start);
     }
 
     res.json({ data });

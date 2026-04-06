@@ -27,6 +27,34 @@ export default {
   section_people: 'Home access',
   section_other: 'Other',
   notifications: 'Notifications',
+  notification_settings_title: 'Notification settings',
+  notification_settings_desc:
+    'Turn each notification type on or off so you only receive what matters most.',
+  notification_settings_saved: 'Notification settings saved.',
+  cannot_load_notification_settings: 'Unable to load notification settings.',
+  cannot_save_notification_settings: 'Unable to save notification settings.',
+  notification_all: 'Receive all notifications',
+  notification_all_desc:
+    'Turning this off pauses all home-system notifications for your account.',
+  notification_household_events: 'Notifications by feature',
+  notification_new_member: 'A new member joined the house',
+  notification_new_member_desc:
+    'Notify the admin/home owner whenever a new member joins.',
+  notification_permission_granted: 'Admin granted you access',
+  notification_permission_granted_desc:
+    'Private alerts when a member is granted room or device access.',
+  notification_device_status_item: 'Device on/off',
+  notification_device_status_desc:
+    'Send to all users when a device is turned on or off.',
+  notification_automation_item: 'Automation triggered',
+  notification_automation_desc:
+    'Notify all users when an automation flow has just run.',
+  notification_camera_item: 'Camera detects someone',
+  notification_camera_desc:
+    'Includes both known faces and unknown visitors on the camera.',
+  notification_device_offline_item: 'Device offline',
+  notification_device_offline_desc:
+    'Alert everyone as soon as an ESP32 or smart device stops responding.',
   appearance: 'Appearance',
   statistics: 'Consumption Estimate',
   help: 'Help',
@@ -269,6 +297,15 @@ export default {
   save_automation: 'SAVE AUTOMATION',
   no_devices_available: 'No devices available',
   fill_name_select_device: 'Please enter name and select device',
+  automation_scheduled_success: 'Scheduled successfully for',
+  automation_schedule_failed:
+    'Unable to create the schedule. Please try again.',
+  automation_setup_desc: 'Create a one-time automation.',
+  automation_device_hint: 'Choose a device to automate.',
+  automation_action_hint: 'Pick an action to automate.',
+  automation_action_turn_on_desc: 'Turn the device on.',
+  automation_action_turn_off_desc: 'Turn the device off.',
+  automation_preview_title: 'Automation preview',
 
   // Appearance
   choose_display_mode: 'Choose display mode',
@@ -285,7 +322,7 @@ export default {
   power_watt_label: 'Configured power:',
 
   // Messages
-  turned_on_msg: 'Turned {action} device {device} 👋',
+  turned_on_msg: 'Turned {action} device {device}',
   unable_to_update: 'Unable to update status',
   delete_schedule_confirm: 'Are you sure you want to delete schedule "{name}"?',
   confirm: 'Confirm',

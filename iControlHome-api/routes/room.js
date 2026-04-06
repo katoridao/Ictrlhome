@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Room = require("../models/Room");
 const House = require("../models/House");
+const { notifyPermissionGranted } = require("../services/notificationService");
 const {
   authenticate,
   isOwner,
@@ -160,6 +161,14 @@ router.post(
           house_id: room.house_id,
         });
       }
+
+      await notifyPermissionGranted({
+        houseId: room.house_id,
+        memberId: member_id,
+        actorName: req.user?.name || req.user?.phone || "Admin",
+        roomName: room.name,
+        canControl: !!(can_control || can_view),
+      });
 
       res.json({ message: "Cấp quyền phòng thành công", room });
     } catch (error) {

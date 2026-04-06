@@ -3,7 +3,10 @@ const Automation = require("../models/Automation");
 const Device = require("../models/Device");
 const DeviceLog = require("../models/DeviceLog");
 const DeviceUsage = require("../models/DeviceUsage");
-const { createNotification } = require("./notificationService");
+const {
+  notifyAutomationTriggered,
+  notifyDeviceOffline,
+} = require("./notificationService");
 const moment = require("moment");
 
 // Gọi HTTP trực tiếp tới ESP32 (giống route device.js)
@@ -50,7 +53,9 @@ const initAutomationWorker = () => {
           { trigger_time: currentTimeHM },
           { trigger_time: currentFullTime },
         ],
-      }).populate("device_id");
+      })
+        .populate("device_id")
+        .populate("user_id", "name");
 
       for (const task of tasks) {
         if (!task.device_id) continue;
@@ -93,7 +98,7 @@ const initAutomationWorker = () => {
         // 3.3 Ghi log lịch sử để màn Device Log hiển thị hành động tự động hoá
         await DeviceLog.create({
           device_id: device._id,
-          user_id: task.user_id || null,
+          user_id: task.user_id?._id || task.user_id || null,
           house_id: device.house_id || "H001",
           action: shouldBeOn ? "ON" : "OFF",
         });
@@ -109,7 +114,19 @@ const initAutomationWorker = () => {
               `[Worker] ESP32 ${device.esp32_ip} không phản hồi:`,
               esp32Result,
             );
+            await Device.findByIdAndUpdate(device._id, {
+              connectivity_status: "OFFLINE",
+            });
+            await notifyDeviceOffline({
+              houseId: device.house_id || "H001",
+              deviceName: device.name,
+              deviceId: device._id,
+            });
           } else {
+            await Device.findByIdAndUpdate(device._id, {
+              connectivity_status: "ONLINE",
+              last_seen_at: new Date(),
+            });
             console.log(
               `[Worker] Đã gửi lệnh HTTP ${task.action} tới ESP32 (${device.esp32_ip})`,
             );
@@ -130,9 +147,14 @@ const initAutomationWorker = () => {
           global.io.emit("device-update");
         }
 
-        // 6. Thông báo & Tắt kịch bản nếu chạy 1 lần
-        const logMsg = `Tự động: Đã ${shouldBeOn ? "BẬT" : "TẮT"} ${device.name}`;
-        if (task.user_id) await createNotification(task.user_id, logMsg);
+        // 6. Gửi thông báo cho cả nhà & Tắt kịch bản nếu chạy 1 lần
+        await notifyAutomationTriggered({
+          houseId: device.house_id || "H001",
+          automationName: task.name,
+          deviceName: device.name,
+          status: shouldBeOn,
+          actorName: task.user_id?.name || "Hệ thống",
+        });
 
         if (task.repeat_type === "ONCE") {
           if (task.auto_delete_on_trigger) {

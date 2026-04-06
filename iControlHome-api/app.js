@@ -11,6 +11,7 @@ require("dotenv").config();
 // 1. IMPORT DATABASE & WORKER
 const db = require("./config/database");
 const { initAutomationWorker } = require("./services/smartService");
+const { initDeviceStatusMonitor } = require("./services/notificationService");
 const Device = require("./models/Device");
 const DeviceUsage = require("./models/DeviceUsage");
 
@@ -204,6 +205,7 @@ app.use("/api/camera", facesRoutes);
  */
 try {
   initAutomationWorker();
+  initDeviceStatusMonitor();
   console.log("[Worker] Automation worker started");
 } catch (error) {
   console.error("[Worker Error]", error.message);

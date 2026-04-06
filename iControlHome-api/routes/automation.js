@@ -23,17 +23,15 @@ router.post("/", authenticate, async (req, res) => {
 
     // KIỂM TRA: Nếu không có req.user từ middleware auth.js, dừng lại ngay
     if (!req.user || !req.user._id) {
-      return res
-        .status(401)
-        .json({
-          message: "Không xác định được người dùng. Hãy đăng nhập lại!",
-        });
+      return res.status(401).json({
+        message: "Không xác định được người dùng. Hãy đăng nhập lại!",
+      });
     }
 
     const newAuto = new Automation({
       name: name.trim(),
       device_id: device_id,
-      user_id: req.user._id, // Lấy ID từ Token đã giải mã
+      user_id: req.user._id,
       action: action,
       trigger_time: trigger_time,
       house_id: house_id || "H001",

@@ -46,6 +46,17 @@ const DeviceSchema = new mongoose.Schema(
       default: false,
     },
 
+    connectivity_status: {
+      type: String,
+      enum: ["UNKNOWN", "ONLINE", "OFFLINE"],
+      default: "UNKNOWN",
+    },
+
+    last_seen_at: {
+      type: Date,
+      default: null,
+    },
+
     total_runtime_seconds: {
       type: Number,
       default: 0,

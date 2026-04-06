@@ -35,6 +35,18 @@ local.properties
 !debug.keystore
 .kotlin/
 
+# Firebase / signing secrets
+google-services.json
+GoogleService-Info.plist
+.env
+.env.*
+!.env.example
+*.jks
+*.p8
+*.p12
+*.pem
+*.key
+
 # node.js
 #
 node_modules/

@@ -10,6 +10,11 @@ const {
   canControlDevice,
   checkHouseMembership,
 } = require("../middlewares/auth");
+const {
+  notifyPermissionGranted,
+  notifyDeviceStatusChanged,
+  notifyDeviceOffline,
+} = require("../services/notificationService");
 
 const normalizeEsp32Url = (hostOrIp, on) => {
   const raw = String(hostOrIp || "").trim();
@@ -211,6 +216,16 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
       });
 
       if (!esp32Result.ok) {
+        await Device.findByIdAndUpdate(current._id, {
+          connectivity_status: "OFFLINE",
+        });
+
+        await notifyDeviceOffline({
+          houseId: current.house_id,
+          deviceName: current.name,
+          deviceId: current._id,
+        });
+
         return res.status(502).json({
           message: "ESP32 không phản hồi hoặc lỗi",
           detail: esp32Result,
@@ -220,7 +235,15 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
 
     const device = await Device.findOneAndUpdate(
       { _id: req.params.id, house_id: "H001" },
-      { status: !!status },
+      {
+        status: !!status,
+        ...(current.esp32_ip
+          ? {
+              connectivity_status: "ONLINE",
+              last_seen_at: new Date(),
+            }
+          : {}),
+      },
       { new: true },
     );
 
@@ -276,6 +299,13 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
         house_id: device.house_id,
       });
     }
+
+    await notifyDeviceStatusChanged({
+      houseId: device.house_id,
+      deviceName: device.name,
+      status: device.status,
+      actorName: req.user?.name || req.user?.phone || "Một thành viên",
+    });
 
     res.json({ device, esp32: esp32Result });
   } catch (error) {
@@ -432,6 +462,14 @@ router.post(
           house_id: device.house_id,
         });
       }
+
+      await notifyPermissionGranted({
+        houseId: device.house_id,
+        memberId: member_id,
+        actorName: req.user?.name || req.user?.phone || "Admin",
+        deviceName: device.name,
+        canControl: !!can_control,
+      });
 
       res.json({ message: "Cấp quyền thiết bị thành công", device });
     } catch (error) {

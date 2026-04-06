@@ -1,10 +1,14 @@
 const mongoose = require("mongoose");
-const mongoURL =
-  "mongodb+srv://dha:eoYOvunXimG9jx7a@cluster0.1hnmitv.mongodb.net/iControlHome";
+
+const mongoURL = process.env.MONGO_URL;
 
 // connect mongodb
 const connect = async () => {
   try {
+    if (!mongoURL) {
+      throw new Error("Thiếu biến môi trường MONGO_URL");
+    }
+
     await mongoose
       .connect(mongoURL)
       .then(() => {
@@ -14,7 +18,7 @@ const connect = async () => {
         console.log("kết nối thất bại");
       });
   } catch (error) {
-    console.log("kết nối thất bại" + error);
+    console.log("kết nối thất bại: " + error.message);
   }
 };
 module.exports = { connect };

@@ -10,9 +10,6 @@ import cv2
 import face_recognition
 import requests
 
-# =====================
-# CONFIG
-# =====================
 KNOWN_FACES_DIR = "known_faces"
 CAMERA_INDEX = 0
 FRAME_SCALE = 0.25
@@ -22,12 +19,11 @@ NOTIFY_COOLDOWN_SECONDS = 20
 REGISTER_COOLDOWN_SECONDS = 5
 CONFIRM_FRAMES = 3
 
-SERVER_BASE_URL = "http://192.168.100.91:3000"
-HOUSE_ID = "H001"
+SERVER_BASE_URL = os.getenv("SERVER_BASE_URL", "http://127.0.0.1:3000")
+HOUSE_ID = os.getenv("HOUSE_ID", "H001")
 
-# Token de camera/device dang ky (được server check ở /api/camera/save-device-token + auth)
-# Bạn có thể đổi tùy ý. Camera sẽ tự gọi /save-device-token để set token này vào server.
-DEVICE_TOKEN = "ICtrlHomeDeviceToken"
+# Local camera/device token - set via environment for your machine before running.
+DEVICE_TOKEN = os.getenv("DEVICE_TOKEN", "CHANGE_ME_DEVICE_TOKEN")
 
 SERVER_TIMEOUT_SECONDS = 8
 JPEG_QUALITY = 70
@@ -223,6 +219,7 @@ def send_detection_to_server(name, frame_bgr):
     payload = {
         "name": name,
         "image": image_b64,
+        "house_id": HOUSE_ID,
         "time": datetime.now().isoformat(),
     }
 

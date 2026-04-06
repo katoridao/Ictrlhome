@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { LanguageContext } from '../context/LanguageContext';
+import { unregisterNotificationToken } from '../services/notificationService';
 
 export default function SettingScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -42,6 +43,7 @@ export default function SettingScreen({ navigation }) {
       {
         text: t.confirm,
         onPress: async () => {
+          await unregisterNotificationToken();
           await AsyncStorage.multiRemove([
             'user_info',
             'phone',

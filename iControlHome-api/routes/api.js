@@ -3,15 +3,29 @@ const router = express.Router();
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { authenticate } = require("../middlewares/auth"); // Import để bảo vệ route
+const { authenticate } = require("../middlewares/auth");
+const {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  mergeNotificationSettings,
+} = require("../services/notificationService");
 
-const JWT_SECRET = process.env.JWT_SECRET || "smart_home_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// 1. UPDATE PROFILE (Thêm authenticate)
+const buildUserPayload = (user) => ({
+  _id: user._id,
+  name: user.name,
+  phone: user.phone,
+  role: user.role,
+  settings: {
+    theme: user.settings?.theme || "LIGHT",
+    language: user.settings?.language || "VI",
+  },
+  notification_settings: mergeNotificationSettings(user.notification_settings),
+});
+
 router.post("/update-profile", authenticate, async (req, res) => {
   try {
     const { name } = req.body;
-    // Lấy user trực tiếp từ req.user do authenticate cung cấp
     const user = await User.findById(req.user._id);
 
     if (!name || name.trim() === "") {
@@ -21,13 +35,12 @@ router.post("/update-profile", authenticate, async (req, res) => {
     user.name = name.trim();
     await user.save();
 
-    res.json({ message: "Cập nhật thành công", user });
+    res.json({ message: "Cập nhật thành công", user: buildUserPayload(user) });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-// 2. REGISTER (Giữ nguyên logic của bạn nhưng trim dữ liệu kỹ hơn)
 router.post("/register", async (req, res) => {
   try {
     const { name, phone, password } = req.body;
@@ -47,6 +60,7 @@ router.post("/register", async (req, res) => {
       password: hashedPassword,
       role: "MEMBER",
       settings: { theme: "LIGHT", language: "VI" },
+      notification_settings: DEFAULT_NOTIFICATION_SETTINGS,
     });
 
     await newUser.save();
@@ -55,8 +69,6 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ message: "Lỗi server" });
   }
 });
-
-// 3. LOGIN (Sửa house_id để không bị lỗi Network Error/DB Error)
 
 router.post("/login", async (req, res) => {
   try {
@@ -67,21 +79,33 @@ router.post("/login", async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Sai mật khẩu" });
+    if (!JWT_SECRET) {
+      return res.status(500).json({ message: "Thiếu cấu hình JWT_SECRET" });
+    }
 
-    // QUAN TRỌNG: Key phải là "id" để khớp với middleware auth.js
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
 
     res.json({
       message: "Đăng nhập thành công",
       token,
-      user: { _id: user._id, name: user.name, phone: user.phone, role: user.role }
+      user: buildUserPayload(user),
     });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
   }
 });
 
-// 3.1 UPDATE USER SETTINGS (theme/language) - per account sync
+router.get("/me", authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
+
+    res.json({ user: buildUserPayload(user) });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
 router.post("/update-settings", authenticate, async (req, res) => {
   try {
     const { theme, language } = req.body;
@@ -123,7 +147,96 @@ router.post("/update-settings", authenticate, async (req, res) => {
     return res.status(500).json({ message: "Lỗi server" });
   }
 });
-// 4. CHANGE PASSWORD (Bắt buộc dùng authenticate)
+
+router.get("/notification-settings", authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
+
+    return res.json({
+      notification_settings: mergeNotificationSettings(
+        user.notification_settings,
+      ),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+router.post("/notification-settings", authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
+
+    const currentSettings = mergeNotificationSettings(
+      user.notification_settings,
+    );
+    const nextSettings = { ...currentSettings };
+
+    for (const key of Object.keys(DEFAULT_NOTIFICATION_SETTINGS)) {
+      if (typeof req.body?.[key] === "boolean") {
+        nextSettings[key] = req.body[key];
+      }
+    }
+
+    user.notification_settings = nextSettings;
+    await user.save();
+
+    return res.json({
+      message: "Cập nhật cài đặt thông báo thành công",
+      notification_settings: mergeNotificationSettings(
+        user.notification_settings,
+      ),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+router.post("/notification-token", authenticate, async (req, res) => {
+  try {
+    const token = String(req.body?.token || "").trim();
+    if (!token) {
+      return res.status(400).json({ message: "Thiếu token thiết bị" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
+
+    const nextTokens = new Set([...(user.fcm_tokens || []), token]);
+    user.fcm_tokens = Array.from(nextTokens);
+    await user.save();
+
+    return res.json({
+      message: "Đăng ký thiết bị nhận thông báo thành công",
+      token_count: user.fcm_tokens.length,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+router.delete("/notification-token", authenticate, async (req, res) => {
+  try {
+    const token = String(req.body?.token || "").trim();
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
+
+    user.fcm_tokens = token
+      ? (user.fcm_tokens || []).filter((item) => item !== token)
+      : [];
+
+    await user.save();
+
+    return res.json({
+      message: "Đã gỡ thiết bị khỏi danh sách nhận thông báo",
+      token_count: user.fcm_tokens.length,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
 router.post("/change-password", authenticate, async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;

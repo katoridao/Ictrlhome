@@ -1,5 +1,39 @@
 const mongoose = require("mongoose");
 
+const notificationSettingsSchema = new mongoose.Schema(
+  {
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+    new_member: {
+      type: Boolean,
+      default: true,
+    },
+    permission_granted: {
+      type: Boolean,
+      default: true,
+    },
+    device_status: {
+      type: Boolean,
+      default: true,
+    },
+    automation_triggered: {
+      type: Boolean,
+      default: true,
+    },
+    camera_detected: {
+      type: Boolean,
+      default: true,
+    },
+    device_offline: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { _id: false },
+);
+
 const UserSchema = new mongoose.Schema(
   {
     phone: {
@@ -37,6 +71,16 @@ const UserSchema = new mongoose.Schema(
         enum: ["VI", "EN"],
         default: "VI",
       },
+    },
+
+    notification_settings: {
+      type: notificationSettingsSchema,
+      default: () => ({}),
+    },
+
+    fcm_tokens: {
+      type: [String],
+      default: [],
     },
   },
   {

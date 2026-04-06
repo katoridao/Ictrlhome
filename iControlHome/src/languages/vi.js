@@ -27,6 +27,34 @@ export default {
   section_people: 'Người ra vào nhà',
   section_other: 'Khác',
   notifications: 'Thông báo',
+  notification_settings_title: 'Cài đặt thông báo',
+  notification_settings_desc:
+    'Bật hoặc tắt từng loại thông báo để chỉ nhận những gì bạn thực sự quan tâm.',
+  notification_settings_saved: 'Đã lưu cài đặt thông báo.',
+  cannot_load_notification_settings: 'Không thể tải cài đặt thông báo.',
+  cannot_save_notification_settings: 'Không thể lưu cài đặt thông báo.',
+  notification_all: 'Nhận tất cả thông báo',
+  notification_all_desc:
+    'Khi tắt mục này, toàn bộ thông báo của hệ thống nhà sẽ tạm dừng.',
+  notification_household_events: 'Thông báo theo chức năng',
+  notification_new_member: 'Có người mới gia nhập nhà',
+  notification_new_member_desc:
+    'Thông báo cho admin/chủ nhà khi có thành viên mới tham gia.',
+  notification_permission_granted: 'Được admin cấp quyền sử dụng',
+  notification_permission_granted_desc:
+    'Thông báo riêng cho thành viên khi được cấp quyền phòng hoặc thiết bị.',
+  notification_device_status_item: 'Bật/tắt thiết bị',
+  notification_device_status_desc:
+    'Gửi cho tất cả user khi một thiết bị được bật hoặc tắt.',
+  notification_automation_item: 'Automation được trigger',
+  notification_automation_desc:
+    'Thông báo cho tất cả user khi một kịch bản tự động vừa chạy.',
+  notification_camera_item: 'Camera phát hiện người xuất hiện',
+  notification_camera_desc:
+    'Bao gồm cả người quen và người lạ trước cửa hoặc trên cam.',
+  notification_device_offline_item: 'Thiết bị offline',
+  notification_device_offline_desc:
+    'Báo ngay cho mọi người khi ESP32 hoặc thiết bị trong nhà không phản hồi.',
   appearance: 'Giao diện',
   statistics: 'Ước tính tiêu thụ',
   help: 'Trợ giúp',
@@ -268,6 +296,14 @@ export default {
   save_automation: 'LƯU TỰ ĐỘNG HOÁ',
   no_devices_available: 'Không có thiết bị',
   fill_name_select_device: 'Vui lòng nhập tên và chọn thiết bị',
+  automation_scheduled_success: 'Đã hẹn giờ thành công lúc',
+  automation_schedule_failed: 'Không thể tạo lịch hẹn giờ. Vui lòng thử lại.',
+  automation_setup_desc: 'Tạo một kịch bản 1 lần.',
+  automation_device_hint: 'Chọn thiết bị để tự động hóa.',
+  automation_action_hint: 'Chọn hành động để tự động hóa.',
+  automation_action_turn_on_desc: 'Bật thiết bị.',
+  automation_action_turn_off_desc: 'Tắt thiết bị.',
+  automation_preview_title: 'Xem trước kịch bản',
 
   // Appearance
   choose_display_mode: 'Chọn chế độ hiển thị',
@@ -284,7 +320,7 @@ export default {
   power_watt_label: 'Công suất cấu hình:',
 
   // Messages
-  turned_on_msg: 'Đã {action} thiết bị {device} 👋',
+  turned_on_msg: 'Đã {action} thiết bị {device}',
   unable_to_update: 'Không thể cập nhật trạng thái',
   delete_schedule_confirm: 'Bạn có chắc chắn muốn xoá kịch bản "{name}"?',
   confirm: 'Xác nhận',
