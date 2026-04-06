@@ -122,3 +122,96 @@ If someone tests on **Genymotion**, they should install **GApps / Google Play Se
 - Verify both REST and Socket.IO consumers when changing realtime behavior
 - Do not commit `.env`, Firebase keys, database credentials, or signing files
 - Rotate credentials immediately if they are ever exposed in git history
+
+---
+
+# README tiếng Việt
+
+## Thư mục này dùng để làm gì?
+
+Đây là phần backend của hệ thống `iControlHome`. Nó chịu trách nhiệm xử lý API, xác thực người dùng, quản lý nhà / phòng / thiết bị, automation, notification và realtime socket cho app mobile.
+
+## Backend hiện đang lo những phần nào?
+
+Cụ thể hơn thì bên này đang xử lý:
+
+- đăng nhập, đăng ký, cập nhật profile
+- quản lý nhà, thành viên và phân quyền
+- quản lý thiết bị, lịch sử bật tắt và thống kê sử dụng
+- automation và worker chạy theo giờ
+- camera / nhận diện khuôn mặt
+- lưu notification và gửi push notification
+- realtime bằng `Socket.IO`
+
+## Công nghệ chính
+
+- `Node.js`
+- `Express`
+- `MongoDB + Mongoose`
+- `JWT`
+- `Socket.IO`
+- `Firebase Admin`
+- `Nodemailer`
+
+## Trước khi chạy cần chuẩn bị gì?
+
+Ít nhất cần có:
+
+- Node.js từ bản `20+`
+- npm
+- một MongoDB đang chạy được
+- file Firebase service account nếu muốn test push notification
+
+## Cài đặt nhanh
+
+Trong thư mục `iControlHome-api/`:
+
+```bash
+npm install
+npm start
+```
+
+## Biến môi trường quan trọng
+
+Hiện tại cậu nên chú ý mấy biến sau trong `.env`:
+
+```env
+MONGO_URL=your_mongodb_connection_string
+JWT_SECRET=your_secret_here
+FIREBASE_SERVICE_ACCOUNT_PATH=./your-firebase-adminsdk.json
+```
+
+> Nói ngắn gọn: secret thì cứ để trong `.env`, đừng hardcode thẳng vào source cho an toàn.
+
+## Các route chính
+
+Backend hiện có các nhóm route như:
+
+- `/api` → auth, settings, notification token...
+- `/api/houses`
+- `/api/rooms`
+- `/api/devices`
+- `/api/device-logs`
+- `/api/device-usages`
+- `/api/automations`
+- `/api/camera`
+- `/api/notifications`
+
+## Notification hoạt động khi nào?
+
+Push notification chỉ hoạt động ổn khi đủ mấy điều kiện này:
+
+1. Firebase Admin đã cấu hình đúng
+2. app mobile đã lấy được FCM token
+3. thiết bị / máy ảo có Google Play Services
+
+Nếu ai test bằng **Genymotion** thì nên cài thêm **GApps** luôn, không thì rất dễ gặp lỗi không lấy được token.
+
+## Lưu ý khi dev
+
+- đổi API thì nhớ so lại bên mobile
+- đổi socket event thì kiểm tra cả 2 phía
+- đừng commit `.env`, key Firebase hoặc credential thật
+- nếu đã lỡ lộ secret lên git thì nên rotate ngay
+
+Nói chung, đây là “bộ não” của hệ thống, nên mỗi khi sửa gì ở backend thì nhớ test cả API lẫn luồng realtime để tránh lệch với app.

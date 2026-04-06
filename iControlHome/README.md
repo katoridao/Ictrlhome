@@ -142,3 +142,76 @@ If the app does not start correctly:
 ## Security note
 
 Do not commit local secrets, Firebase credentials, or environment-specific files. The repository already ignores the main secret file patterns, but keep checking before each commit.
+
+---
+
+# README tiếng Việt
+
+## Thư mục này là gì?
+
+Đây là phần app mobile của dự án `iControlHome`, được viết bằng React Native. Nói ngắn gọn thì đây là ứng dụng mà người dùng cầm trên điện thoại để đăng nhập, quản lý nhà, điều khiển thiết bị, tạo automation, xem lịch sử camera và chỉnh các cài đặt cá nhân.
+
+## App này đang phụ trách những gì?
+
+Phần mobile hiện xử lý các nhóm chức năng chính như:
+
+- đăng nhập, đăng ký, quên mật khẩu
+- quản lý phòng, thiết bị trong nhà
+- bật / tắt thiết bị và nhận cập nhật realtime
+- tạo automation / hẹn giờ
+- nhận notification và chỉnh cài đặt thông báo
+- xem lịch sử người ra vào / nhận diện từ camera
+
+## Công nghệ chính đang dùng
+
+- `React Native 0.83.1`
+- `React 19`
+- `React Navigation`
+- `Axios`
+- `AsyncStorage`
+- `Socket.IO client`
+- `Firebase Messaging`
+- `Notifee`
+
+## Trước khi chạy app cần kiểm tra gì?
+
+Cậu nên xem trước mấy chỗ này:
+
+- `src/database/api.js` → địa chỉ API backend
+- `src/database/socket.js` → địa chỉ socket realtime
+- `android/app/google-services.json` → cấu hình Firebase cho Android
+- `ios/.../GoogleService-Info.plist` → cấu hình Firebase cho iOS (nếu dùng)
+
+> Khi chạy local, mobile app, backend và ESP32 nên ở cùng mạng LAN để dễ kết nối hơn.
+
+## Nếu dùng Genymotion thì lưu ý gì?
+
+Nếu test notification bằng **Genymotion** thì nhớ cài **GApps / Google Play Services**. Không có phần này thì Firebase thường không lấy được FCM token, lúc đó notification push sẽ không tới được máy giả lập.
+
+## Cách cài và chạy nhanh
+
+Trong thư mục `iControlHome/`:
+
+```bash
+npm install
+npm start
+npm run android
+```
+
+Nếu dùng máy Android thật thì đôi khi cần thêm:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+```
+
+## Nếu app chạy lỗi thì nên kiểm tra theo thứ tự này
+
+1. `npm install` đã cài đủ package chưa
+2. Metro đã chạy chưa
+3. `BASE_URL` và `SOCKET_URL` đã đúng IP backend chưa
+4. máy thật / emulator có cùng mạng với backend không
+5. nếu notification không chạy trên Genymotion thì kiểm tra lại Google Play Services
+
+## Ghi chú nhỏ về bảo mật
+
+Mấy file như `.env`, Firebase key, file ký app hay config local thì không nên commit lên git. Repo đã có `.gitignore` cho phần lớn các file nhạy cảm rồi, nhưng trước khi push vẫn nên liếc lại `git status` một lần cho chắc.

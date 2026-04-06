@@ -104,3 +104,105 @@ Do not commit:
 - local venv / cache files
 
 The folder already ignores common secret and temporary file patterns, but always double-check before pushing to git.
+
+---
+
+# README tiếng Việt
+
+## Thư mục này gồm những gì?
+
+Phần này là phía phần cứng / camera của dự án, gồm 2 file chính:
+
+- `main.py` → code MicroPython chạy trên ESP32 để bật / tắt thiết bị qua HTTP
+- `camera.py` → script Python dùng webcam để nhận diện khuôn mặt và gửi dữ liệu về backend
+
+Hiểu đơn giản thì đây là phần giúp backend “nói chuyện” được với ESP32 và camera thật ngoài đời.
+
+## `main.py` dùng để làm gì?
+
+File này chạy trên ESP32 và mở ra một HTTP server nhỏ. Từ đó backend hoặc app có thể gọi các đường dẫn như:
+
+- `/on`, `/off`
+- `/all/on`, `/all/off`
+- `/led1/on`, `/led1/off`
+- `/led2/on`, `/led2/off`
+- `/led3/on`, `/led3/off`
+
+Trước khi nạp file vào board, nhớ sửa lại:
+
+- `SSID`
+- `PWD`
+- `PORT`
+
+> Quan trọng: ESP32 nên cùng mạng Wi‑Fi với backend / app để việc điều khiển ổn định hơn.
+
+## `camera.py` đang làm gì?
+
+Script này phụ trách:
+
+- đọc hình từ webcam
+- so khớp khuôn mặt đã lưu
+- gửi sự kiện nhận diện về backend
+- hỗ trợ đăng ký thêm khuôn mặt mới
+
+Trước khi chạy thì nên kiểm tra các biến như:
+
+- `SERVER_BASE_URL`
+- `HOUSE_ID`
+- `DEVICE_TOKEN`
+- `CAMERA_INDEX`
+
+## Cần cài gì trước?
+
+- Python `3.10` là đẹp nhất
+- pip
+- webcam hoạt động ổn
+- ESP32 có MicroPython
+- `esptool` hoặc công cụ upload code như MicroPico / Thonny
+
+## Chạy camera service nhanh
+
+Trong thư mục `iControlHome-esp32/`:
+
+```powershell
+py -3.10 -m venv venv
+.\venv\Scripts\activate
+pip install dlib-bin
+pip install face-recognition --no-deps
+pip install -r requirements.txt
+python camera.py
+```
+
+Nếu gặp lỗi cài `face-recognition` thì cứ ưu tiên Python `3.10` trước, thường sẽ đỡ vất vả hơn khá nhiều.
+
+## Flash / upload ESP32
+
+Nếu cần dùng `esptool`:
+
+```bash
+pip install esptool
+python -m esptool --port COM5 erase-flash
+python -m esptool --chip esp32 --port COM5 write_flash -z 0x1000 esp32.bin
+```
+
+Đổi `COM5` thành đúng cổng COM của board cậu đang dùng.
+
+Nếu cậu dùng **MicroPico** hay **Thonny** thì thường chỉ cần sửa file xong rồi upload `main.py` lên board là đủ.
+
+## Checklist trước khi test cả hệ thống
+
+1. backend đã chạy
+2. ESP32 đã kết nối Wi‑Fi và in ra IP
+3. `camera.py` gọi được về backend
+4. IP lưu trong thiết bị ở database đúng với IP thật của ESP32
+
+## Ghi chú bảo mật
+
+Không nên commit:
+
+- mật khẩu Wi‑Fi thật
+- token local
+- dữ liệu khuôn mặt riêng tư
+- `venv`, cache hay file tạm
+
+Repo đã ignore phần lớn các file kiểu này rồi, nhưng trước khi push vẫn nên check lại cho yên tâm.
