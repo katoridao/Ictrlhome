@@ -1,12 +1,25 @@
 var createError = require("http-errors");
 var express = require("express");
 var path = require("path");
+var fs = require("fs");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 var cors = require("cors");
 var http = require("http");
 var { Server } = require("socket.io");
-require("dotenv").config();
+
+const envPath = path.join(__dirname, ".env");
+const envExamplePath = path.join(__dirname, ".env.example");
+
+require("dotenv").config({
+  path: fs.existsSync(envPath) ? envPath : envExamplePath,
+});
+
+if (!fs.existsSync(envPath) && fs.existsSync(envExamplePath)) {
+  console.warn(
+    "[env] Không tìm thấy file .env, hệ thống đang tạm dùng .env.example. Hãy copy .env.example thành .env và điền cấu hình thật nếu cần.",
+  );
+}
 
 // 1. IMPORT DATABASE & WORKER
 const db = require("./config/database");

@@ -43,6 +43,24 @@ npm install
 
 ## Environment / local config
 
+When someone else pulls this repo, the real `.env` will **not** be included (it is ignored on purpose). Use the committed template instead:
+
+### Quick setup
+
+**Windows PowerShell**
+
+```powershell
+Copy-Item .env.example .env
+```
+
+**macOS / Linux**
+
+```bash
+cp .env.example .env
+```
+
+Then update the values in `.env` for the local machine.
+
 At minimum, check these values before starting:
 
 - `config/database.js` → MongoDB connection string
@@ -172,6 +190,14 @@ npm start
 ```
 
 ## Biến môi trường quan trọng
+
+Khi người khác `pull` về thì file `.env` thật sẽ **không đi kèm**. Repo chỉ nên commit `.env.example`, rồi copy ra `.env` bằng lệnh sau:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Sau đó sửa giá trị trong `.env` theo máy local.
 
 Hiện tại cậu nên chú ý mấy biến sau trong `.env`:
 
