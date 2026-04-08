@@ -53,21 +53,17 @@ const AddDeviceModal = ({ navigation, route }) => {
         const houseId = await AsyncStorage.getItem('current_house_id');
         if (!houseId) {
           // Giữ lại: đây là confirm dialog cần người dùng chọn hành động
-          Alert.alert(
-            'Chưa chọn nhà',
-            'Bạn cần chọn hoặc tạo nhà trước khi thêm thiết bị.',
-            [
-              {
-                text: 'Hủy',
-                style: 'cancel',
-                onPress: () => navigation.goBack(),
-              },
-              {
-                text: 'Chọn Nhà',
-                onPress: () => navigation.navigate('SelectHouse'),
-              },
-            ],
-          );
+          Alert.alert(t.no_house_selected, t.no_house_selected_message, [
+            {
+              text: t.cancel_action,
+              style: 'cancel',
+              onPress: () => navigation.goBack(),
+            },
+            {
+              text: t.select_house,
+              onPress: () => navigation.navigate('SelectHouse'),
+            },
+          ]);
           return;
         }
         const response = await api.get('/rooms');
@@ -84,7 +80,7 @@ const AddDeviceModal = ({ navigation, route }) => {
     if (!name.trim()) {
       Toast.show({
         type: 'error',
-        text1: 'Thông báo',
+        text1: t.notification,
         text2: t.fill_all_info,
       });
       return;
@@ -115,9 +111,7 @@ const AddDeviceModal = ({ navigation, route }) => {
         Toast.show({
           type: 'success',
           text1: t.success,
-          text2: isEditMode
-            ? 'Đã cập nhật thông tin!'
-            : 'Đã thêm thiết bị mới!',
+          text2: isEditMode ? t.device_updated_success : t.device_added_success,
         });
         navigation.goBack();
       }
@@ -125,7 +119,7 @@ const AddDeviceModal = ({ navigation, route }) => {
       Toast.show({
         type: 'error',
         text1: t.error,
-        text2: error.response?.data?.message || 'Lỗi server',
+        text2: error.response?.data?.message || t.server_error,
       });
     } finally {
       setLoading(false);

@@ -187,22 +187,22 @@ const getLocalizedNotificationContent = ({
             ].join("\n"),
           };
 
-    // case "device_offline":
-    //   return safeLanguage === "EN"
-    //     ? {
-    //         title: "A device is offline",
-    //         message: [
-    //           `Device: ${safeDeviceName || "Unknown"}`,
-    //           "Status: OFFLINE",
-    //         ].join("\n"),
-    //       }
-    //     : {
-    //         title: "Thiết bị đang offline",
-    //         message: [
-    //           `Thiết bị: ${safeDeviceName || "Không xác định"}`,
-    //           "Trạng thái: OFFLINE",
-    //         ].join("\n"),
-    //       };
+    case "device_offline":
+      return safeLanguage === "EN"
+        ? {
+            title: "A device is offline",
+            message: [
+              `Device: ${safeDeviceName || "Unknown"}`,
+              "Status: OFFLINE",
+            ].join("\n"),
+          }
+        : {
+            title: "Thiết bị đang offline",
+            message: [
+              `Thiết bị: ${safeDeviceName || "Không xác định"}`,
+              "Trạng thái: OFFLINE",
+            ].join("\n"),
+          };
 
     default:
       return {
@@ -791,8 +791,7 @@ const notifyDeviceOffline = async ({
 }) => {
   await notifyHouseUsers({
     houseId,
-    title: "Thiết bị đang offline",
-    message: `Thiết bị ${deviceName || "không xác định"} hiện không phản hồi.`,
+
     type: "SYSTEM",
     settingsKey: "device_offline",
     data: {

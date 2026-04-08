@@ -285,6 +285,14 @@ export default {
   register_success: 'Registration successful!',
   join_house_success: 'Successfully joined house!',
   notification: 'Notification',
+  no_house_selected_message:
+    'You need to select or create a house before adding a device.',
+  device_updated_success: 'Device information updated successfully!',
+  device_added_success: 'New device added successfully!',
+  server_error: 'Server error',
+  server_connection_error: 'Unable to connect to the server',
+  update_failed: 'Update failed',
+  invalid_server_response: 'Invalid response from the server',
 
   // Automation Screen
   automation_setup: 'Set up automation',

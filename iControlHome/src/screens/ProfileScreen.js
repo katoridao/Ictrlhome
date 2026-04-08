@@ -93,7 +93,7 @@ const ProfileScreen = ({ navigation, route }) => {
       setTimeout(() => navigation.goBack(), 1000);
     } catch (error) {
       const msg =
-        error.response?.data?.message || error.message || 'Lỗi cập nhật';
+        error.response?.data?.message || error.message || t.update_failed;
 
       Toast.show({
         type: 'error',

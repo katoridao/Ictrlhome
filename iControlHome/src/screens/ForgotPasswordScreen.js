@@ -75,7 +75,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       Toast.show({
         type: 'error',
         text1: t.error,
-        text2: error?.response?.data?.message || 'Không thể kết nối đến server',
+        text2: error?.response?.data?.message || t.server_connection_error,
       });
     } finally {
       setLoading(false);

@@ -83,7 +83,7 @@ export default function RegisterScreen({ navigation }) {
       }
     } catch (error) {
       const errorMessage =
-        error.response?.data?.message || 'Lỗi kết nối server';
+        error.response?.data?.message || t.server_connection_error;
       Toast.show({ type: 'error', text1: t.error, text2: errorMessage });
     } finally {
       setLoading(false);

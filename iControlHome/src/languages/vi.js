@@ -284,6 +284,14 @@ export default {
   register_success: 'Đăng ký thành công!',
   join_house_success: 'Đã tham gia nhà thành công!',
   notification: 'Thông báo',
+  no_house_selected_message:
+    'Bạn cần chọn hoặc tạo nhà trước khi thêm thiết bị.',
+  device_updated_success: 'Đã cập nhật thông tin thiết bị!',
+  device_added_success: 'Đã thêm thiết bị mới!',
+  server_error: 'Lỗi server',
+  server_connection_error: 'Không thể kết nối đến server',
+  update_failed: 'Lỗi cập nhật',
+  invalid_server_response: 'Phản hồi từ server không hợp lệ',
 
   // Automation Screen
   automation_setup: 'Thiết lập kịch bản',

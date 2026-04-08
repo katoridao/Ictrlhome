@@ -128,14 +128,15 @@ const LoginScreen = ({ navigation }) => {
 
         navigation.replace('Main');
       } else {
-        const errorMsg =
-          response.data?.message || 'Phản hồi từ server không hợp lệ';
+        const errorMsg = response.data?.message || t.invalid_server_response;
         console.error('Invalid response:', response.data);
         Toast.show({ type: 'error', text1: t.error, text2: errorMsg });
       }
     } catch (error) {
       const errorMessage =
-        error.response?.data?.message || error.message || 'Lỗi kết nối server';
+        error.response?.data?.message ||
+        error.message ||
+        t.server_connection_error;
       console.error('Login error:', {
         message: errorMessage,
         status: error.response?.status,
