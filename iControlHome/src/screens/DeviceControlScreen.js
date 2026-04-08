@@ -78,7 +78,6 @@ export default function DeviceControlScreen({ route }) {
 
   const toggleStatus = async () => {
     const newStatus = status === 1 || status === true ? 0 : 1;
-    const statusLabel = newStatus === 1 ? t.on : t.off;
 
     setLoading(true);
     try {
@@ -92,15 +91,6 @@ export default function DeviceControlScreen({ route }) {
           console.log('[ESP32] Result from backend:', response.data.esp32);
         }
         setStatus(newStatus);
-        Toast.show({
-          type: 'success',
-          text1: t.success,
-          text2: `${t.turned_on_msg
-            .replace('{action}', statusLabel)
-            .replace('{device}', device.name)}`,
-          visibilityTime: 2000,
-          autoHide: true,
-        });
       }
     } catch (error) {
       const message =

@@ -303,8 +303,10 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
     await notifyDeviceStatusChanged({
       houseId: device.house_id,
       deviceName: device.name,
+      deviceId: device._id,
       status: device.status,
       actorName: req.user?.name || req.user?.phone || "Một thành viên",
+      actorUserId: userId,
     });
 
     res.json({ device, esp32: esp32Result });
@@ -467,6 +469,7 @@ router.post(
         houseId: device.house_id,
         memberId: member_id,
         actorName: req.user?.name || req.user?.phone || "Admin",
+        actorUserId: req.user?._id,
         deviceName: device.name,
         canControl: !!can_control,
       });

@@ -7,8 +7,10 @@ import notifee, {
   AndroidImportance,
   AndroidStyle,
   AndroidVisibility,
+  EventType,
 } from '@notifee/react-native';
 import api from '../database/api';
+import { navigateFromNotificationData } from '../navigation/navigationService';
 
 export const DEFAULT_NOTIFICATION_SETTINGS = {
   enabled: true,
@@ -29,9 +31,13 @@ const LOGO_ASSET = Image.resolveAssetSource(
 
 let foregroundUnsubscribe = null;
 let tokenRefreshUnsubscribe = null;
+let notificationPressUnsubscribe = null;
+let notificationOpenedUnsubscribe = null;
 let bootstrapPromise = null;
 let lastDisplayedMessageId = null;
 let lastDisplayedAt = 0;
+let lastOpenedNotificationKey = null;
+let lastOpenedAt = 0;
 
 const normalizeData = data => {
   return Object.entries(data || {}).reduce((acc, [key, value]) => {
@@ -377,7 +383,9 @@ const shouldDisplayLocalFromRemoteMessage = (
     return false;
   }
 
-  if (isBackground && remoteMessage?.notification) {
+  // Backend already sends a push notification payload, so skip the extra
+  // foreground banner/snackbar and only keep one visible alert.
+  if (remoteMessage?.notification) {
     return false;
   }
 
@@ -480,6 +488,39 @@ export const unregisterNotificationToken = async () => {
   await AsyncStorage.removeItem(REGISTERED_FCM_TOKEN_KEY);
 };
 
+const buildNotificationOpenKey = (data = {}) => {
+  return [
+    data?.message_id || '',
+    data?.created_at || '',
+    data?.type || '',
+    data?.localization_key || '',
+    data?.target_screen || '',
+    data?.device_id || '',
+  ].join('::');
+};
+
+export const openScreenFromNotificationData = async (data = {}) => {
+  if (!data || !Object.keys(data).length) {
+    return false;
+  }
+
+  const openKey = buildNotificationOpenKey(data);
+  const now = Date.now();
+
+  if (
+    openKey &&
+    lastOpenedNotificationKey === openKey &&
+    now - lastOpenedAt < 2500
+  ) {
+    return false;
+  }
+
+  lastOpenedNotificationKey = openKey;
+  lastOpenedAt = now;
+
+  return navigateFromNotificationData(data);
+};
+
 export const bootstrapNotifications = async () => {
   if (bootstrapPromise) return bootstrapPromise;
 
@@ -506,6 +547,40 @@ export const bootstrapNotifications = async () => {
       });
     }
 
+    if (!notificationPressUnsubscribe) {
+      notificationPressUnsubscribe = notifee.onForegroundEvent(
+        async ({ type, detail }) => {
+          if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
+            await openScreenFromNotificationData(detail?.notification?.data);
+          }
+        },
+      );
+    }
+
+    if (!notificationOpenedUnsubscribe) {
+      notificationOpenedUnsubscribe = messaging().onNotificationOpenedApp(
+        async remoteMessage => {
+          await openScreenFromNotificationData(remoteMessage?.data || {});
+        },
+      );
+    }
+
+    try {
+      const initialNotifeeNotification = await notifee.getInitialNotification();
+      if (initialNotifeeNotification?.notification?.data) {
+        await openScreenFromNotificationData(
+          initialNotifeeNotification.notification.data,
+        );
+      }
+
+      const initialRemoteMessage = await messaging().getInitialNotification();
+      if (initialRemoteMessage?.data) {
+        await openScreenFromNotificationData(initialRemoteMessage.data);
+      }
+    } catch (error) {
+      console.warn('[Notification] open notification warning:', error?.message);
+    }
+
     if (!tokenRefreshUnsubscribe) {
       tokenRefreshUnsubscribe = messaging().onTokenRefresh(async token => {
         try {
@@ -526,7 +601,11 @@ export const bootstrapNotifications = async () => {
 export const releaseNotificationListeners = () => {
   foregroundUnsubscribe?.();
   tokenRefreshUnsubscribe?.();
+  notificationPressUnsubscribe?.();
+  notificationOpenedUnsubscribe?.();
   foregroundUnsubscribe = null;
   tokenRefreshUnsubscribe = null;
+  notificationPressUnsubscribe = null;
+  notificationOpenedUnsubscribe = null;
   bootstrapPromise = null;
 };

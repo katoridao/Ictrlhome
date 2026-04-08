@@ -152,8 +152,10 @@ const initAutomationWorker = () => {
           houseId: device.house_id || "H001",
           automationName: task.name,
           deviceName: device.name,
+          deviceId: device._id,
           status: shouldBeOn,
           actorName: task.user_id?.name || "Hệ thống",
+          actorUserId: task.user_id?._id || task.user_id || null,
         });
 
         if (task.repeat_type === "ONCE") {

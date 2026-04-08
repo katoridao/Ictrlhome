@@ -146,6 +146,7 @@ router.post("/add-member", authenticate, isOwner, async (req, res) => {
       houseId: "H001",
       memberName: user.name,
       memberPhone: user.phone,
+      actorUserId: req.user?._id,
     });
 
     const updatedHouse = await House.findById("H001")
@@ -229,6 +230,7 @@ router.post("/request-join", authenticate, async (req, res) => {
       houseId: "H001",
       memberName: requestingUser.name,
       memberPhone: requestingUser.phone,
+      actorUserId: requestingUser._id,
     });
 
     const io = req.app.get("io");
@@ -385,6 +387,7 @@ router.post("/join", authenticate, async (req, res) => {
       houseId: "H001",
       memberName: req.user.name,
       memberPhone: req.user.phone,
+      actorUserId: req.user._id,
     });
 
     res.json({ message: "Tham gia nhà thành công! Bạn đã được kết nối." });

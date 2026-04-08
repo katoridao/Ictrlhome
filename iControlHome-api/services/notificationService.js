@@ -187,22 +187,22 @@ const getLocalizedNotificationContent = ({
             ].join("\n"),
           };
 
-    case "device_offline":
-      return safeLanguage === "EN"
-        ? {
-            title: "A device is offline",
-            message: [
-              `Device: ${safeDeviceName || "Unknown"}`,
-              "Status: OFFLINE",
-            ].join("\n"),
-          }
-        : {
-            title: "Thiết bị đang offline",
-            message: [
-              `Thiết bị: ${safeDeviceName || "Không xác định"}`,
-              "Trạng thái: OFFLINE",
-            ].join("\n"),
-          };
+    // case "device_offline":
+    //   return safeLanguage === "EN"
+    //     ? {
+    //         title: "A device is offline",
+    //         message: [
+    //           `Device: ${safeDeviceName || "Unknown"}`,
+    //           "Status: OFFLINE",
+    //         ].join("\n"),
+    //       }
+    //     : {
+    //         title: "Thiết bị đang offline",
+    //         message: [
+    //           `Thiết bị: ${safeDeviceName || "Không xác định"}`,
+    //           "Trạng thái: OFFLINE",
+    //         ].join("\n"),
+    //       };
 
     default:
       return {
@@ -525,6 +525,8 @@ const emitRealtimeNotification = ({
 
 const notifyUsers = async ({
   users = [],
+  excludeUserId,
+  excludedUserIds = [],
   houseId = "H001",
   title,
   message,
@@ -536,8 +538,17 @@ const notifyUsers = async ({
   try {
     const effectiveSettingsKey =
       localizationKey || getSettingsKeyFromType(type, settingsKey);
-    const eligibleUsers = users.filter((user) =>
-      isNotificationEnabledForUser(user, effectiveSettingsKey),
+    const excludedSet = new Set(
+      [excludeUserId, ...(excludedUserIds || [])]
+        .filter(Boolean)
+        .map((id) => id.toString()),
+    );
+
+    const eligibleUsers = users.filter(
+      (user) =>
+        user?._id &&
+        !excludedSet.has(user._id.toString()) &&
+        isNotificationEnabledForUser(user, effectiveSettingsKey),
     );
 
     if (!eligibleUsers.length) {
@@ -633,6 +644,7 @@ const notifyNewMemberJoined = async ({
   houseId = "H001",
   memberName,
   memberPhone,
+  actorUserId,
 }) => {
   const house = await House.findById(houseId).populate("owner_id");
   if (!house?.owner_id) return;
@@ -641,6 +653,7 @@ const notifyNewMemberJoined = async ({
 
   await notifyUsers({
     users: [house.owner_id],
+    excludeUserId: actorUserId,
     houseId,
     title: "Có thành viên mới gia nhập nhà",
     message: `${safeName} vừa tham gia vào nhà của bạn.`,
@@ -649,6 +662,7 @@ const notifyNewMemberJoined = async ({
     data: {
       member_name: safeName,
       member_phone: memberPhone || "",
+      target_screen: "ManageMembers",
     },
   });
 };
@@ -657,6 +671,7 @@ const notifyPermissionGranted = async ({
   houseId = "H001",
   memberId,
   actorName,
+  actorUserId,
   deviceName,
   roomName,
   canControl = true,
@@ -674,6 +689,7 @@ const notifyPermissionGranted = async ({
 
   await notifyUsers({
     users: [user],
+    excludeUserId: actorUserId,
     houseId,
     title: "Bạn vừa được cấp quyền sử dụng",
     message: `${actorName || "Admin"} đã cấp quyền điều khiển ${scopeLabel} cho bạn.`,
@@ -683,6 +699,7 @@ const notifyPermissionGranted = async ({
       actor_name: actorName || "Admin",
       device_name: deviceName || "",
       room_name: roomName || "",
+      target_screen: "Main",
     },
   });
 };
@@ -690,21 +707,26 @@ const notifyPermissionGranted = async ({
 const notifyDeviceStatusChanged = async ({
   houseId = "H001",
   deviceName,
+  deviceId,
   status,
   actorName,
+  actorUserId,
 }) => {
   const actionLabel = status ? "bật" : "tắt";
 
   await notifyHouseUsers({
     houseId,
+    excludeUserId: actorUserId,
     title: `Thiết bị vừa được ${actionLabel}`,
     message: `${actorName || "Một thành viên"} đã ${actionLabel} thiết bị ${deviceName}.`,
     type: "DEVICE",
     settingsKey: "device_status",
     data: {
       device_name: deviceName || "",
+      device_id: deviceId?.toString() || "",
       status: status ? "ON" : "OFF",
       actor_name: actorName || "",
+      target_screen: "DeviceLogScreen",
     },
   });
 };
@@ -713,8 +735,10 @@ const notifyAutomationTriggered = async ({
   houseId = "H001",
   automationName,
   deviceName,
+  deviceId,
   status,
   actorName,
+  actorUserId,
 }) => {
   const safeActorName = actorName || "Hệ thống";
   const actionLabel = status ? "bật" : "tắt";
@@ -728,8 +752,10 @@ const notifyAutomationTriggered = async ({
     data: {
       automation_name: automationName || "",
       device_name: deviceName || "",
+      device_id: deviceId?.toString() || "",
       status: status ? "ON" : "OFF",
       actor_name: safeActorName,
+      target_screen: "DeviceLogScreen",
     },
   });
 };
@@ -753,6 +779,7 @@ const notifyCameraDetection = async ({
     data: {
       person_name: safeName,
       detected_status: isKnown ? "known" : "unknown",
+      target_screen: "EntryExitScreen",
     },
   });
 };
@@ -772,6 +799,7 @@ const notifyDeviceOffline = async ({
       device_name: deviceName || "",
       device_id: deviceId?.toString() || "",
       connectivity_status: "OFFLINE",
+      target_screen: "DeviceLogScreen",
     },
   });
 };

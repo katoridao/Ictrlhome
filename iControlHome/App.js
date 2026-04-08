@@ -26,9 +26,14 @@ import {
 } from './src/screens/MemberManagement';
 import PeopleScreen from './src/screens/PeopleScreen';
 import EntryExitScreen from './src/screens/EntryExitScreen';
+import DeviceLogScreen from './src/screens/Device_logScreen';
 import MainTab from './src/navigation/MainTab';
 import MainAutomationScreen from './src/screens/MainAutomationScreen';
 import { bootstrapNotifications } from './src/services/notificationService';
+import {
+  flushPendingNotificationNavigation,
+  navigationRef,
+} from './src/navigation/navigationService';
 
 const Stack = createNativeStackNavigator();
 
@@ -36,7 +41,10 @@ function AppNavigator() {
   const { t } = useContext(LanguageContext);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={flushPendingNotificationNavigation}
+    >
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
         initialRouteName="Welcome"
@@ -73,6 +81,17 @@ function AppNavigator() {
             title: 'Chi tiết phòng',
             headerStyle: { backgroundColor: '#2196F3' },
             headerTintColor: '#fff',
+          }}
+        />
+        <Stack.Screen
+          name="DeviceLogScreen"
+          component={DeviceLogScreen}
+          options={{
+            headerShown: true,
+            title: t.tab_log,
+            headerStyle: { backgroundColor: '#2196F3' },
+            headerTintColor: '#fff',
+            headerTitleAlign: 'center',
           }}
         />
 

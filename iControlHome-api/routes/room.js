@@ -166,6 +166,7 @@ router.post(
         houseId: room.house_id,
         memberId: member_id,
         actorName: req.user?.name || req.user?.phone || "Admin",
+        actorUserId: req.user?._id,
         roomName: room.name,
         canControl: !!(can_control || can_view),
       });
