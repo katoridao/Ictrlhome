@@ -119,12 +119,12 @@ const ProfileScreen = ({ navigation, route }) => {
             source={require('../../public/img/avatar.png')}
             style={styles.avatar}
           />
-          <TouchableOpacity style={styles.cameraBtn}>
+          {/* <TouchableOpacity style={styles.cameraBtn}>
             <Text style={styles.cameraText}>{t.edit_profile}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
-        <Text style={styles.headerName}>{fullName}</Text>
-        <Text style={styles.headerPhone}>{phone}</Text>
+        {/* <Text style={styles.headerName}>{fullName}</Text>
+        <Text style={styles.headerPhone}>{phone}</Text> */}
       </View>
 
       <View style={styles.form}>
