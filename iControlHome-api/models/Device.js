@@ -57,6 +57,11 @@ const DeviceSchema = new mongoose.Schema(
       default: null,
     },
 
+    last_offline_notification_at: {
+      type: Date,
+      default: null,
+    },
+
     total_runtime_seconds: {
       type: Number,
       default: 0,

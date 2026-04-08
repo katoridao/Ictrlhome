@@ -383,9 +383,10 @@ const shouldDisplayLocalFromRemoteMessage = (
     return false;
   }
 
-  // Backend already sends a push notification payload, so skip the extra
-  // foreground banner/snackbar and only keep one visible alert.
-  if (remoteMessage?.notification) {
+  // When the app is in the background, the OS already renders the remote
+  // notification payload. In the foreground, we still need a local banner so
+  // the user can actually see the alert immediately.
+  if (isBackground && remoteMessage?.notification) {
     return false;
   }
 

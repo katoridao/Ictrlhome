@@ -14,6 +14,7 @@ const {
   notifyPermissionGranted,
   notifyDeviceStatusChanged,
   notifyDeviceOffline,
+  shouldSendOfflineNotification,
 } = require("../services/notificationService");
 
 const normalizeEsp32Url = (hostOrIp, on) => {
@@ -216,15 +217,28 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
       });
 
       if (!esp32Result.ok) {
-        await Device.findByIdAndUpdate(current._id, {
-          connectivity_status: "OFFLINE",
+        const now = new Date();
+        const shouldNotifyOffline = shouldSendOfflineNotification({
+          previousStatus: current.connectivity_status,
+          lastNotifiedAt: current.last_offline_notification_at,
+          now,
         });
 
-        await notifyDeviceOffline({
-          houseId: current.house_id,
-          deviceName: current.name,
-          deviceId: current._id,
+        await Device.findByIdAndUpdate(current._id, {
+          connectivity_status: "OFFLINE",
+          ...(shouldNotifyOffline ? { last_offline_notification_at: now } : {}),
         });
+
+        if (shouldNotifyOffline) {
+          await notifyDeviceOffline({
+            houseId: current.house_id,
+            deviceName: current.name,
+            deviceId: current._id,
+            excludeTokens: req.currentDevicePushToken
+              ? [req.currentDevicePushToken]
+              : [],
+          });
+        }
 
         return res.status(502).json({
           message: "ESP32 không phản hồi hoặc lỗi",
@@ -307,6 +321,7 @@ router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
       status: device.status,
       actorName: req.user?.name || req.user?.phone || "Một thành viên",
       actorUserId: userId,
+      actorDeviceToken: req.currentDevicePushToken,
     });
 
     res.json({ device, esp32: esp32Result });

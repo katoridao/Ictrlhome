@@ -40,8 +40,8 @@ const MainAutomationScreen = ({ navigation }) => {
       console.log('DEVICE DEBUG:', JSON.stringify(res.data.devices, null, 2));
 
       const devData = res.data.devices || [];
-      // HIỂN THỊ TẤT CẢ: Bỏ filter can_control để User thường cũng thấy thiết bị
-      setDevices(devData);
+      const controllableDevices = devData.filter(dev => dev.can_control);
+      setDevices(controllableDevices);
     } catch (err) {
       console.error('Lỗi tải thiết bị:', err.message);
     } finally {
@@ -108,10 +108,14 @@ const MainAutomationScreen = ({ navigation }) => {
         navigation.goBack();
       }
     } catch (err) {
+      const forbidden = err?.response?.status === 403;
+
       Toast.show({
         type: 'error',
         text1: t.error,
-        text2: t.automation_schedule_failed,
+        text2: forbidden
+          ? 'Bạn chưa được cấp quyền điều khiển thiết bị này.'
+          : t.automation_schedule_failed,
       });
     }
   };

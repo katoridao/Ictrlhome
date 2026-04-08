@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = 'http://192.168.100.91:3000/api';
+const REGISTERED_FCM_TOKEN_KEY = 'registered_fcm_token';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -18,6 +19,14 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const devicePushToken = await AsyncStorage.getItem(
+      REGISTERED_FCM_TOKEN_KEY,
+    );
+    if (devicePushToken) {
+      config.headers['X-Device-Push-Token'] = devicePushToken;
+    }
+
     return config;
   },
   error => Promise.reject(error),

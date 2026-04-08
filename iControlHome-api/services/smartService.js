@@ -6,6 +6,7 @@ const DeviceUsage = require("../models/DeviceUsage");
 const {
   notifyAutomationTriggered,
   notifyDeviceOffline,
+  shouldSendOfflineNotification,
 } = require("./notificationService");
 const moment = require("moment");
 
@@ -114,14 +115,28 @@ const initAutomationWorker = () => {
               `[Worker] ESP32 ${device.esp32_ip} không phản hồi:`,
               esp32Result,
             );
+
+            const now = new Date();
+            const shouldNotifyOffline = shouldSendOfflineNotification({
+              previousStatus: device.connectivity_status,
+              lastNotifiedAt: device.last_offline_notification_at,
+              now,
+            });
+
             await Device.findByIdAndUpdate(device._id, {
               connectivity_status: "OFFLINE",
+              ...(shouldNotifyOffline
+                ? { last_offline_notification_at: now }
+                : {}),
             });
-            await notifyDeviceOffline({
-              houseId: device.house_id || "H001",
-              deviceName: device.name,
-              deviceId: device._id,
-            });
+
+            if (shouldNotifyOffline) {
+              await notifyDeviceOffline({
+                houseId: device.house_id || "H001",
+                deviceName: device.name,
+                deviceId: device._id,
+              });
+            }
           } else {
             await Device.findByIdAndUpdate(device._id, {
               connectivity_status: "ONLINE",

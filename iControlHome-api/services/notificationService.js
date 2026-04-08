@@ -18,6 +18,32 @@ const DEFAULT_NOTIFICATION_SETTINGS = Object.freeze({
 
 let firebaseWarningShown = false;
 let deviceMonitorTimer = null;
+const DEVICE_OFFLINE_NOTIFICATION_COOLDOWN_MS = Number(
+  process.env.DEVICE_OFFLINE_NOTIFICATION_COOLDOWN_MS || 15 * 60 * 1000,
+);
+
+const toValidTimestamp = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  const timestamp = date.getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const shouldSendOfflineNotification = ({
+  previousStatus = "UNKNOWN",
+  lastNotifiedAt,
+  now = new Date(),
+  cooldownMs = DEVICE_OFFLINE_NOTIFICATION_COOLDOWN_MS,
+}) => {
+  const safePreviousStatus = String(previousStatus || "UNKNOWN").toUpperCase();
+  const lastTimestamp = toValidTimestamp(lastNotifiedAt);
+
+  if (!lastTimestamp) {
+    return safePreviousStatus !== "OFFLINE";
+  }
+
+  return now.getTime() - lastTimestamp >= cooldownMs;
+};
 
 const mergeNotificationSettings = (settings = {}) => ({
   ...DEFAULT_NOTIFICATION_SETTINGS,
@@ -346,6 +372,17 @@ const stringifyPushData = (data = {}) => {
   }, {});
 };
 
+const filterUserPushTokens = (tokens = [], excludeTokens = []) => {
+  const excludedSet =
+    excludeTokens instanceof Set
+      ? excludeTokens
+      : new Set((excludeTokens || []).filter(Boolean).map(String));
+
+  return [...new Set((tokens || []).filter(Boolean).map(String))].filter(
+    (token) => !excludedSet.has(token),
+  );
+};
+
 const isNotificationEnabledForUser = (user, settingsKey) => {
   const mergedSettings = mergeNotificationSettings(user?.notification_settings);
 
@@ -399,9 +436,15 @@ const removeInvalidTokens = async (invalidEntries = []) => {
 
 const sendPushToUsers = async (users = [], payload = {}) => {
   const groupedTargets = new Map();
+  const excludedTokensSet = new Set(
+    (payload.excludeTokens || []).filter(Boolean).map(String),
+  );
 
   for (const user of users) {
-    const tokens = [...new Set((user?.fcm_tokens || []).filter(Boolean))];
+    const tokens = filterUserPushTokens(
+      user?.fcm_tokens || [],
+      excludedTokensSet,
+    );
     if (!tokens.length) continue;
 
     const localized = getNotificationContentForUser(user, payload);
@@ -527,6 +570,7 @@ const notifyUsers = async ({
   users = [],
   excludeUserId,
   excludedUserIds = [],
+  excludeTokens = [],
   houseId = "H001",
   title,
   message,
@@ -587,11 +631,13 @@ const notifyUsers = async ({
       { ordered: false },
     );
 
+    const realtimeSample = deliveries[0]?.localized || {};
+
     emitRealtimeNotification({
       houseId,
       users: eligibleUsers,
-      title,
-      message,
+      title: realtimeSample.title || title || "Thông báo",
+      message: realtimeSample.message || message || "",
       type,
       data: effectiveData,
     });
@@ -604,6 +650,7 @@ const notifyUsers = async ({
       settingsKey: effectiveSettingsKey,
       localizationKey: effectiveSettingsKey,
       data: effectiveData,
+      excludeTokens,
     });
 
     return {
@@ -711,12 +758,13 @@ const notifyDeviceStatusChanged = async ({
   status,
   actorName,
   actorUserId,
+  actorDeviceToken,
 }) => {
   const actionLabel = status ? "bật" : "tắt";
 
   await notifyHouseUsers({
     houseId,
-    excludeUserId: actorUserId,
+    excludeTokens: actorDeviceToken ? [actorDeviceToken] : [],
     title: `Thiết bị vừa được ${actionLabel}`,
     message: `${actorName || "Một thành viên"} đã ${actionLabel} thiết bị ${deviceName}.`,
     type: "DEVICE",
@@ -726,6 +774,7 @@ const notifyDeviceStatusChanged = async ({
       device_id: deviceId?.toString() || "",
       status: status ? "ON" : "OFF",
       actor_name: actorName || "",
+      actor_user_id: actorUserId?.toString() || "",
       target_screen: "DeviceLogScreen",
     },
   });
@@ -788,10 +837,13 @@ const notifyDeviceOffline = async ({
   houseId = "H001",
   deviceName,
   deviceId,
+  excludeTokens = [],
 }) => {
   await notifyHouseUsers({
     houseId,
-
+    excludeTokens,
+    title: "Thiết bị đang offline",
+    message: `Thiết bị ${deviceName || "Không xác định"} đang offline. Vui lòng kiểm tra kết nối.`,
     type: "SYSTEM",
     settingsKey: "device_offline",
     data: {
@@ -851,13 +903,26 @@ const initDeviceStatusMonitor = () => {
         const probe = await pingDevice(device.esp32_ip);
         const nextStatus = probe.online ? "ONLINE" : "OFFLINE";
         const previousStatus = device.connectivity_status || "UNKNOWN";
+        const now = new Date();
+        const shouldNotifyOffline =
+          nextStatus === "OFFLINE" &&
+          previousStatus !== nextStatus &&
+          shouldSendOfflineNotification({
+            previousStatus,
+            lastNotifiedAt: device.last_offline_notification_at,
+            now,
+          });
 
         const update = {
           connectivity_status: nextStatus,
         };
 
         if (probe.online) {
-          update.last_seen_at = new Date();
+          update.last_seen_at = now;
+        }
+
+        if (shouldNotifyOffline) {
+          update.last_offline_notification_at = now;
         }
 
         await Device.findByIdAndUpdate(device._id, update);
@@ -873,7 +938,7 @@ const initDeviceStatusMonitor = () => {
             });
         }
 
-        if (previousStatus !== "OFFLINE" && nextStatus === "OFFLINE") {
+        if (shouldNotifyOffline) {
           await notifyDeviceOffline({
             houseId: device.house_id || "H001",
             deviceName: device.name,
@@ -903,4 +968,6 @@ module.exports = {
   notifyDeviceOffline,
   initDeviceStatusMonitor,
   ensureFirebaseAdmin,
+  shouldSendOfflineNotification,
+  filterUserPushTokens,
 };

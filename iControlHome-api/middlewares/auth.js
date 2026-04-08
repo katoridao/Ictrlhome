@@ -3,6 +3,48 @@ const User = require("../models/User");
 const Device = require("../models/Device");
 const Room = require("../models/Room");
 
+const findMatchingPermission = (permissions = [], userId) => {
+  if (!userId) return null;
+  const normalizedUserId = userId.toString();
+
+  return (permissions || []).find(
+    (permission) => permission?.user_id?.toString() === normalizedUserId,
+  );
+};
+
+const hasControlPermission = ({ userId, role, device, room }) => {
+  if (!userId || !device) return false;
+  if (role === "OWNER") return true;
+
+  const roomPerm = findMatchingPermission(room?.permissions, userId);
+  if (roomPerm?.can_control) return true;
+
+  const devicePerm = findMatchingPermission(device?.permissions, userId);
+  return !!devicePerm?.can_control;
+};
+
+const userCanControlDevice = async (user, deviceOrId) => {
+  if (!user?._id) return false;
+  if (user.role === "OWNER") return true;
+
+  const device =
+    deviceOrId && typeof deviceOrId === "object" && deviceOrId._id
+      ? deviceOrId
+      : await Device.findById(deviceOrId);
+
+  if (!device) return false;
+
+  const roomId = device.room_id?._id || device.room_id || null;
+  const room = roomId ? await Room.findById(roomId) : null;
+
+  return hasControlPermission({
+    userId: user._id,
+    role: user.role,
+    device,
+    room,
+  });
+};
+
 // 1. Xác thực Token
 const authenticate = async (req, res, next) => {
   try {
@@ -27,6 +69,8 @@ const authenticate = async (req, res, next) => {
     }
 
     req.user = user;
+    req.currentDevicePushToken =
+      String(req.header("x-device-push-token") || "").trim() || null;
     next();
   } catch (error) {
     res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
@@ -36,11 +80,9 @@ const authenticate = async (req, res, next) => {
 // 2. Chỉ OWNER
 const isOwner = (req, res, next) => {
   if (req.user && req.user.role === "OWNER") return next();
-  return res
-    .status(403)
-    .json({
-      message: "Chỉ chủ nhà (OWNER) mới có quyền thực hiện hành động này",
-    });
+  return res.status(403).json({
+    message: "Chỉ chủ nhà (OWNER) mới có quyền thực hiện hành động này",
+  });
 };
 
 // 3. Kiểm tra quyền điều khiển thiết bị
@@ -50,27 +92,17 @@ const canControlDevice = async (req, res, next) => {
     const role = req.user.role;
     const deviceId = req.params.id;
 
-    if (role === "OWNER") return next();
-
     const device = await Device.findById(deviceId);
     if (!device) {
       return res.status(404).json({ message: "Không tìm thấy thiết bị" });
     }
 
-    if (device.room_id) {
-      const room = await Room.findById(device.room_id);
-      if (room) {
-        const roomPerm = room.permissions.find(
-          (p) => p.user_id.toString() === userId.toString(),
-        );
-        if (roomPerm?.can_control) return next();
-      }
-    }
+    const roomId = device.room_id?._id || device.room_id || null;
+    const room = roomId ? await Room.findById(roomId) : null;
 
-    const devicePerm = device.permissions.find(
-      (p) => p.user_id.toString() === userId.toString(),
-    );
-    if (devicePerm?.can_control) return next();
+    if (hasControlPermission({ userId, role, device, room })) {
+      return next();
+    }
 
     return res
       .status(403)
@@ -83,18 +115,15 @@ const canControlDevice = async (req, res, next) => {
 // 4. Kiểm tra quyền XEM thiết bị
 const canViewDevice = async (userId, device) => {
   if (device.room_id) {
-    const room = await Room.findById(device.room_id);
+    const roomId = device.room_id?._id || device.room_id;
+    const room = await Room.findById(roomId);
     if (room) {
-      const roomPerm = room.permissions.find(
-        (p) => p.user_id.toString() === userId.toString(),
-      );
+      const roomPerm = findMatchingPermission(room.permissions, userId);
       if (roomPerm?.can_view || roomPerm?.can_control) return true;
     }
   }
 
-  const devicePerm = device.permissions.find(
-    (p) => p.user_id.toString() === userId.toString(),
-  );
+  const devicePerm = findMatchingPermission(device.permissions, userId);
   return !!devicePerm?.can_control;
 };
 
@@ -131,4 +160,6 @@ module.exports = {
   canControlDevice,
   canViewDevice,
   checkHouseMembership,
+  hasControlPermission,
+  userCanControlDevice,
 };
