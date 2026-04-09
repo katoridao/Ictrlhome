@@ -162,11 +162,11 @@ export default function SettingScreen({ navigation }) {
         <View
           style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}
         >
-          <SettingItem
+          {/* <SettingItem
             icon={require('../../public/img/help.png')}
             label={t.help}
             textColor={themeStyles.text}
-          />
+          /> */}
           <SettingItem
             icon={require('../../public/img/logout.png')}
             label={t.logout}
