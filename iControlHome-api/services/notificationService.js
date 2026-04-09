@@ -13,42 +13,32 @@ const DEFAULT_NOTIFICATION_SETTINGS = Object.freeze({
   device_status: true,
   automation_triggered: true,
   camera_detected: true,
-  device_offline: true,
 });
 
 let firebaseWarningShown = false;
 let deviceMonitorTimer = null;
-const DEVICE_OFFLINE_NOTIFICATION_COOLDOWN_MS = Number(
-  process.env.DEVICE_OFFLINE_NOTIFICATION_COOLDOWN_MS || 15 * 60 * 1000,
-);
 
-const toValidTimestamp = (value) => {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  const timestamp = date.getTime();
-  return Number.isNaN(timestamp) ? null : timestamp;
-};
+const mergeNotificationSettings = (...sources) => {
+  const merged = { ...DEFAULT_NOTIFICATION_SETTINGS };
 
-const shouldSendOfflineNotification = ({
-  previousStatus = "UNKNOWN",
-  lastNotifiedAt,
-  now = new Date(),
-  cooldownMs = DEVICE_OFFLINE_NOTIFICATION_COOLDOWN_MS,
-}) => {
-  const safePreviousStatus = String(previousStatus || "UNKNOWN").toUpperCase();
-  const lastTimestamp = toValidTimestamp(lastNotifiedAt);
+  for (const settings of sources) {
+    if (!settings) continue;
 
-  if (!lastTimestamp) {
-    return safePreviousStatus !== "OFFLINE";
+    for (const key of Object.keys(DEFAULT_NOTIFICATION_SETTINGS)) {
+      if (typeof settings[key] === "boolean") {
+        merged[key] = settings[key];
+      }
+    }
   }
 
-  return now.getTime() - lastTimestamp >= cooldownMs;
+  return merged;
 };
 
-const mergeNotificationSettings = (settings = {}) => ({
-  ...DEFAULT_NOTIFICATION_SETTINGS,
-  ...(settings || {}),
-});
+const extractUserNotificationSettings = (user) =>
+  mergeNotificationSettings(
+    user?.settings?.notification,
+    user?.notification_settings,
+  );
 
 const normalizeLanguage = (language = "VI") =>
   String(language || "VI").toUpperCase() === "EN" ? "EN" : "VI";
@@ -74,27 +64,52 @@ const getLocalizedNotificationContent = ({
     (safeLanguage === "EN" ? "A new member" : "Một thành viên mới");
   const safePersonName =
     data.person_name || (safeLanguage === "EN" ? "Unknown person" : "Người lạ");
+  const safeOwnerName =
+    data.owner_name || (safeLanguage === "EN" ? "the home owner" : "chủ nhà");
 
   switch (localizationKey) {
     case "new_member":
       return safeLanguage === "EN"
         ? {
             title: "A new member joined your house",
-            message: [
-              `Member: ${safeMemberName}`,
-              data.member_phone ? `Phone: ${data.member_phone}` : null,
-            ]
-              .filter(Boolean)
-              .join("\n"),
+            message: `${safeMemberName} joined your family.`,
           }
         : {
             title: "Có thành viên mới gia nhập nhà",
-            message: [
-              `Thành viên: ${safeMemberName}`,
-              data.member_phone ? `SĐT: ${data.member_phone}` : null,
-            ]
-              .filter(Boolean)
-              .join("\n"),
+            message: `${safeMemberName} đã gia nhập gia đình của bạn.`,
+          };
+
+    case "member_added_to_household":
+      return safeLanguage === "EN"
+        ? {
+            title: "Family updated",
+            message: `${safeOwnerName} added ${safeMemberName} to the household.`,
+          }
+        : {
+            title: "Cập nhật hộ gia đình",
+            message: `${safeOwnerName} đã thêm ${safeMemberName} vào hộ gia đình.`,
+          };
+
+    case "member_self_joined":
+      return safeLanguage === "EN"
+        ? {
+            title: "Joined house successfully",
+            message: `You joined ${safeOwnerName}'s house successfully.`,
+          }
+        : {
+            title: "Tham gia nhà thành công",
+            message: `Bạn đã gia nhập nhà của ${safeOwnerName} thành công.`,
+          };
+
+    case "member_added_by_owner":
+      return safeLanguage === "EN"
+        ? {
+            title: "You were added to a house",
+            message: `You were added to ${safeOwnerName}'s house.`,
+          }
+        : {
+            title: "Bạn đã được thêm vào hộ gia đình",
+            message: `Bạn đã được ${safeOwnerName} thêm vào hộ gia đình.`,
           };
 
     case "permission_granted": {
@@ -213,23 +228,6 @@ const getLocalizedNotificationContent = ({
             ].join("\n"),
           };
 
-    case "device_offline":
-      return safeLanguage === "EN"
-        ? {
-            title: "A device is offline",
-            message: [
-              `Device: ${safeDeviceName || "Unknown"}`,
-              "Status: OFFLINE",
-            ].join("\n"),
-          }
-        : {
-            title: "Thiết bị đang offline",
-            message: [
-              `Thiết bị: ${safeDeviceName || "Không xác định"}`,
-              "Trạng thái: OFFLINE",
-            ].join("\n"),
-          };
-
     default:
       return {
         title:
@@ -290,7 +288,7 @@ const getSettingsKeyFromType = (type, fallbackKey) => {
       return "camera_detected";
     case "SYSTEM":
     default:
-      return "device_offline";
+      return null;
   }
 };
 
@@ -384,7 +382,7 @@ const filterUserPushTokens = (tokens = [], excludeTokens = []) => {
 };
 
 const isNotificationEnabledForUser = (user, settingsKey) => {
-  const mergedSettings = mergeNotificationSettings(user?.notification_settings);
+  const mergedSettings = extractUserNotificationSettings(user);
 
   if (!mergedSettings.enabled) return false;
   if (!settingsKey) return true;
@@ -580,15 +578,23 @@ const notifyUsers = async ({
   data = {},
 }) => {
   try {
-    const effectiveSettingsKey =
-      localizationKey || getSettingsKeyFromType(type, settingsKey);
+    const effectiveSettingsKey = settingsKey || getSettingsKeyFromType(type);
+    const effectiveLocalizationKey = localizationKey || effectiveSettingsKey;
     const excludedSet = new Set(
       [excludeUserId, ...(excludedUserIds || [])]
         .filter(Boolean)
         .map((id) => id.toString()),
     );
 
-    const eligibleUsers = users.filter(
+    const uniqueUsers = Array.from(
+      new Map(
+        (users || [])
+          .filter((user) => user?._id)
+          .map((user) => [user._id.toString(), user]),
+      ).values(),
+    );
+
+    const eligibleUsers = uniqueUsers.filter(
       (user) =>
         user?._id &&
         !excludedSet.has(user._id.toString()) &&
@@ -601,7 +607,7 @@ const notifyUsers = async ({
 
     const effectiveData = {
       ...(data || {}),
-      localization_key: effectiveSettingsKey,
+      localization_key: effectiveLocalizationKey,
     };
 
     const deliveries = eligibleUsers.map((user) => ({
@@ -612,7 +618,7 @@ const notifyUsers = async ({
         message,
         type,
         settingsKey: effectiveSettingsKey,
-        localizationKey: effectiveSettingsKey,
+        localizationKey: effectiveLocalizationKey,
         data: effectiveData,
       }),
     }));
@@ -648,7 +654,7 @@ const notifyUsers = async ({
       message,
       type,
       settingsKey: effectiveSettingsKey,
-      localizationKey: effectiveSettingsKey,
+      localizationKey: effectiveLocalizationKey,
       data: effectiveData,
       excludeTokens,
     });
@@ -689,27 +695,96 @@ const createNotification = async (userId, msg, overrides = {}) => {
 
 const notifyNewMemberJoined = async ({
   houseId = "H001",
+  memberId,
   memberName,
   memberPhone,
   actorUserId,
+  addedByOwner = false,
 }) => {
-  const house = await House.findById(houseId).populate("owner_id");
+  const house = await House.findById(houseId)
+    .populate("owner_id")
+    .populate("members");
   if (!house?.owner_id) return;
 
   const safeName = memberName || memberPhone || "Một thành viên mới";
+  const ownerName = house.owner_id.name || house.owner_id.phone || "chủ nhà";
+  const joinedUserId = memberId?.toString() || actorUserId?.toString() || null;
+  const ownerId = house.owner_id?._id?.toString?.() || null;
+  const memberRecipients = (house.members || []).filter(Boolean);
+
+  if (addedByOwner) {
+    const existingFamilyRecipients = memberRecipients.filter((user) => {
+      const userId = user?._id?.toString?.();
+      return userId && userId !== joinedUserId && userId !== ownerId;
+    });
+
+    await notifyUsers({
+      users: existingFamilyRecipients,
+      houseId,
+      title: "Cập nhật hộ gia đình",
+      message: `${ownerName} đã thêm ${safeName} vào hộ gia đình.`,
+      type: "MEMBER",
+      settingsKey: "new_member",
+      localizationKey: "member_added_to_household",
+      data: {
+        member_name: safeName,
+        member_phone: memberPhone || "",
+        owner_name: ownerName,
+        actor_user_id: actorUserId?.toString() || "",
+        target_screen: "ManageMembers",
+      },
+    });
+  } else {
+    const existingFamilyRecipients = [
+      house.owner_id,
+      ...memberRecipients,
+    ].filter((user) => user?._id?.toString?.() !== joinedUserId);
+
+    await notifyUsers({
+      users: existingFamilyRecipients,
+      houseId,
+      title: "Có thành viên mới gia nhập nhà",
+      message: `${safeName} đã gia nhập gia đình của bạn.`,
+      type: "MEMBER",
+      settingsKey: "new_member",
+      localizationKey: "new_member",
+      data: {
+        member_name: safeName,
+        member_phone: memberPhone || "",
+        owner_name: ownerName,
+        target_screen: "ManageMembers",
+      },
+    });
+  }
+
+  if (!joinedUserId) return;
+
+  const joinedUser =
+    memberRecipients.find((user) => user?._id?.toString?.() === joinedUserId) ||
+    (await User.findById(joinedUserId));
+
+  if (!joinedUser) return;
 
   await notifyUsers({
-    users: [house.owner_id],
-    excludeUserId: actorUserId,
+    users: [joinedUser],
     houseId,
-    title: "Có thành viên mới gia nhập nhà",
-    message: `${safeName} vừa tham gia vào nhà của bạn.`,
+    title: addedByOwner
+      ? "Bạn đã được thêm vào hộ gia đình"
+      : "Tham gia nhà thành công",
+    message: addedByOwner
+      ? `Bạn đã được ${ownerName} thêm vào hộ gia đình.`
+      : `Bạn đã gia nhập nhà của ${ownerName} thành công.`,
     type: "MEMBER",
     settingsKey: "new_member",
+    localizationKey: addedByOwner
+      ? "member_added_by_owner"
+      : "member_self_joined",
     data: {
       member_name: safeName,
       member_phone: memberPhone || "",
-      target_screen: "ManageMembers",
+      owner_name: ownerName,
+      actor_user_id: actorUserId?.toString() || "",
+      target_screen: "Main",
     },
   });
 };
@@ -724,6 +799,16 @@ const notifyPermissionGranted = async ({
   canControl = true,
 }) => {
   if (!memberId || !canControl) return;
+
+  const house = await House.findById(houseId);
+  const isHouseMember = house
+    ? house.owner_id?.toString() === memberId.toString() ||
+      (house.members || []).some(
+        (member) => member.toString() === memberId.toString(),
+      )
+    : false;
+
+  if (!isHouseMember) return;
 
   const user = await User.findById(memberId);
   if (!user) return;
@@ -833,34 +918,23 @@ const notifyCameraDetection = async ({
   });
 };
 
-const notifyDeviceOffline = async ({
-  houseId = "H001",
-  deviceName,
-  deviceId,
-  excludeTokens = [],
-}) => {
-  await notifyHouseUsers({
-    houseId,
-    excludeTokens,
-    title: "Thiết bị đang offline",
-    message: `Thiết bị ${deviceName || "Không xác định"} đang offline. Vui lòng kiểm tra kết nối.`,
-    type: "SYSTEM",
-    settingsKey: "device_offline",
-    data: {
-      device_name: deviceName || "",
-      device_id: deviceId?.toString() || "",
-      connectivity_status: "OFFLINE",
-      target_screen: "DeviceLogScreen",
-    },
-  });
-};
-
 const buildDevicePingUrl = (hostOrIp) => {
   const raw = String(hostOrIp || "").trim();
   if (!raw) return null;
-  return raw.startsWith("http://") || raw.startsWith("https://")
-    ? raw
-    : `http://${raw}`;
+  const normalized =
+    raw.startsWith("http://") || raw.startsWith("https://")
+      ? raw
+      : `http://${raw}`;
+
+  try {
+    const url = new URL(normalized);
+    if (!url.port) {
+      url.port = "8080";
+    }
+    return url.toString().replace(/\/$/, "");
+  } catch (error) {
+    return normalized;
+  }
 };
 
 const pingDevice = async (hostOrIp, timeoutMs = 5000) => {
@@ -904,25 +978,12 @@ const initDeviceStatusMonitor = () => {
         const nextStatus = probe.online ? "ONLINE" : "OFFLINE";
         const previousStatus = device.connectivity_status || "UNKNOWN";
         const now = new Date();
-        const shouldNotifyOffline =
-          nextStatus === "OFFLINE" &&
-          previousStatus !== nextStatus &&
-          shouldSendOfflineNotification({
-            previousStatus,
-            lastNotifiedAt: device.last_offline_notification_at,
-            now,
-          });
-
         const update = {
           connectivity_status: nextStatus,
         };
 
         if (probe.online) {
           update.last_seen_at = now;
-        }
-
-        if (shouldNotifyOffline) {
-          update.last_offline_notification_at = now;
         }
 
         await Device.findByIdAndUpdate(device._id, update);
@@ -936,14 +997,6 @@ const initDeviceStatusMonitor = () => {
               connectivity_status: nextStatus,
               last_seen_at: update.last_seen_at || device.last_seen_at || null,
             });
-        }
-
-        if (shouldNotifyOffline) {
-          await notifyDeviceOffline({
-            houseId: device.house_id || "H001",
-            deviceName: device.name,
-            deviceId: device._id,
-          });
         }
       }
     } catch (error) {
@@ -965,9 +1018,7 @@ module.exports = {
   notifyDeviceStatusChanged,
   notifyAutomationTriggered,
   notifyCameraDetection,
-  notifyDeviceOffline,
   initDeviceStatusMonitor,
   ensureFirebaseAdmin,
-  shouldSendOfflineNotification,
   filterUserPushTokens,
 };

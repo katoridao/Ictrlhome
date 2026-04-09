@@ -3,20 +3,27 @@ const Automation = require("../models/Automation");
 const Device = require("../models/Device");
 const DeviceLog = require("../models/DeviceLog");
 const DeviceUsage = require("../models/DeviceUsage");
-const {
-  notifyAutomationTriggered,
-  notifyDeviceOffline,
-  shouldSendOfflineNotification,
-} = require("./notificationService");
+const { notifyAutomationTriggered } = require("./notificationService");
 const moment = require("moment");
 
 // Gọi HTTP trực tiếp tới ESP32 (giống route device.js)
 const normalizeEsp32Url = (hostOrIp, on) => {
   const raw = String(hostOrIp || "").trim();
   if (!raw) return null;
+
   const hasScheme = raw.startsWith("http://") || raw.startsWith("https://");
-  const base = hasScheme ? raw : `http://${raw}`;
-  return `${base}${on ? "/on" : "/off"}`;
+  const normalized = hasScheme ? raw : `http://${raw}`;
+
+  try {
+    const url = new URL(normalized);
+    if (!url.port) {
+      url.port = "8080";
+    }
+    return `${url.toString().replace(/\/$/, "")}${on ? "/on" : "/off"}`;
+  } catch (error) {
+    const safeBase = normalized.replace(/\/$/, "");
+    return `${safeBase}${on ? "/on" : "/off"}`;
+  }
 };
 
 const callEsp32 = async ({ esp32_ip, on, timeoutMs = 8000 }) => {
@@ -116,27 +123,9 @@ const initAutomationWorker = () => {
               esp32Result,
             );
 
-            const now = new Date();
-            const shouldNotifyOffline = shouldSendOfflineNotification({
-              previousStatus: device.connectivity_status,
-              lastNotifiedAt: device.last_offline_notification_at,
-              now,
-            });
-
             await Device.findByIdAndUpdate(device._id, {
               connectivity_status: "OFFLINE",
-              ...(shouldNotifyOffline
-                ? { last_offline_notification_at: now }
-                : {}),
             });
-
-            if (shouldNotifyOffline) {
-              await notifyDeviceOffline({
-                houseId: device.house_id || "H001",
-                deviceName: device.name,
-                deviceId: device._id,
-              });
-            }
           } else {
             await Device.findByIdAndUpdate(device._id, {
               connectivity_status: "ONLINE",
@@ -159,7 +148,9 @@ const initAutomationWorker = () => {
             });
 
           // Trigger refresh for screens listening to generic device log updates.
-          global.io.emit("device-update");
+          global.io.to(device.house_id || "H001").emit("device-update", {
+            house_id: device.house_id || "H001",
+          });
         }
 
         // 6. Gửi thông báo cho cả nhà & Tắt kịch bản nếu chạy 1 lần

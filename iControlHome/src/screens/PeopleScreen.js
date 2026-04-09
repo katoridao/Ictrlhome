@@ -25,16 +25,19 @@ export default function PeopleScreen() {
   const [people, setPeople] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [userRole, setUserRole] = useState('MEMBER');
+  const [isMember, setIsMember] = useState(null);
+  const [memberChecked, setMemberChecked] = useState(false);
 
   const fetchPeople = useCallback(async () => {
     try {
-      const houseId =
-        (await AsyncStorage.getItem('current_house_id')) || 'H001';
+      const houseId = await AsyncStorage.getItem('current_house_id');
       const response = await api.get('/camera/faces', {
-        params: { house_id: houseId },
+        params: houseId ? { house_id: houseId } : {},
       });
       setPeople(response.data.faces || []);
     } catch (error) {
+      setPeople([]);
       Toast.show({
         type: 'error',
         text1: t.error,
@@ -47,8 +50,53 @@ export default function PeopleScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchPeople();
-    }, [fetchPeople]),
+      let active = true;
+
+      const syncMembershipAndLoad = async () => {
+        try {
+          setLoading(true);
+          const role = await AsyncStorage.getItem('user_role');
+          if (!active) return;
+          setUserRole(role || 'MEMBER');
+
+          const res = await api.get('/houses/check-member');
+          if (!active) return;
+
+          const joined = res.data?.is_member === true;
+          setIsMember(joined);
+
+          if (joined && res.data?.house_id) {
+            await AsyncStorage.setItem('current_house_id', res.data.house_id);
+            await AsyncStorage.setItem(
+              'current_house_name',
+              res.data.house_name || t.home,
+            );
+          }
+
+          if ((role || 'MEMBER') === 'OWNER' || joined) {
+            await fetchPeople();
+          } else {
+            setPeople([]);
+            setLoading(false);
+          }
+        } catch (error) {
+          if (!active) return;
+          setIsMember(false);
+          setPeople([]);
+          setLoading(false);
+        } finally {
+          if (active) {
+            setMemberChecked(true);
+          }
+        }
+      };
+
+      syncMembershipAndLoad();
+
+      return () => {
+        active = false;
+      };
+    }, [fetchPeople, t]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -129,6 +177,8 @@ export default function PeopleScreen() {
     );
   };
 
+  const notJoined = userRole !== 'OWNER' && isMember === false;
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: themeStyles.background }]}
@@ -156,12 +206,22 @@ export default function PeopleScreen() {
       </View>
 
       {/* LIST */}
-      {loading ? (
+      {!memberChecked || loading ? (
         <ActivityIndicator
           size="large"
           color={themeStyles.primary}
           style={{ marginTop: 50 }}
         />
+      ) : notJoined ? (
+        <View style={styles.emptyContainer}>
+          <MaterialCommunityIcons name="home-lock" size={80} color="#ccc" />
+          <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
+            {t.not_joined_house}
+          </Text>
+          <Text style={[styles.emptyHint, { color: themeStyles.subText }]}>
+            {t.enter_admin_info}
+          </Text>
+        </View>
       ) : (
         <FlatList
           data={people}

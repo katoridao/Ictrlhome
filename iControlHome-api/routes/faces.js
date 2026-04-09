@@ -4,7 +4,11 @@ const router = express.Router();
 const Face = require("../models/Face");
 const House = require("../models/House");
 
-const { authenticate, isOwner } = require("../middlewares/auth");
+const {
+  authenticate,
+  isOwner,
+  checkHouseMembership,
+} = require("../middlewares/auth");
 
 // Token de camera/cpu client gọi API đăng ký/xuất ảnh.
 // Luu y: đây là token runtime (khởi động lại server thì reset). Bạn cũng có thể set env FACE_DEVICE_TOKEN.
@@ -16,7 +20,9 @@ const getDeviceToken = () => {
 
 const requireDeviceAuth = (req, res, next) => {
   const header = req.header("Authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+  const token = header.startsWith("Bearer ")
+    ? header.slice("Bearer ".length)
+    : "";
   const expected = getDeviceToken();
 
   if (!expected) {
@@ -33,19 +39,17 @@ const requireDeviceAuth = (req, res, next) => {
 };
 
 const getHouseIdForUser = async (user) => {
-  // Hiện tại hệ thống đang hardcode 1 house "H001" trong nhiều route,
-  // nên ở đây mình cũng ưu tiên tìm house mà user thuộc về.
-  if (!user) return "H001";
+  if (!user) return null;
 
   if (user.role === "OWNER") {
     const house = await House.findOne({ owner_id: user._id });
-    return house?._id?.toString?.() || "H001";
+    return house?._id?.toString?.() || null;
   }
 
   const house = await House.findOne({
     members: { $elemMatch: { $eq: user._id } },
   });
-  return house?._id?.toString?.() || "H001";
+  return house?._id?.toString?.() || null;
 };
 
 // =========================
@@ -103,7 +107,10 @@ router.post("/faces/register", requireDeviceAuth, async (req, res) => {
 
     // Chặn trùng khuôn mặt: so encoding với tất cả face trong nhà
     if (Array.isArray(encoding) && encoding.length === 128) {
-      const allFaces = await Face.find({ house_id: normalizedHouseId, encoding: { $exists: true, $ne: [] } });
+      const allFaces = await Face.find({
+        house_id: normalizedHouseId,
+        encoding: { $exists: true, $ne: [] },
+      });
       for (const existingFace of allFaces) {
         const dist = faceDistance(encoding, existingFace.encoding);
         if (dist <= 0.45) {
@@ -126,7 +133,9 @@ router.post("/faces/register", requireDeviceAuth, async (req, res) => {
     res.json({ message: "Registered face", face });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ message: "Tên đã tồn tại trong hệ thống." });
+      return res
+        .status(409)
+        .json({ message: "Tên đã tồn tại trong hệ thống." });
     }
     res.status(500).json({ error: "Server error" });
   }
@@ -144,10 +153,20 @@ function faceDistance(enc1, enc2) {
 // =========================
 
 // List faces của nhà người đang đăng nhập
-router.get("/faces", authenticate, async (req, res) => {
+router.get("/faces", authenticate, checkHouseMembership, async (req, res) => {
   try {
-    const house_id = await getHouseIdForUser(req.user);
-    const faces = await Face.find({ house_id }).sort({ createdAt: -1 }).select("name image createdAt");
+    if (!req.isHouseMember) {
+      return res.json({ faces: [] });
+    }
+
+    const house_id = req.houseId || (await getHouseIdForUser(req.user));
+    if (!house_id) {
+      return res.json({ faces: [] });
+    }
+
+    const faces = await Face.find({ house_id })
+      .sort({ createdAt: -1 })
+      .select("name image createdAt");
     res.json({ faces });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
@@ -167,4 +186,3 @@ router.delete("/faces/:id", authenticate, isOwner, async (req, res) => {
 });
 
 module.exports = router;
-

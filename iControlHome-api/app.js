@@ -27,6 +27,9 @@ const { initAutomationWorker } = require("./services/smartService");
 const { initDeviceStatusMonitor } = require("./services/notificationService");
 const Device = require("./models/Device");
 const DeviceUsage = require("./models/DeviceUsage");
+const User = require("./models/User");
+const House = require("./models/House");
+const jwt = require("jsonwebtoken");
 
 // 2. IMPORT MODELS & MIDDLEWARE
 const Notification = require("./models/Notification");
@@ -113,6 +116,7 @@ const buildRealtimeDevicePayload = async () => {
 
       return {
         device_id: device._id,
+        house_id: device.house_id || "H001",
         device_name: device.name,
         power_watt: device.power_watt,
         runtime_seconds: totalSeconds,
@@ -138,26 +142,92 @@ const startRuntimeEmitter = () => {
       if (io.engine.clientsCount === 0) return;
 
       const devices = await buildRealtimeDevicePayload();
-      io.emit("device-runtime", devices);
+      const devicesByHouse = devices.reduce((acc, device) => {
+        const houseId = String(device.house_id || "H001");
+        if (!acc[houseId]) acc[houseId] = [];
+        acc[houseId].push(device);
+        return acc;
+      }, {});
+
+      Object.entries(devicesByHouse).forEach(([houseId, payload]) => {
+        io.to(houseId).emit("device-runtime", payload);
+      });
     } catch (err) {
       console.log("[Realtime] emit device-runtime error:", err.message);
     }
   }, 1000);
 };
 
+io.use(async (socket, next) => {
+  try {
+    const rawToken =
+      socket.handshake.auth?.token ||
+      socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, "");
+    const token = String(rawToken || "").trim();
+
+    if (!token) {
+      return next(new Error("Unauthorized"));
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return next(new Error("Missing JWT secret"));
+    }
+
+    const decoded = jwt.verify(token, jwtSecret);
+    const user = await User.findById(decoded._id || decoded.id);
+
+    if (!user) {
+      return next(new Error("Unauthorized"));
+    }
+
+    socket.data.user = user;
+    return next();
+  } catch (error) {
+    return next(new Error("Unauthorized"));
+  }
+});
+
 io.on("connection", (socket) => {
   console.log(`[Socket] Client kết nối: ${socket.id}`);
   startRuntimeEmitter();
 
-  socket.on("join_house", ({ house_id }) => {
-    if (!house_id) return;
+  if (socket.data?.user?._id) {
+    socket.join(`user:${socket.data.user._id.toString()}`);
+  }
 
-    socket.join(house_id);
-    const roomSize = io.sockets.adapter.rooms.get(house_id)?.size || 0;
+  socket.on("join_house", async ({ house_id }) => {
+    if (!house_id || !socket.data?.user) return;
 
-    console.log(
-      `[Socket] ${socket.id} join house ${house_id} (${roomSize} clients)`,
-    );
+    try {
+      const normalizedHouseId = String(house_id);
+
+      if (socket.data.user.role !== "OWNER") {
+        const house = await House.findById(normalizedHouseId);
+        const isMember = house
+          ? house.members.some(
+              (member) => member.toString() === socket.data.user._id.toString(),
+            )
+          : false;
+
+        if (!isMember) {
+          socket.emit("house_join_denied", {
+            house_id: normalizedHouseId,
+          });
+          return;
+        }
+      }
+
+      socket.join(normalizedHouseId);
+      const roomSize =
+        io.sockets.adapter.rooms.get(normalizedHouseId)?.size || 0;
+
+      console.log(
+        `[Socket] ${socket.id} join house ${normalizedHouseId} (${roomSize} clients)`,
+      );
+    } catch (error) {
+      console.log("[Socket] join_house denied:", error.message);
+    }
   });
 
   socket.on("leave_house", ({ house_id }) => {

@@ -35,12 +35,21 @@ export default function JoinHouseScreen({ navigation }) {
         join_password: joinPassword,
       });
 
+      const houseId = response.data?.house_id || 'H001';
+      const ownerName = response.data?.owner_name || t.home;
+      const successMessage = (
+        t.join_house_success_with_owner || t.join_house_success
+      ).replace('{owner}', ownerName);
+
       Toast.show({
         type: 'success',
         text1: t.success,
-        text2: response.data.message || t.join_house_success,
+        text2: successMessage,
         visibilityTime: 2500,
       });
+
+      await AsyncStorage.setItem('current_house_id', houseId);
+      await AsyncStorage.setItem('current_house_name', ownerName);
 
       // Reload lại user_info để cập nhật trạng thái member
       const userInfo = await AsyncStorage.getItem('user_info');

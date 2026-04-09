@@ -11,6 +11,12 @@ const {
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const resolveUserNotificationSettings = (user) =>
+  mergeNotificationSettings(
+    user?.settings?.notification,
+    user?.notification_settings,
+  );
+
 const buildUserPayload = (user) => ({
   _id: user._id,
   name: user.name,
@@ -19,8 +25,9 @@ const buildUserPayload = (user) => ({
   settings: {
     theme: user.settings?.theme || "LIGHT",
     language: user.settings?.language || "VI",
+    notification: resolveUserNotificationSettings(user),
   },
-  notification_settings: mergeNotificationSettings(user.notification_settings),
+  notification_settings: resolveUserNotificationSettings(user),
 });
 
 router.post("/update-profile", authenticate, async (req, res) => {
@@ -59,8 +66,11 @@ router.post("/register", async (req, res) => {
       phone: phone.trim(),
       password: hashedPassword,
       role: "MEMBER",
-      settings: { theme: "LIGHT", language: "VI" },
-      notification_settings: DEFAULT_NOTIFICATION_SETTINGS,
+      settings: {
+        theme: "LIGHT",
+        language: "VI",
+        notification: DEFAULT_NOTIFICATION_SETTINGS,
+      },
     });
 
     await newUser.save();
@@ -154,9 +164,7 @@ router.get("/notification-settings", authenticate, async (req, res) => {
     if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
 
     return res.json({
-      notification_settings: mergeNotificationSettings(
-        user.notification_settings,
-      ),
+      notification_settings: resolveUserNotificationSettings(user),
     });
   } catch (error) {
     return res.status(500).json({ message: "Lỗi server" });
@@ -168,9 +176,7 @@ router.post("/notification-settings", authenticate, async (req, res) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
 
-    const currentSettings = mergeNotificationSettings(
-      user.notification_settings,
-    );
+    const currentSettings = resolveUserNotificationSettings(user);
     const nextSettings = { ...currentSettings };
 
     for (const key of Object.keys(DEFAULT_NOTIFICATION_SETTINGS)) {
@@ -179,14 +185,17 @@ router.post("/notification-settings", authenticate, async (req, res) => {
       }
     }
 
-    user.notification_settings = nextSettings;
+    if (!user.settings) {
+      user.settings = { theme: "LIGHT", language: "VI" };
+    }
+
+    user.settings.notification = nextSettings;
+    user.notification_settings = undefined;
     await user.save();
 
     return res.json({
       message: "Cập nhật cài đặt thông báo thành công",
-      notification_settings: mergeNotificationSettings(
-        user.notification_settings,
-      ),
+      notification_settings: resolveUserNotificationSettings(user),
     });
   } catch (error) {
     return res.status(500).json({ message: "Lỗi server" });

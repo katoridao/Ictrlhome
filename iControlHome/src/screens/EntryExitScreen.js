@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useContext, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -29,6 +30,9 @@ export default function EntryExitScreen() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [userRole, setUserRole] = useState('MEMBER');
+  const [isMember, setIsMember] = useState(null);
+  const [memberChecked, setMemberChecked] = useState(false);
 
   const [timeFilter, setTimeFilter] = useState('day');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -90,8 +94,53 @@ export default function EntryExitScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchHistory();
-    }, [fetchHistory]),
+      let active = true;
+
+      const syncMembershipAndLoad = async () => {
+        try {
+          setLoading(true);
+          const role = await AsyncStorage.getItem('user_role');
+          if (!active) return;
+          setUserRole(role || 'MEMBER');
+
+          const res = await api.get('/houses/check-member');
+          if (!active) return;
+
+          const joined = res.data?.is_member === true;
+          setIsMember(joined);
+
+          if (joined && res.data?.house_id) {
+            await AsyncStorage.setItem('current_house_id', res.data.house_id);
+            await AsyncStorage.setItem(
+              'current_house_name',
+              res.data.house_name || t.home,
+            );
+          }
+
+          if ((role || 'MEMBER') === 'OWNER' || joined) {
+            await fetchHistory();
+          } else {
+            setRecords([]);
+            setLoading(false);
+          }
+        } catch (error) {
+          if (!active) return;
+          setIsMember(false);
+          setRecords([]);
+          setLoading(false);
+        } finally {
+          if (active) {
+            setMemberChecked(true);
+          }
+        }
+      };
+
+      syncMembershipAndLoad();
+
+      return () => {
+        active = false;
+      };
+    }, [fetchHistory, t]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -253,6 +302,9 @@ export default function EntryExitScreen() {
     );
   };
 
+  const isOwner = userRole === 'OWNER';
+  const notJoined = !isOwner && isMember === false;
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: themeStyles.background }]}
@@ -263,124 +315,156 @@ export default function EntryExitScreen() {
         <Text style={styles.headerTitle}>{t.entry_exit_history}</Text>
       </View>
 
-      {/* FILTER BAR */}
-      <View style={styles.filterWrapper}>
-        <View style={styles.filterRow}>
-          <FilterItem
-            label={getStatusFilterLabel(statusFilter)}
-            active={openFilter === 'status'}
-            themeStyles={themeStyles}
-            onPress={() =>
-              setOpenFilter(openFilter === 'status' ? null : 'status')
-            }
-          />
-          <FilterItem
-            label={getTimeFilterLabel(timeFilter)}
-            active={openFilter === 'time'}
-            themeStyles={themeStyles}
-            onPress={() => setOpenFilter(openFilter === 'time' ? null : 'time')}
-          />
-        </View>
-
-        {openFilter && (
-          <View
-            style={[styles.dropdown, { backgroundColor: themeStyles.card }]}
-          >
-            {openFilter === 'status' &&
-              STATUS_FILTERS.map(item => (
-                <DropdownOption
-                  key={item}
-                  label={getStatusFilterLabel(item)}
-                  active={statusFilter === item}
-                  themeStyles={themeStyles}
-                  onPress={() => {
-                    setStatusFilter(item);
-                    setOpenFilter(null);
-                  }}
-                />
-              ))}
-            {openFilter === 'time' &&
-              TIME_FILTERS.map(item => (
-                <DropdownOption
-                  key={item}
-                  label={getTimeFilterLabel(item)}
-                  active={timeFilter === item}
-                  themeStyles={themeStyles}
-                  onPress={() => {
-                    setTimeFilter(item);
-                    setOpenFilter(null);
-                  }}
-                />
-              ))}
-          </View>
-        )}
-      </View>
-
-      {/* SUMMARY STATS */}
-      {!loading && records.length > 0 && (
-        <View style={styles.statsRow}>
-          <View
-            style={[styles.statCard, { backgroundColor: themeStyles.card }]}
-          >
-            <MaterialCommunityIcons
-              name="account-check"
-              size={20}
-              color="#4CAF50"
-            />
-            <Text style={[styles.statNum, { color: themeStyles.text }]}>
-              {records.filter(r => r.status === 'known').length}
-            </Text>
-            <Text style={[styles.statLabel, { color: themeStyles.subText }]}>
-              {t.recognized}
-            </Text>
-          </View>
-          <View
-            style={[styles.statCard, { backgroundColor: themeStyles.card }]}
-          >
-            <MaterialCommunityIcons
-              name="account-question"
-              size={20}
-              color="#FF9800"
-            />
-            <Text style={[styles.statNum, { color: themeStyles.text }]}>
-              {records.filter(r => r.status === 'unknown').length}
-            </Text>
-            <Text style={[styles.statLabel, { color: themeStyles.subText }]}>
-              {t.stranger}
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* LIST */}
-      {loading ? (
+      {!memberChecked ? (
         <ActivityIndicator
           size="large"
           color={themeStyles.primary}
           style={{ marginTop: 50 }}
         />
+      ) : notJoined ? (
+        <View style={styles.emptyContainer}>
+          <MaterialCommunityIcons name="home-lock" size={80} color="#ccc" />
+          <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
+            {t.not_joined_house}
+          </Text>
+          <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
+            {t.enter_admin_info}
+          </Text>
+        </View>
       ) : (
-        <FlatList
-          data={groupedRecords}
-          keyExtractor={item => item.date}
-          renderItem={renderSection}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[themeStyles.primary]}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="door-open" size={80} color="#ccc" />
-              <Text style={[styles.emptyText, { color: themeStyles.subText }]}>
-                {t.no_entry_exit_history}
-              </Text>
+        <>
+          {/* FILTER BAR */}
+          <View style={styles.filterWrapper}>
+            <View style={styles.filterRow}>
+              <FilterItem
+                label={getStatusFilterLabel(statusFilter)}
+                active={openFilter === 'status'}
+                themeStyles={themeStyles}
+                onPress={() =>
+                  setOpenFilter(openFilter === 'status' ? null : 'status')
+                }
+              />
+              <FilterItem
+                label={getTimeFilterLabel(timeFilter)}
+                active={openFilter === 'time'}
+                themeStyles={themeStyles}
+                onPress={() =>
+                  setOpenFilter(openFilter === 'time' ? null : 'time')
+                }
+              />
             </View>
-          }
-        />
+
+            {openFilter && (
+              <View
+                style={[styles.dropdown, { backgroundColor: themeStyles.card }]}
+              >
+                {openFilter === 'status' &&
+                  STATUS_FILTERS.map(item => (
+                    <DropdownOption
+                      key={item}
+                      label={getStatusFilterLabel(item)}
+                      active={statusFilter === item}
+                      themeStyles={themeStyles}
+                      onPress={() => {
+                        setStatusFilter(item);
+                        setOpenFilter(null);
+                      }}
+                    />
+                  ))}
+                {openFilter === 'time' &&
+                  TIME_FILTERS.map(item => (
+                    <DropdownOption
+                      key={item}
+                      label={getTimeFilterLabel(item)}
+                      active={timeFilter === item}
+                      themeStyles={themeStyles}
+                      onPress={() => {
+                        setTimeFilter(item);
+                        setOpenFilter(null);
+                      }}
+                    />
+                  ))}
+              </View>
+            )}
+          </View>
+
+          {/* SUMMARY STATS */}
+          {!loading && records.length > 0 && (
+            <View style={styles.statsRow}>
+              <View
+                style={[styles.statCard, { backgroundColor: themeStyles.card }]}
+              >
+                <MaterialCommunityIcons
+                  name="account-check"
+                  size={20}
+                  color="#4CAF50"
+                />
+                <Text style={[styles.statNum, { color: themeStyles.text }]}>
+                  {records.filter(r => r.status === 'known').length}
+                </Text>
+                <Text
+                  style={[styles.statLabel, { color: themeStyles.subText }]}
+                >
+                  {t.recognized}
+                </Text>
+              </View>
+              <View
+                style={[styles.statCard, { backgroundColor: themeStyles.card }]}
+              >
+                <MaterialCommunityIcons
+                  name="account-question"
+                  size={20}
+                  color="#FF9800"
+                />
+                <Text style={[styles.statNum, { color: themeStyles.text }]}>
+                  {records.filter(r => r.status === 'unknown').length}
+                </Text>
+                <Text
+                  style={[styles.statLabel, { color: themeStyles.subText }]}
+                >
+                  {t.stranger}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* LIST */}
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color={themeStyles.primary}
+              style={{ marginTop: 50 }}
+            />
+          ) : (
+            <FlatList
+              data={groupedRecords}
+              keyExtractor={item => item.date}
+              renderItem={renderSection}
+              contentContainerStyle={styles.listContent}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[themeStyles.primary]}
+                />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <MaterialCommunityIcons
+                    name="door-open"
+                    size={80}
+                    color="#ccc"
+                  />
+                  <Text
+                    style={[styles.emptyText, { color: themeStyles.subText }]}
+                  >
+                    {t.no_entry_exit_history}
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </>
       )}
     </SafeAreaView>
   );

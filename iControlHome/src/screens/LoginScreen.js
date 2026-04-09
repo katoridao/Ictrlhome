@@ -76,8 +76,16 @@ const LoginScreen = ({ navigation }) => {
           settings: {
             theme: userData.settings?.theme || 'LIGHT',
             language: userData.settings?.language || 'VI',
+            notification:
+              userData.settings?.notification ||
+              userData.notification_settings ||
+              {},
           },
-          notification_settings: userData.notification_settings || {},
+          notification_settings:
+            userData.notification_settings ||
+            userData.settings?.notification ||
+            {},
+          is_house_member: false,
         };
 
         // Lưu token để các request sau tự động đính kèm Authorization header
@@ -98,11 +106,34 @@ const LoginScreen = ({ navigation }) => {
           await AsyncStorage.removeItem('remember_me');
         }
 
-        // FIX: Luôn lưu house_id = "H001" vì backend đang hardcode H001
-        const houseId = response.data.house_id || 'H001';
-        const houseName = response.data.house_name || 'NHÀ CHÍNH';
-        await AsyncStorage.setItem('current_house_id', houseId);
-        await AsyncStorage.setItem('current_house_name', houseName);
+        try {
+          const membershipResponse = await api.get('/houses/check-member');
+          const membership = membershipResponse.data || {};
+          userMatched.is_house_member = membership.is_member === true;
+          await AsyncStorage.setItem('user_info', JSON.stringify(userMatched));
+
+          if (membership.is_member && membership.house_id) {
+            await AsyncStorage.setItem('current_house_id', membership.house_id);
+            await AsyncStorage.setItem(
+              'current_house_name',
+              membership.house_name || 'NHÀ CHÍNH',
+            );
+          } else {
+            await AsyncStorage.multiRemove([
+              'current_house_id',
+              'current_house_name',
+            ]);
+          }
+        } catch (membershipError) {
+          console.warn(
+            '[Login] Không thể đồng bộ trạng thái house:',
+            membershipError?.message,
+          );
+          await AsyncStorage.multiRemove([
+            'current_house_id',
+            'current_house_name',
+          ]);
+        }
 
         // Sync app settings with this account immediately after login.
         await changeTheme(userMatched.settings.theme, { syncRemote: false });

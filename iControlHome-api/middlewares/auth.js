@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Device = require("../models/Device");
 const Room = require("../models/Room");
+const House = require("../models/House");
 
 const findMatchingPermission = (permissions = [], userId) => {
   if (!userId) return null;
@@ -90,11 +91,33 @@ const canControlDevice = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const role = req.user.role;
-    const deviceId = req.params.id;
+    const deviceId = req.params.id || req.params.deviceId;
 
     const device = await Device.findById(deviceId);
     if (!device) {
       return res.status(404).json({ message: "Không tìm thấy thiết bị" });
+    }
+
+    if (role !== "OWNER") {
+      let isHouseMember = req.isHouseMember;
+
+      if (typeof isHouseMember !== "boolean") {
+        const house = await House.findById(device.house_id || "H001");
+        isHouseMember = house
+          ? house.members.some(
+              (member) => member.toString() === userId.toString(),
+            )
+          : false;
+      }
+
+      req.isHouseMember = isHouseMember;
+      req.houseId = isHouseMember ? String(device.house_id || "H001") : null;
+
+      if (!isHouseMember) {
+        return res.status(403).json({
+          message: "Bạn chưa tham gia hộ gia đình nào",
+        });
+      }
     }
 
     const roomId = device.room_id?._id || device.room_id || null;
@@ -137,19 +160,21 @@ const checkHouseMembership = async (req, res, next) => {
     // OWNER luôn là member
     if (user.role === "OWNER") {
       req.isHouseMember = true;
+      req.houseId = "H001";
       return next();
     }
 
-    const House = require("../models/House");
     const house = await House.findById("H001");
 
     req.isHouseMember = house
       ? house.members.some((m) => m.toString() === user._id.toString())
       : false;
+    req.houseId = req.isHouseMember ? house?._id?.toString?.() || "H001" : null;
 
     next();
   } catch (error) {
     req.isHouseMember = false;
+    req.houseId = null;
     next();
   }
 };

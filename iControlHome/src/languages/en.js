@@ -39,7 +39,7 @@ export default {
   notification_household_events: 'Notifications by feature',
   notification_new_member: 'A new member joined the house',
   notification_new_member_desc:
-    'Notify the admin/home owner whenever a new member joins.',
+    'Notify the home owner and existing members when someone new joins the house.',
   notification_permission_granted: 'Admin granted you access',
   notification_permission_granted_desc:
     'Private alerts when a member is granted room or device access.',
@@ -162,6 +162,8 @@ export default {
   status_on: 'ON',
   status_off: 'OFF',
   device_control_error: 'Device control error',
+  esp32_unreachable:
+    'The ESP32 is not responding. Please check the IP, port 8080, and network connection.',
 
   // RoomDetailScreen
   room_detail: 'Room Details',
@@ -258,6 +260,14 @@ export default {
   admin_phone: 'Admin phone',
   join_password: 'Join password',
   join_house_btn: 'JOIN HOUSE',
+  join_password_placeholder: 'Enter the house join password',
+  house_config_title: 'House settings',
+  house_config_desc:
+    'Only the owner can change the house name and join password.',
+  house_name_label: 'House name',
+  house_name_placeholder: 'e.g.: My Home',
+  house_updated_success: 'House information updated successfully.',
+  cannot_update_house: 'Unable to update house information.',
 
   // Member Management
   add_member: 'Add member',
@@ -284,6 +294,8 @@ export default {
   name_required: 'Full name cannot be empty',
   register_success: 'Registration successful!',
   join_house_success: 'Successfully joined house!',
+  join_house_success_with_owner: "You joined {owner}'s house successfully.",
+  added_to_house_success: "You were added to {owner}'s house.",
   notification: 'Notification',
   no_house_selected_message:
     'You need to select or create a house before adding a device.',

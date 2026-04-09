@@ -64,12 +64,6 @@ export default function NotificationSettingScreen({ navigation }) {
         title: t.notification_camera_item,
         description: t.notification_camera_desc,
       },
-      {
-        key: 'device_offline',
-        icon: 'wifi-off',
-        title: t.notification_device_offline_item,
-        description: t.notification_device_offline_desc,
-      },
     ],
     [t],
   );

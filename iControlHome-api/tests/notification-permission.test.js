@@ -2,36 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  shouldSendOfflineNotification,
   filterUserPushTokens,
+  mergeNotificationSettings,
 } = require("../services/notificationService");
 const { hasControlPermission } = require("../middlewares/auth");
-
-test("shouldSendOfflineNotification throttles repeated offline alerts", () => {
-  assert.equal(typeof shouldSendOfflineNotification, "function");
-
-  const now = new Date("2026-04-08T10:00:00.000Z");
-
-  assert.equal(
-    shouldSendOfflineNotification({
-      previousStatus: "OFFLINE",
-      lastNotifiedAt: new Date("2026-04-08T09:55:00.000Z"),
-      now,
-      cooldownMs: 15 * 60 * 1000,
-    }),
-    false,
-  );
-
-  assert.equal(
-    shouldSendOfflineNotification({
-      previousStatus: "ONLINE",
-      lastNotifiedAt: new Date("2026-04-08T09:30:00.000Z"),
-      now,
-      cooldownMs: 15 * 60 * 1000,
-    }),
-    true,
-  );
-});
 
 test("filterUserPushTokens removes only the active device token", () => {
   assert.equal(typeof filterUserPushTokens, "function");
@@ -42,6 +16,28 @@ test("filterUserPushTokens removes only the active device token", () => {
   );
 
   assert.deepEqual(filterUserPushTokens(["token-a"], ["token-x"]), ["token-a"]);
+});
+
+test("mergeNotificationSettings keeps per-user flags and strips legacy offline keys", () => {
+  assert.equal(typeof mergeNotificationSettings, "function");
+
+  const merged = mergeNotificationSettings(
+    {
+      enabled: false,
+      new_member: false,
+    },
+    {
+      device_status: true,
+      camera_detected: false,
+      device_offline: false,
+    },
+  );
+
+  assert.equal(merged.enabled, false);
+  assert.equal(merged.new_member, false);
+  assert.equal(merged.device_status, true);
+  assert.equal(merged.camera_detected, false);
+  assert.equal(Object.hasOwn(merged, "device_offline"), false);
 });
 
 test("hasControlPermission respects owner, room, and device permissions", () => {

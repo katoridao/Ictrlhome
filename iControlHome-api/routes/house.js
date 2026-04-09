@@ -7,11 +7,32 @@ const Device = require("../models/Device");
 const Room = require("../models/Room");
 const DeviceUsage = require("../models/DeviceUsage");
 const { notifyNewMemberJoined } = require("../services/notificationService");
-const { authenticate, isOwner, isMember } = require("../middlewares/auth");
+const {
+  authenticate,
+  isOwner,
+  checkHouseMembership,
+} = require("../middlewares/auth");
+
+const serializeHouseForUser = (house, user) => {
+  const data =
+    typeof house?.toObject === "function" ? house.toObject() : { ...house };
+
+  if (user?.role !== "OWNER") {
+    delete data.join_password;
+  }
+
+  return data;
+};
 
 // GET /api/houses
-router.get("/", async (req, res) => {
+router.get("/", checkHouseMembership, async (req, res) => {
   try {
+    if (!req.isHouseMember) {
+      return res.status(403).json({
+        message: "Bạn chưa tham gia hộ gia đình nào",
+      });
+    }
+
     const house = await House.findById("H001")
       .populate("owner_id", "name phone")
       .populate("members", "name phone");
@@ -20,7 +41,7 @@ router.get("/", async (req, res) => {
       return res.status(404).json({ message: "House chưa được khởi tạo" });
     }
 
-    res.json(house);
+    res.json(serializeHouseForUser(house, req.user));
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
   }
@@ -31,11 +52,18 @@ router.get("/check-member", authenticate, async (req, res) => {
   try {
     const user = req.user;
 
+    const house = await House.findById("H001").populate("owner_id", "name");
+
     if (user.role === "OWNER") {
-      return res.json({ is_member: true, role: "OWNER" });
+      return res.json({
+        is_member: true,
+        role: "OWNER",
+        house_id: house?._id?.toString?.() || "H001",
+        house_name: house?.name || "NHÀ CHÍNH",
+        owner_name: user.name || user.phone || "Owner",
+      });
     }
 
-    const house = await House.findById("H001");
     if (!house) {
       return res.status(404).json({ message: "Không tìm thấy nhà" });
     }
@@ -47,6 +75,9 @@ router.get("/check-member", authenticate, async (req, res) => {
     res.json({
       is_member: isMemberOfHouse,
       role: user.role,
+      house_id: isMemberOfHouse ? house._id.toString() : null,
+      house_name: isMemberOfHouse ? house.name || "NHÀ CHÍNH" : null,
+      owner_name: house.owner_id?.name || "Owner",
     });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
@@ -54,8 +85,14 @@ router.get("/check-member", authenticate, async (req, res) => {
 });
 
 // GET /api/houses/statistics — phải đặt TRƯỚC /:id
-router.get("/statistics", async (req, res) => {
+router.get("/statistics", checkHouseMembership, async (req, res) => {
   try {
+    if (!req.isHouseMember) {
+      return res.status(403).json({
+        message: "Bạn chưa tham gia hộ gia đình nào",
+      });
+    }
+
     const { month, year } = req.query;
 
     const house = await House.findById("H001");
@@ -97,6 +134,49 @@ router.get("/statistics", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: "Lỗi tính toán hóa đơn" });
+  }
+});
+
+// PUT /api/houses/config — Cập nhật tên nhà + mật khẩu tham gia (Chỉ OWNER)
+router.put("/config", authenticate, isOwner, async (req, res) => {
+  try {
+    const nextName = String(req.body?.name || "").trim();
+    const nextJoinPassword = String(req.body?.join_password || "").trim();
+
+    if (!nextName || !nextJoinPassword) {
+      return res.status(400).json({
+        message: "Vui lòng nhập đầy đủ tên nhà và mật khẩu tham gia",
+      });
+    }
+
+    const house = await House.findById("H001");
+    if (!house) {
+      return res.status(404).json({ message: "Không tìm thấy nhà" });
+    }
+
+    house.name = nextName;
+    house.join_password = nextJoinPassword;
+    await house.save();
+
+    const updatedHouse = await House.findById("H001")
+      .populate("owner_id", "name phone")
+      .populate("members", "name phone");
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to("H001").emit("house_updated", {
+        house: serializeHouseForUser(updatedHouse, req.user),
+        house_id: "H001",
+      });
+    }
+
+    return res.json({
+      message: "Cập nhật thông tin nhà thành công",
+      house: serializeHouseForUser(updatedHouse, req.user),
+    });
+  } catch (err) {
+    console.error("[House] Error updating config:", err);
+    return res.status(500).json({ message: "Lỗi server" });
   }
 });
 
@@ -144,9 +224,11 @@ router.post("/add-member", authenticate, isOwner, async (req, res) => {
 
     await notifyNewMemberJoined({
       houseId: "H001",
+      memberId: user._id,
       memberName: user.name,
       memberPhone: user.phone,
       actorUserId: req.user?._id,
+      addedByOwner: true,
     });
 
     const updatedHouse = await House.findById("H001")
@@ -163,6 +245,10 @@ router.post("/add-member", authenticate, isOwner, async (req, res) => {
           phone: user.phone,
         },
         house_id: "H001",
+      });
+      io.to(`user:${user._id.toString()}`).emit("house_membership_granted", {
+        house_id: "H001",
+        house_name: updatedHouse?.name || "NHÀ CHÍNH",
       });
     }
 
@@ -228,9 +314,11 @@ router.post("/request-join", authenticate, async (req, res) => {
 
     await notifyNewMemberJoined({
       houseId: "H001",
+      memberId: requestingUser._id,
       memberName: requestingUser.name,
       memberPhone: requestingUser.phone,
       actorUserId: requestingUser._id,
+      addedByOwner: false,
     });
 
     const io = req.app.get("io");
@@ -247,9 +335,20 @@ router.post("/request-join", authenticate, async (req, res) => {
         },
         house_id: "H001",
       });
+      io.to(`user:${requestingUser._id.toString()}`).emit(
+        "house_membership_granted",
+        {
+          house_id: "H001",
+          house_name: house?.name || "NHÀ CHÍNH",
+        },
+      );
     }
 
-    res.json({ message: "Tham gia nhà thành công! Bạn đã được thêm vào nhà." });
+    res.json({
+      message: `Bạn đã gia nhập nhà của ${admin.name || admin.phone} thành công.`,
+      house_id: house._id.toString(),
+      owner_name: admin.name || admin.phone || "Owner",
+    });
   } catch (err) {
     console.error("[House] Error request-join:", err);
     res.status(500).json({ message: "Lỗi server" });
@@ -299,6 +398,9 @@ router.delete("/remove-member", authenticate, isOwner, async (req, res) => {
         member_id,
         house_id: "H001",
       });
+      io.to(`user:${String(member_id)}`).emit("house_membership_revoked", {
+        house_id: "H001",
+      });
     }
 
     const updatedHouse = await House.findById("H001")
@@ -316,8 +418,14 @@ router.delete("/remove-member", authenticate, isOwner, async (req, res) => {
 });
 
 // GET /api/houses/:id
-router.get("/:id", async (req, res) => {
+router.get("/:id", checkHouseMembership, async (req, res) => {
   try {
+    if (!req.isHouseMember) {
+      return res.status(403).json({
+        message: "Bạn chưa tham gia hộ gia đình nào",
+      });
+    }
+
     const { id } = req.params;
     const houseId = !id || id === "null" || id === "undefined" ? "H001" : id;
 
@@ -329,7 +437,7 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy nhà" });
     }
 
-    res.json(house);
+    res.json(serializeHouseForUser(house, req.user));
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
   }
@@ -385,12 +493,18 @@ router.post("/join", authenticate, async (req, res) => {
 
     await notifyNewMemberJoined({
       houseId: "H001",
+      memberId: req.user._id,
       memberName: req.user.name,
       memberPhone: req.user.phone,
       actorUserId: req.user._id,
+      addedByOwner: false,
     });
 
-    res.json({ message: "Tham gia nhà thành công! Bạn đã được kết nối." });
+    res.json({
+      message: `Bạn đã gia nhập nhà của ${admin.name || admin.phone} thành công.`,
+      house_id: house._id.toString(),
+      owner_name: admin.name || admin.phone || "Owner",
+    });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
   }

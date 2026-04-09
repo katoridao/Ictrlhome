@@ -13,6 +13,7 @@ import {
   Animated,
   TouchableWithoutFeedback,
   PanResponder,
+  TextInput,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
@@ -34,21 +35,14 @@ export default function HomeScreen({ navigation }) {
   const [isMember, setIsMember] = useState(null);
   const [userData, setUserData] = useState(null);
   const [houseData, setHouseData] = useState(null);
+  const [houseConfigVisible, setHouseConfigVisible] = useState(false);
+  const [houseNameInput, setHouseNameInput] = useState('');
+  const [joinPasswordInput, setJoinPasswordInput] = useState('');
+  const [savingHouseConfig, setSavingHouseConfig] = useState(false);
 
   const getDisplayHouseName = rawName => {
     const name = String(rawName || '').trim();
-    if (!name) return t.home;
-
-    const normalized = name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // If DB returns a default/system name, show localized label instead.
-    const defaultNames = ['nha chinh', 'main house', 'my home', 'home'];
-    return defaultNames.includes(normalized) ? t.home : name;
+    return name || t.home;
   };
 
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -93,6 +87,18 @@ export default function HomeScreen({ navigation }) {
       const onRoomDeleted = refreshHomeData;
       const onMemberAdded = refreshHomeData;
       const onMemberRemoved = refreshHomeData;
+      const onHouseUpdated = ({ house }) => {
+        if (!mounted) return;
+        if (house) {
+          setHouseData(house);
+          AsyncStorage.setItem(
+            'current_house_name',
+            house.name || t.home,
+          ).catch(() => {});
+        } else {
+          refreshHomeData();
+        }
+      };
 
       const setupSocket = async () => {
         try {
@@ -118,6 +124,7 @@ export default function HomeScreen({ navigation }) {
           socket.off('room_deleted').on('room_deleted', onRoomDeleted);
           socket.off('member_added').on('member_added', onMemberAdded);
           socket.off('member_removed').on('member_removed', onMemberRemoved);
+          socket.off('house_updated').on('house_updated', onHouseUpdated);
 
           console.log('[HomeScreen] Socket listeners registered');
         } catch (err) {
@@ -143,6 +150,7 @@ export default function HomeScreen({ navigation }) {
           socket.off('room_deleted');
           socket.off('member_added');
           socket.off('member_removed');
+          socket.off('house_updated');
         }
       };
     }, []),
@@ -217,7 +225,28 @@ export default function HomeScreen({ navigation }) {
         setUserData(user);
         try {
           const res = await api.get('/houses/check-member');
-          setIsMember(res.data.is_member);
+          const joined = res.data?.is_member === true;
+          setIsMember(joined);
+
+          const nextUser = { ...user, is_house_member: joined };
+          setUserData(nextUser);
+          await AsyncStorage.setItem('user_info', JSON.stringify(nextUser));
+
+          if (joined && res.data?.house_id) {
+            await AsyncStorage.setItem('current_house_id', res.data.house_id);
+            await AsyncStorage.setItem(
+              'current_house_name',
+              res.data.house_name || t.home,
+            );
+          } else {
+            await AsyncStorage.multiRemove([
+              'current_house_id',
+              'current_house_name',
+            ]);
+            setDevices([]);
+            setHouseData(null);
+            return;
+          }
         } catch (e) {
           setIsMember(true);
         }
@@ -259,6 +288,68 @@ export default function HomeScreen({ navigation }) {
   const onLongPressDevice = item => {
     if (userRole !== 'OWNER') return;
     openSheet(item);
+  };
+
+  const openHouseConfig = () => {
+    if (userRole !== 'OWNER' || !houseData) return;
+    setHouseNameInput(houseData?.name || '');
+    setJoinPasswordInput(houseData?.join_password || '');
+    setHouseConfigVisible(true);
+  };
+
+  const closeHouseConfig = () => {
+    if (savingHouseConfig) return;
+    setHouseConfigVisible(false);
+  };
+
+  const handleSaveHouseConfig = async () => {
+    const nextName = houseNameInput.trim();
+    const nextJoinPassword = joinPasswordInput.trim();
+
+    if (!nextName || !nextJoinPassword) {
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: t.fill_all_info,
+      });
+      return;
+    }
+
+    setSavingHouseConfig(true);
+    try {
+      const response = await api.put('/houses/config', {
+        name: nextName,
+        join_password: nextJoinPassword,
+      });
+
+      const updatedHouse = response.data?.house || {
+        ...houseData,
+        name: nextName,
+        join_password: nextJoinPassword,
+      };
+
+      setHouseData(updatedHouse);
+      await AsyncStorage.setItem(
+        'current_house_name',
+        updatedHouse.name || t.home,
+      );
+
+      Toast.show({
+        type: 'success',
+        text1: t.success,
+        text2: response.data?.message || t.house_updated_success,
+      });
+
+      setHouseConfigVisible(false);
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: error.response?.data?.message || t.cannot_update_house,
+      });
+    } finally {
+      setSavingHouseConfig(false);
+    }
   };
 
   const getDeviceIcon = type => {
@@ -348,9 +439,16 @@ export default function HomeScreen({ navigation }) {
       style={[styles.container, { backgroundColor: themeStyles.background }]}
     >
       <View style={[styles.header, { backgroundColor: themeStyles.primary }]}>
-        <Text style={styles.houseName}>
-          {getDisplayHouseName(houseData?.name)}
-        </Text>
+        <TouchableOpacity
+          activeOpacity={isOwner ? 0.75 : 1}
+          style={styles.houseTitleButton}
+          onPress={isOwner ? openHouseConfig : undefined}
+        >
+          <Text style={styles.houseName}>
+            {getDisplayHouseName(houseData?.name)}
+          </Text>
+          {isOwner && <Text style={styles.houseEditHint}>✎</Text>}
+        </TouchableOpacity>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {userRole === 'OWNER' && (
             <TouchableOpacity
@@ -442,6 +540,97 @@ export default function HomeScreen({ navigation }) {
           />
         )}
       </View>
+
+      <Modal
+        visible={houseConfigVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeHouseConfig}
+      >
+        <TouchableWithoutFeedback onPress={closeHouseConfig}>
+          <View style={styles.configBackdrop} />
+        </TouchableWithoutFeedback>
+
+        <View style={styles.configModalWrap}>
+          <View
+            style={[
+              styles.configCard,
+              { backgroundColor: themeStyles.card || '#fff' },
+            ]}
+          >
+            <Text style={[styles.configTitle, { color: themeStyles.text }]}>
+              {t.house_config_title}
+            </Text>
+            <Text
+              style={[styles.configSubtitle, { color: themeStyles.subText }]}
+            >
+              {t.house_config_desc}
+            </Text>
+
+            <Text style={[styles.configLabel, { color: themeStyles.text }]}>
+              {t.house_name_label}
+            </Text>
+            <TextInput
+              value={houseNameInput}
+              onChangeText={setHouseNameInput}
+              placeholder={t.house_name_placeholder}
+              placeholderTextColor={themeStyles.subText}
+              editable={!savingHouseConfig}
+              style={[
+                styles.configInput,
+                {
+                  color: themeStyles.text,
+                  borderColor: themeStyles.border || '#ddd',
+                },
+              ]}
+            />
+
+            <Text style={[styles.configLabel, { color: themeStyles.text }]}>
+              {t.join_password}
+            </Text>
+            <TextInput
+              value={joinPasswordInput}
+              onChangeText={setJoinPasswordInput}
+              placeholder={t.join_password_placeholder}
+              placeholderTextColor={themeStyles.subText}
+              editable={!savingHouseConfig}
+              autoCapitalize="none"
+              style={[
+                styles.configInput,
+                {
+                  color: themeStyles.text,
+                  borderColor: themeStyles.border || '#ddd',
+                },
+              ]}
+            />
+
+            <View style={styles.configActions}>
+              <TouchableOpacity
+                style={[styles.configBtn, styles.configBtnSecondary]}
+                onPress={closeHouseConfig}
+                disabled={savingHouseConfig}
+              >
+                <Text style={styles.configBtnSecondaryText}>{t.cancel}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.configBtn,
+                  styles.configBtnPrimary,
+                  { backgroundColor: themeStyles.primary },
+                ]}
+                onPress={handleSaveHouseConfig}
+                disabled={savingHouseConfig}
+              >
+                {savingHouseConfig ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.configBtnPrimaryText}>{t.save}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={sheetVisible}
@@ -554,6 +743,59 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  configBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  configModalWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  configCard: {
+    borderRadius: 18,
+    padding: 18,
+    elevation: 8,
+  },
+  configTitle: { fontSize: 18, fontWeight: '700' },
+  configSubtitle: {
+    fontSize: 13,
+    marginTop: 6,
+    marginBottom: 14,
+    lineHeight: 18,
+  },
+  configLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  configInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    marginBottom: 10,
+  },
+  configActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 6,
+  },
+  configBtn: {
+    minWidth: 92,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  configBtnSecondary: { backgroundColor: '#EEF1F6' },
+  configBtnPrimary: { minWidth: 104 },
+  configBtnSecondaryText: { color: '#334155', fontWeight: '700' },
+  configBtnPrimaryText: { color: '#fff', fontWeight: '700' },
   header: {
     height: 70,
     paddingHorizontal: 16,
@@ -563,7 +805,14 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
+  houseTitleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    gap: 6,
+  },
   houseName: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
+  houseEditHint: { color: 'rgba(255,255,255,0.85)', fontSize: 14 },
   headerIcon: { width: 30, height: 30, tintColor: '#fff' },
   body: { flex: 1 },
   loader: { marginTop: 40 },

@@ -50,6 +50,19 @@ export default function Device_logScreen() {
         try {
           const res = await api.get('/houses/check-member');
           setIsMember(res.data.is_member);
+
+          if (res.data?.is_member && res.data?.house_id) {
+            await AsyncStorage.setItem('current_house_id', res.data.house_id);
+            await AsyncStorage.setItem(
+              'current_house_name',
+              res.data.house_name || t.home,
+            );
+          } else {
+            await AsyncStorage.multiRemove([
+              'current_house_id',
+              'current_house_name',
+            ]);
+          }
         } catch (e) {
           setIsMember(true);
         }
@@ -563,5 +576,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 15,
   },
-
 });

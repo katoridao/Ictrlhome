@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { LanguageContext } from '../context/LanguageContext';
 import { unregisterNotificationToken } from '../services/notificationService';
+import api from '../database/api';
 
 export default function SettingScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -27,7 +28,18 @@ export default function SettingScreen({ navigation }) {
           const jsonValue = await AsyncStorage.getItem('user_info');
           if (jsonValue !== null) {
             const user = JSON.parse(jsonValue);
-            setUserData(user);
+
+            try {
+              const membershipResponse = await api.get('/houses/check-member');
+              const nextUser = {
+                ...user,
+                is_house_member: membershipResponse.data?.is_member === true,
+              };
+              setUserData(nextUser);
+              await AsyncStorage.setItem('user_info', JSON.stringify(nextUser));
+            } catch (membershipError) {
+              setUserData(user);
+            }
           }
         } catch (e) {
           console.error('Lỗi lấy dữ liệu:', e);
@@ -59,6 +71,9 @@ export default function SettingScreen({ navigation }) {
       },
     ]);
   };
+
+  const hasHouseAccess =
+    userData?.role === 'OWNER' || userData?.is_house_member === true;
 
   return (
     <View
@@ -123,12 +138,14 @@ export default function SettingScreen({ navigation }) {
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('AppearanceScreen')}
           />
-          <SettingItem
-            icon={require('../../public/img/device_usage.png')}
-            label={t.statistics}
-            textColor={themeStyles.text}
-            onPress={() => navigation.navigate('StatisticsScreen')}
-          />
+          {hasHouseAccess && (
+            <SettingItem
+              icon={require('../../public/img/device_usage.png')}
+              label={t.statistics}
+              textColor={themeStyles.text}
+              onPress={() => navigation.navigate('StatisticsScreen')}
+            />
+          )}
           <SettingItem
             icon={require('../../public/img/language.png')}
             label={t.language}
@@ -143,19 +160,32 @@ export default function SettingScreen({ navigation }) {
         <View
           style={[styles.sectionBox, { backgroundColor: themeStyles.card }]}
         >
-          <SettingItem
-            icon={require('../../public/img/user.png')}
-            label={t.face_list}
-            textColor={themeStyles.text}
-            onPress={() => navigation.navigate('PeopleScreen')}
-          />
-          <SettingItem
-            icon={require('../../public/img/history.png')}
-            label={t.entry_exit_history}
-            textColor={themeStyles.text}
-            onPress={() => navigation.navigate('EntryExitScreen')}
-            noBorder
-          />
+          {hasHouseAccess ? (
+            <>
+              <SettingItem
+                icon={require('../../public/img/user.png')}
+                label={t.face_list}
+                textColor={themeStyles.text}
+                onPress={() => navigation.navigate('PeopleScreen')}
+              />
+              <SettingItem
+                icon={require('../../public/img/history.png')}
+                label={t.entry_exit_history}
+                textColor={themeStyles.text}
+                onPress={() => navigation.navigate('EntryExitScreen')}
+                noBorder
+              />
+            </>
+          ) : (
+            <SettingItem
+              icon={require('../../public/img/user.png')}
+              label={t.join_house}
+              value={t.not_joined_house}
+              textColor={themeStyles.text}
+              onPress={() => navigation.navigate('JoinHouse')}
+              noBorder
+            />
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>{t.section_other}</Text>

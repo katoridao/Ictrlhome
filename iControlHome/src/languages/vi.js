@@ -39,7 +39,7 @@ export default {
   notification_household_events: 'Thông báo theo chức năng',
   notification_new_member: 'Có người mới gia nhập nhà',
   notification_new_member_desc:
-    'Thông báo cho admin/chủ nhà khi có thành viên mới tham gia.',
+    'Thông báo cho chủ nhà và các thành viên đang ở trong nhà khi có người mới tham gia.',
   notification_permission_granted: 'Được admin cấp quyền sử dụng',
   notification_permission_granted_desc:
     'Thông báo riêng cho thành viên khi được cấp quyền phòng hoặc thiết bị.',
@@ -162,6 +162,8 @@ export default {
   status_on: 'ĐANG BẬT',
   status_off: 'ĐANG TẮT',
   device_control_error: 'Lỗi điều khiển thiết bị',
+  esp32_unreachable:
+    'ESP32 không phản hồi. Vui lòng kiểm tra IP, cổng 8080 và kết nối mạng.',
 
   // RoomDetailScreen
   room_detail: 'Chi tiết phòng',
@@ -257,6 +259,13 @@ export default {
   admin_phone: 'Số điện thoại admin',
   join_password: 'Mật khẩu tham gia nhà',
   join_house_btn: 'THAM GIA NHÀ',
+  join_password_placeholder: 'Nhập mật khẩu gia nhập nhà',
+  house_config_title: 'Cấu hình nhà',
+  house_config_desc: 'Chỉ chủ nhà mới có thể đổi tên nhà và mật khẩu tham gia.',
+  house_name_label: 'Tên nhà',
+  house_name_placeholder: 'Ví dụ: Nhà của tôi',
+  house_updated_success: 'Đã cập nhật thông tin nhà thành công.',
+  cannot_update_house: 'Không thể cập nhật thông tin nhà.',
 
   // Member Management
   add_member: 'Thêm thành viên',
@@ -283,6 +292,8 @@ export default {
   name_required: 'Họ tên không được để trống',
   register_success: 'Đăng ký thành công!',
   join_house_success: 'Đã tham gia nhà thành công!',
+  join_house_success_with_owner: 'Bạn đã gia nhập nhà của {owner} thành công.',
+  added_to_house_success: 'Bạn đã được {owner} thêm vào hộ gia đình.',
   notification: 'Thông báo',
   no_house_selected_message:
     'Bạn cần chọn hoặc tạo nhà trước khi thêm thiết bị.',

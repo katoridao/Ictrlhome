@@ -19,7 +19,6 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
   device_status: true,
   automation_triggered: true,
   camera_detected: true,
-  device_offline: true,
 };
 
 export const NOTIFICATION_CHANNEL_ID = 'ictrlhome-default';
@@ -83,27 +82,52 @@ const resolveLocalizedRemoteContent = async remoteMessage => {
     (language === 'en' ? 'A new member' : 'Một thành viên mới');
   const personName =
     data.person_name || (language === 'en' ? 'Unknown person' : 'Người lạ');
+  const ownerName =
+    data.owner_name || (language === 'en' ? 'the home owner' : 'chủ nhà');
 
   switch (localizationKey) {
     case 'new_member':
       return language === 'en'
         ? {
             title: 'A new member joined your house',
-            body: [
-              `Member: ${memberName}`,
-              data.member_phone ? `Phone: ${data.member_phone}` : null,
-            ]
-              .filter(Boolean)
-              .join('\n'),
+            body: `${memberName} joined your family.`,
           }
         : {
             title: 'Có thành viên mới gia nhập nhà',
-            body: [
-              `Thành viên: ${memberName}`,
-              data.member_phone ? `SĐT: ${data.member_phone}` : null,
-            ]
-              .filter(Boolean)
-              .join('\n'),
+            body: `${memberName} đã gia nhập gia đình của bạn.`,
+          };
+
+    case 'member_added_to_household':
+      return language === 'en'
+        ? {
+            title: 'Family updated',
+            body: `${ownerName} added ${memberName} to the household.`,
+          }
+        : {
+            title: 'Cập nhật hộ gia đình',
+            body: `${ownerName} đã thêm ${memberName} vào hộ gia đình.`,
+          };
+
+    case 'member_self_joined':
+      return language === 'en'
+        ? {
+            title: 'Joined house successfully',
+            body: `You joined ${ownerName}'s house successfully.`,
+          }
+        : {
+            title: 'Tham gia nhà thành công',
+            body: `Bạn đã gia nhập nhà của ${ownerName} thành công.`,
+          };
+
+    case 'member_added_by_owner':
+      return language === 'en'
+        ? {
+            title: 'You were added to a house',
+            body: `You were added to ${ownerName}'s house.`,
+          }
+        : {
+            title: 'Bạn đã được thêm vào hộ gia đình',
+            body: `Bạn đã được ${ownerName} thêm vào hộ gia đình.`,
           };
 
     case 'permission_granted': {
@@ -211,23 +235,6 @@ const resolveLocalizedRemoteContent = async remoteMessage => {
             ),
           };
 
-    case 'device_offline':
-      return language === 'en'
-        ? {
-            title: 'A device is offline',
-            body: [
-              `Device: ${deviceName || 'Unknown'}`,
-              'Status: OFFLINE',
-            ].join('\n'),
-          }
-        : {
-            title: 'Thiết bị đang offline',
-            body: [
-              `Thiết bị: ${deviceName || 'Không xác định'}`,
-              'Trạng thái: OFFLINE',
-            ].join('\n'),
-          };
-
     default:
       return { title: fallbackTitle, body: fallbackBody };
   }
@@ -239,6 +246,9 @@ const getNotificationVisualProfile = (data = {}, language = 'vi') => {
 
   switch (key) {
     case 'new_member':
+    case 'member_self_joined':
+    case 'member_added_by_owner':
+    case 'member_added_to_household':
       return {
         accentColor: '#8B5CF6',
         tag: isEn ? 'Member update' : 'Cập nhật thành viên',
@@ -272,13 +282,6 @@ const getNotificationVisualProfile = (data = {}, language = 'vi') => {
         tag: isEn ? 'Camera detection' : 'Phát hiện từ camera',
         category: AndroidCategory.ALARM,
         vibrationPattern: [300, 200, 300, 450],
-      };
-    case 'device_offline':
-      return {
-        accentColor: '#DC2626',
-        tag: isEn ? 'Urgent attention' : 'Cần chú ý ngay',
-        category: AndroidCategory.ALARM,
-        vibrationPattern: [350, 180, 350, 180, 350, 300],
       };
     default:
       return {

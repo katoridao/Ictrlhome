@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Detection = require("../models/Detection");
+const { authenticate, checkHouseMembership } = require("../middlewares/auth");
 const { notifyCameraDetection } = require("../services/notificationService");
 
 router.post("/save-token", async (req, res) => {
@@ -44,9 +45,13 @@ router.post("/detect", async (req, res) => {
   }
 });
 
-router.get("/history", async (req, res) => {
+router.get("/history", authenticate, checkHouseMembership, async (req, res) => {
   try {
-    const { period, status, house_id = "H001" } = req.query;
+    if (!req.isHouseMember) {
+      return res.json({ data: [] });
+    }
+
+    const { period, status, house_id = req.houseId || "H001" } = req.query;
     const query = { house_id };
 
     if (status === "known") query.status = "known";

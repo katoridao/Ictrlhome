@@ -26,10 +26,6 @@ const notificationSettingsSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    device_offline: {
-      type: Boolean,
-      default: true,
-    },
   },
   { _id: false },
 );
@@ -71,11 +67,15 @@ const UserSchema = new mongoose.Schema(
         enum: ["VI", "EN"],
         default: "VI",
       },
+      notification: {
+        type: notificationSettingsSchema,
+        default: () => ({}),
+      },
     },
 
     notification_settings: {
       type: notificationSettingsSchema,
-      default: () => ({}),
+      default: undefined,
     },
 
     fcm_tokens: {

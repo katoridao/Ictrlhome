@@ -4,6 +4,7 @@ const Device = require("../models/Device");
 const DeviceLog = require("../models/DeviceLog");
 const DeviceUsage = require("../models/DeviceUsage");
 const Room = require("../models/Room");
+const House = require("../models/House");
 const {
   authenticate,
   isOwner,
@@ -13,16 +14,25 @@ const {
 const {
   notifyPermissionGranted,
   notifyDeviceStatusChanged,
-  notifyDeviceOffline,
-  shouldSendOfflineNotification,
 } = require("../services/notificationService");
 
 const normalizeEsp32Url = (hostOrIp, on) => {
   const raw = String(hostOrIp || "").trim();
   if (!raw) return null;
+
   const hasScheme = raw.startsWith("http://") || raw.startsWith("https://");
-  const base = hasScheme ? raw : `http://${raw}`;
-  return `${base}${on ? "/on" : "/off"}`;
+  const normalized = hasScheme ? raw : `http://${raw}`;
+
+  try {
+    const url = new URL(normalized);
+    if (!url.port) {
+      url.port = "8080";
+    }
+    return `${url.toString().replace(/\/$/, "")}${on ? "/on" : "/off"}`;
+  } catch (error) {
+    const safeBase = normalized.replace(/\/$/, "");
+    return `${safeBase}${on ? "/on" : "/off"}`;
+  }
 };
 
 const callEsp32 = async ({ esp32_ip, on, timeoutMs = 8000 }) => {
@@ -39,10 +49,11 @@ const callEsp32 = async ({ esp32_ip, on, timeoutMs = 8000 }) => {
       return { ok: false, status: res.status, text };
     }
     const normalized = String(text || "").trim();
-    if (normalized && normalized.toUpperCase() !== "OK") {
-      return { ok: false, status: res.status, text: normalized };
-    }
-    return { ok: true, text: normalized || "OK" };
+    return {
+      ok: true,
+      status: res.status,
+      text: normalized || "OK",
+    };
   } catch (e) {
     return { ok: false, error: e?.message || String(e) };
   } finally {
@@ -196,140 +207,128 @@ router.put("/:id", authenticate, isOwner, async (req, res) => {
 });
 
 // 4. Bật/Tắt thiết bị — emit socket event sau khi update
-router.put("/:id/status", authenticate, canControlDevice, async (req, res) => {
-  try {
-    const { status } = req.body;
-    const userId = req.user._id;
-    let esp32Result = null;
+router.put(
+  "/:id/status",
+  authenticate,
+  checkHouseMembership,
+  canControlDevice,
+  async (req, res) => {
+    try {
+      const { status } = req.body;
+      const userId = req.user._id;
+      let esp32Result = null;
 
-    const current = await Device.findOne({
-      _id: req.params.id,
-      house_id: "H001",
-    });
-
-    if (!current)
-      return res.status(404).json({ message: "Không tìm thấy thiết bị" });
-
-    if (current.esp32_ip) {
-      esp32Result = await callEsp32({
-        esp32_ip: current.esp32_ip,
-        on: !!status,
+      const current = await Device.findOne({
+        _id: req.params.id,
+        house_id: "H001",
       });
 
-      if (!esp32Result.ok) {
-        const now = new Date();
-        const shouldNotifyOffline = shouldSendOfflineNotification({
-          previousStatus: current.connectivity_status,
-          lastNotifiedAt: current.last_offline_notification_at,
-          now,
+      if (!current)
+        return res.status(404).json({ message: "Không tìm thấy thiết bị" });
+
+      if (current.esp32_ip) {
+        esp32Result = await callEsp32({
+          esp32_ip: current.esp32_ip,
+          on: !!status,
         });
 
-        await Device.findByIdAndUpdate(current._id, {
-          connectivity_status: "OFFLINE",
-          ...(shouldNotifyOffline ? { last_offline_notification_at: now } : {}),
-        });
+        if (!esp32Result.ok) {
+          await Device.findByIdAndUpdate(current._id, {
+            connectivity_status: "OFFLINE",
+          });
 
-        if (shouldNotifyOffline) {
-          await notifyDeviceOffline({
-            houseId: current.house_id,
-            deviceName: current.name,
-            deviceId: current._id,
-            excludeTokens: req.currentDevicePushToken
-              ? [req.currentDevicePushToken]
-              : [],
+          return res.status(502).json({
+            message:
+              "ESP32 không phản hồi. Vui lòng kiểm tra IP, cổng 8080 và kết nối mạng.",
+            detail: esp32Result,
           });
         }
+      }
 
-        return res.status(502).json({
-          message: "ESP32 không phản hồi hoặc lỗi",
-          detail: esp32Result,
+      const device = await Device.findOneAndUpdate(
+        { _id: req.params.id, house_id: "H001" },
+        {
+          status: !!status,
+          ...(current.esp32_ip
+            ? {
+                connectivity_status: "ONLINE",
+                last_seen_at: new Date(),
+              }
+            : {}),
+        },
+        { new: true },
+      );
+
+      if (!device)
+        return res.status(404).json({ message: "Không tìm thấy thiết bị" });
+
+      const now = new Date();
+
+      if (status) {
+        const existed = await DeviceUsage.findOne({
+          device_id: device._id,
+          end_time: null,
+        });
+        if (!existed) {
+          await DeviceUsage.create({ device_id: device._id, start_time: now });
+        }
+      } else {
+        const lastUsage = await DeviceUsage.findOne({
+          device_id: device._id,
+          end_time: null,
+        }).sort({ start_time: -1 });
+
+        if (lastUsage) {
+          const durationMs = now - lastUsage.start_time;
+          const durationMinutes = durationMs / (1000 * 60);
+          const runtimeSeconds = Math.floor(durationMs / 1000);
+          const energyKwh = (device.power_watt * runtimeSeconds) / 3600000;
+          lastUsage.end_time = now;
+          lastUsage.duration_minutes = Math.round(durationMinutes * 100) / 100;
+          lastUsage.energy_kwh = energyKwh;
+          await lastUsage.save();
+        }
+      }
+
+      await DeviceLog.create({
+        device_id: device._id,
+        user_id: userId,
+        house_id: device.house_id,
+        action: status ? "ON" : "OFF",
+      });
+
+      // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
+      const io = req.app.get("io");
+      if (io) {
+        console.log(
+          "[Device Status] Emit device_status_changed to",
+          device.house_id,
+          device._id,
+        );
+        io.to(device.house_id).emit("device_status_changed", {
+          device_id: device._id.toString(),
+          status: device.status,
+          house_id: device.house_id,
         });
       }
-    }
 
-    const device = await Device.findOneAndUpdate(
-      { _id: req.params.id, house_id: "H001" },
-      {
-        status: !!status,
-        ...(current.esp32_ip
-          ? {
-              connectivity_status: "ONLINE",
-              last_seen_at: new Date(),
-            }
-          : {}),
-      },
-      { new: true },
-    );
-
-    if (!device)
-      return res.status(404).json({ message: "Không tìm thấy thiết bị" });
-
-    const now = new Date();
-
-    if (status) {
-      const existed = await DeviceUsage.findOne({
-        device_id: device._id,
-        end_time: null,
-      });
-      if (!existed) {
-        await DeviceUsage.create({ device_id: device._id, start_time: now });
-      }
-    } else {
-      const lastUsage = await DeviceUsage.findOne({
-        device_id: device._id,
-        end_time: null,
-      }).sort({ start_time: -1 });
-
-      if (lastUsage) {
-        const durationMs = now - lastUsage.start_time;
-        const durationMinutes = durationMs / (1000 * 60);
-        const runtimeSeconds = Math.floor(durationMs / 1000);
-        const energyKwh = (device.power_watt * runtimeSeconds) / 3600000;
-        lastUsage.end_time = now;
-        lastUsage.duration_minutes = Math.round(durationMinutes * 100) / 100;
-        lastUsage.energy_kwh = energyKwh;
-        await lastUsage.save();
-      }
-    }
-
-    await DeviceLog.create({
-      device_id: device._id,
-      user_id: userId,
-      house_id: device.house_id,
-      action: status ? "ON" : "OFF",
-    });
-
-    // ✅ Emit realtime: chỉ gửi đến các client trong cùng nhà
-    const io = req.app.get("io");
-    if (io) {
-      console.log(
-        "[Device Status] Emit device_status_changed to",
-        device.house_id,
-        device._id,
-      );
-      io.to(device.house_id).emit("device_status_changed", {
-        device_id: device._id.toString(),
+      await notifyDeviceStatusChanged({
+        houseId: device.house_id,
+        deviceName: device.name,
+        deviceId: device._id,
         status: device.status,
-        house_id: device.house_id,
+        actorName: req.user?.name || req.user?.phone || "Một thành viên",
+        actorUserId: userId,
+        actorDeviceToken: req.currentDevicePushToken,
       });
+
+      res.json({ device, esp32: esp32Result });
+    } catch (error) {
+      console.error("[Device Status] Error:", error);
+      res.status(500).json({ message: "Lỗi server" });
     }
-
-    await notifyDeviceStatusChanged({
-      houseId: device.house_id,
-      deviceName: device.name,
-      deviceId: device._id,
-      status: device.status,
-      actorName: req.user?.name || req.user?.phone || "Một thành viên",
-      actorUserId: userId,
-      actorDeviceToken: req.currentDevicePushToken,
-    });
-
-    res.json({ device, esp32: esp32Result });
-  } catch (error) {
-    console.error("[Device Status] Error:", error);
-    res.status(500).json({ message: "Lỗi server" });
-  }
-});
+  },
+);
 
 // 5. Gán phòng (Chỉ OWNER)
 router.put("/assign-room/:id", authenticate, isOwner, async (req, res) => {
@@ -453,6 +452,19 @@ router.post(
       const device = await Device.findById(req.params.id);
       if (!device)
         return res.status(404).json({ message: "Thiết bị không tồn tại" });
+
+      const house = await House.findById(device.house_id || "H001");
+      const isHouseMember = house
+        ? (house.members || []).some(
+            (member) => member.toString() === String(member_id),
+          )
+        : false;
+
+      if (!isHouseMember) {
+        return res.status(400).json({
+          message: "Chỉ có thể cấp quyền cho thành viên đã tham gia nhà",
+        });
+      }
 
       const existingIndex = device.permissions.findIndex(
         (p) => p.user_id.toString() === member_id,

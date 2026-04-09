@@ -128,6 +128,19 @@ router.post(
       if (!room)
         return res.status(404).json({ message: "Không tìm thấy phòng" });
 
+      const house = await House.findById(room.house_id || "H001");
+      const isHouseMember = house
+        ? (house.members || []).some(
+            (member) => member.toString() === String(member_id),
+          )
+        : false;
+
+      if (!isHouseMember) {
+        return res.status(400).json({
+          message: "Chỉ có thể cấp quyền cho thành viên đã tham gia nhà",
+        });
+      }
+
       const existingIndex = room.permissions.findIndex(
         (p) => p.user_id.toString() === member_id,
       );

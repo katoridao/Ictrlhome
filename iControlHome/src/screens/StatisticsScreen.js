@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   AppState,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useTheme } from '../context/ThemeContext';
 import { LanguageContext } from '../context/LanguageContext';
@@ -32,6 +33,9 @@ export default function StatisticsScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [tick, setTick] = useState(0);
   const [serverNote, setServerNote] = useState('');
+  const [userRole, setUserRole] = useState('MEMBER');
+  const [isMember, setIsMember] = useState(null);
+  const [memberChecked, setMemberChecked] = useState(false);
 
   const appState = useRef(AppState.currentState);
   const socketRef = useRef(null);
@@ -89,6 +93,31 @@ export default function StatisticsScreen({ navigation }) {
   // ===============================
   const fetchData = useCallback(async () => {
     try {
+      const role = await AsyncStorage.getItem('user_role');
+      setUserRole(role || 'MEMBER');
+
+      const membershipResponse = await api.get('/houses/check-member');
+      const joined = membershipResponse.data?.is_member === true;
+      setIsMember(joined);
+      setMemberChecked(true);
+
+      if (joined && membershipResponse.data?.house_id) {
+        await AsyncStorage.setItem(
+          'current_house_id',
+          membershipResponse.data.house_id,
+        );
+        await AsyncStorage.setItem(
+          'current_house_name',
+          membershipResponse.data.house_name || t.home,
+        );
+      }
+
+      if ((role || 'MEMBER') !== 'OWNER' && !joined) {
+        setDevices([]);
+        setServerNote('');
+        return;
+      }
+
       const res = await api.get('/device-usages/realtime');
 
       const devicesFromServer = res.data.devices || [];
@@ -105,11 +134,12 @@ export default function StatisticsScreen({ navigation }) {
       lastUpdateRef.current = next;
     } catch (error) {
       console.log('Fetch error:', error.message);
+      setDevices([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [normalizeDeviceStats]);
+  }, [normalizeDeviceStats, t.home]);
 
   useEffect(() => {
     fetchData();
@@ -216,6 +246,7 @@ export default function StatisticsScreen({ navigation }) {
 
   const estimationNote =
     language === 'vi' && serverNote ? serverNote : t.statistics_note;
+  const notJoined = userRole !== 'OWNER' && isMember === false;
 
   return (
     <View
@@ -244,150 +275,192 @@ export default function StatisticsScreen({ navigation }) {
         <View style={{ width: 22 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.body}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[themeStyles.primary]}
-          />
-        }
-      >
-        {/* SUMMARY */}
-        <View
-          style={[styles.summaryCard, { backgroundColor: themeStyles.primary }]}
-        >
-          <Text style={styles.summaryLabel}>{t.total_cost}</Text>
-
-          <Text style={styles.summaryCost}>
-            {formatCurrency(totalCost)} {t.vnd}
-          </Text>
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <View>
-              <Text style={styles.subLabel}>{t.total_energy}</Text>
-              <Text style={styles.subValue}>
-                {formatKwh(totalKwh)} {t.kwh}
-              </Text>
-            </View>
-
-            <View>
-              <Text style={styles.subLabel}>{t.active_devices}</Text>
-              <Text style={styles.subValue}>
-                {devices.filter(d => d.isActive).length} {t.devices_count}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View
-          style={[
-            styles.noteCard,
-            {
-              backgroundColor: themeStyles.card,
-              borderColor: themeStyles.border || '#ddd',
-            },
-          ]}
-        >
-          <Text style={[styles.noteText, { color: themeStyles.subText }]}>
-            {estimationNote}
-          </Text>
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: themeStyles.text }]}>
-          {t.device_details}
-        </Text>
-
-        {loading ? (
+      {!memberChecked && loading ? (
+        <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={themeStyles.primary} />
-        ) : devices.length === 0 ? (
+        </View>
+      ) : notJoined ? (
+        <View style={styles.centeredState}>
+          <Image
+            source={require('../../public/img/device_usage.png')}
+            style={{ width: 80, height: 80, opacity: 0.35, marginBottom: 16 }}
+          />
+          <Text
+            style={{ color: themeStyles.text, fontSize: 18, fontWeight: '700' }}
+          >
+            {t.not_joined_house}
+          </Text>
           <Text
             style={{
-              textAlign: 'center',
               color: themeStyles.subText,
-              marginTop: 20,
+              textAlign: 'center',
+              marginTop: 8,
+              paddingHorizontal: 24,
             }}
           >
-            {t.no_device_data}
+            {t.enter_admin_info}
           </Text>
-        ) : (
-          devices.map(item => {
-            const baseRuntime = item.runtime_seconds || 0;
-            const lastUpdate =
-              lastUpdateRef.current[String(item.device_id)] || Date.now();
-            const extra = item.isActive
-              ? Math.max(0, Math.floor((Date.now() - lastUpdate) / 1000))
-              : 0;
-            const runtime = baseRuntime + extra;
-            const minutes = Math.floor(runtime / 60);
-            const seconds = Math.floor(runtime % 60);
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.body}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[themeStyles.primary]}
+            />
+          }
+        >
+          {/* SUMMARY */}
+          <View
+            style={[
+              styles.summaryCard,
+              { backgroundColor: themeStyles.primary },
+            ]}
+          >
+            <Text style={styles.summaryLabel}>{t.total_cost}</Text>
 
-            return (
-              <View
-                key={item.device_id}
-                style={[
-                  styles.deviceItem,
-                  {
-                    backgroundColor: themeStyles.card,
-                  },
-                ]}
-              >
-                <View style={styles.deviceInfo}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text
-                      style={[styles.deviceName, { color: themeStyles.text }]}
+            <Text style={styles.summaryCost}>
+              {formatCurrency(totalCost)} {t.vnd}
+            </Text>
+
+            <View style={styles.divider} />
+
+            <View style={styles.row}>
+              <View>
+                <Text style={styles.subLabel}>{t.total_energy}</Text>
+                <Text style={styles.subValue}>
+                  {formatKwh(totalKwh)} {t.kwh}
+                </Text>
+              </View>
+
+              <View>
+                <Text style={styles.subLabel}>{t.active_devices}</Text>
+                <Text style={styles.subValue}>
+                  {devices.filter(d => d.isActive).length} {t.devices_count}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.noteCard,
+              {
+                backgroundColor: themeStyles.card,
+                borderColor: themeStyles.border || '#ddd',
+              },
+            ]}
+          >
+            <Text style={[styles.noteText, { color: themeStyles.subText }]}>
+              {estimationNote}
+            </Text>
+          </View>
+
+          <Text style={[styles.sectionTitle, { color: themeStyles.text }]}>
+            {t.device_details}
+          </Text>
+
+          {loading ? (
+            <ActivityIndicator size="large" color={themeStyles.primary} />
+          ) : devices.length === 0 ? (
+            <Text
+              style={{
+                textAlign: 'center',
+                color: themeStyles.subText,
+                marginTop: 20,
+              }}
+            >
+              {t.no_device_data}
+            </Text>
+          ) : (
+            devices.map(item => {
+              const baseRuntime = item.runtime_seconds || 0;
+              const lastUpdate =
+                lastUpdateRef.current[String(item.device_id)] || Date.now();
+              const extra = item.isActive
+                ? Math.max(0, Math.floor((Date.now() - lastUpdate) / 1000))
+                : 0;
+              const runtime = baseRuntime + extra;
+              const minutes = Math.floor(runtime / 60);
+              const seconds = Math.floor(runtime % 60);
+
+              return (
+                <View
+                  key={item.device_id}
+                  style={[
+                    styles.deviceItem,
+                    {
+                      backgroundColor: themeStyles.card,
+                    },
+                  ]}
+                >
+                  <View style={styles.deviceInfo}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}
                     >
-                      {item.device_name}
-                    </Text>
+                      <Text
+                        style={[styles.deviceName, { color: themeStyles.text }]}
+                      >
+                        {item.device_name}
+                      </Text>
 
-                    {item.isActive && <View style={styles.activeDot} />}
+                      {item.isActive && <View style={styles.activeDot} />}
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.deviceDuration,
+                        {
+                          color: item.isActive
+                            ? '#4CAF50'
+                            : themeStyles.subText,
+                        },
+                      ]}
+                    >
+                      {item.isActive ? `${t.running}: ` : `${t.used}: `}
+                      {minutes}m {seconds}s
+                    </Text>
                   </View>
 
-                  <Text
-                    style={[
-                      styles.deviceDuration,
-                      {
-                        color: item.isActive ? '#4CAF50' : themeStyles.subText,
-                      },
-                    ]}
-                  >
-                    {item.isActive ? `${t.running}: ` : `${t.used}: `}
-                    {minutes}m {seconds}s
-                  </Text>
-                </View>
+                  <View style={styles.deviceStats}>
+                    <Text
+                      style={[
+                        styles.deviceCost,
+                        { color: themeStyles.primary },
+                      ]}
+                    >
+                      ~ {formatCurrency(item.estimated_cost_vnd)} {t.vnd}
+                    </Text>
 
-                <View style={styles.deviceStats}>
-                  <Text
-                    style={[styles.deviceCost, { color: themeStyles.primary }]}
-                  >
-                    ~ {formatCurrency(item.estimated_cost_vnd)} {t.vnd}
-                  </Text>
-
-                  <Text
-                    style={[styles.deviceKwh, { color: themeStyles.subText }]}
-                  >
-                    ~ {formatKwh(item.estimated_energy_kwh)} {t.kwh}
-                  </Text>
+                    <Text
+                      style={[styles.deviceKwh, { color: themeStyles.subText }]}
+                    >
+                      ~ {formatKwh(item.estimated_energy_kwh)} {t.kwh}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  centeredState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
 
   header: {
     height: 60,

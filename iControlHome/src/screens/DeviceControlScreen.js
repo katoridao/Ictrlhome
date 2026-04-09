@@ -93,10 +93,18 @@ export default function DeviceControlScreen({ route }) {
         setStatus(newStatus);
       }
     } catch (error) {
-      const message =
+      const statusCode = error?.response?.status;
+      let message =
         error?.response?.data?.message ||
         error?.response?.data?.detail?.error ||
         t.unable_to_update;
+
+      if (statusCode === 403) {
+        message = t.no_permission;
+      } else if (statusCode === 502) {
+        message = t.esp32_unreachable || message;
+      }
+
       Toast.show({ type: 'error', text1: t.error, text2: message });
     } finally {
       setLoading(false);
