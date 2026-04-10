@@ -75,7 +75,7 @@ Khi cần dùng `esptool`, có thể thực hiện:
 ```bash
 pip install esptool
 python -m esptool --port COM5 erase-flash
-python -m esptool --chip esp32 --port COM5 write_flash -z 0x1000 esp32.bin
+python -m esptool --chip esp32 --port COM5 write-flash -z 0x1000 esp32.bin
 ```
 
 Trong đó, `COM5` cần được thay bằng đúng cổng serial của thiết bị đang sử dụng.
