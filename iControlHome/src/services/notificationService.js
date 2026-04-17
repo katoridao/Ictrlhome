@@ -19,6 +19,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
   device_status: true,
   automation_triggered: true,
   camera_detected: true,
+  consumption_estimate: true,
 };
 
 export const NOTIFICATION_CHANNEL_ID = 'ictrlhome-default';
@@ -235,6 +236,31 @@ const resolveLocalizedRemoteContent = async remoteMessage => {
             ),
           };
 
+    case 'estimated_cost_threshold':
+    case 'consumption_estimate_threshold': {
+      const monthLabel = data.month_label || (language === 'en' ? 'Current month' : 'Tháng hiện tại');
+      const threshold = Number(data.threshold_vnd || 0);
+      const total = Number(data.total_cost_vnd || 0);
+
+      return language === 'en'
+        ? {
+            title: 'Estimated electricity cost reached a new level',
+            body: [
+              `Month: ${monthLabel}`,
+              `Reached threshold: ${Math.round(threshold).toLocaleString('en-US')} VND`,
+              `Current estimate: ${Math.round(total).toLocaleString('en-US')} VND`,
+            ].join('\n'),
+          }
+        : {
+            title: 'Chi phí điện ước tính đã đạt ngưỡng mới',
+            body: [
+              `Tháng: ${monthLabel}`,
+              `Ngưỡng vừa đạt: ${Math.round(threshold).toLocaleString('vi-VN')} VNĐ`,
+              `Ước tính hiện tại: ${Math.round(total).toLocaleString('vi-VN')} VNĐ`,
+            ].join('\n'),
+          };
+    }
+
     default:
       return { title: fallbackTitle, body: fallbackBody };
   }
@@ -282,6 +308,14 @@ const getNotificationVisualProfile = (data = {}, language = 'vi') => {
         tag: isEn ? 'Camera detection' : 'Phát hiện từ camera',
         category: AndroidCategory.ALARM,
         vibrationPattern: [300, 200, 300, 450],
+      };
+    case 'estimated_cost_threshold':
+    case 'consumption_estimate_threshold':
+      return {
+        accentColor: '#7C3AED',
+        tag: isEn ? 'Estimated electricity cost' : 'Chi phí điện ước tính',
+        category: AndroidCategory.REMINDER,
+        vibrationPattern: [220, 180, 220, 320],
       };
     default:
       return {

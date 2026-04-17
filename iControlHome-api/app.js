@@ -24,7 +24,10 @@ if (!fs.existsSync(envPath) && fs.existsSync(envExamplePath)) {
 // 1. IMPORT DATABASE & WORKER
 const db = require("./config/database");
 const { initAutomationWorker } = require("./services/smartService");
-const { initDeviceStatusMonitor } = require("./services/notificationService");
+const {
+  initDeviceStatusMonitor,
+  initConsumptionThresholdMonitor,
+} = require("./services/notificationService");
 const Device = require("./models/Device");
 const DeviceUsage = require("./models/DeviceUsage");
 const User = require("./models/User");
@@ -273,6 +276,70 @@ app.get("/api/notifications", authenticate, async (req, res) => {
   }
 });
 
+app.get("/api/notifications/estimated-cost-threshold-logs", authenticate, async (req, res) => {
+  try {
+    const houseId = String(req.query?.house_id || "H001");
+    const period = String(req.query?.period || "").toLowerCase();
+    const monthKey = String(req.query?.month_key || "").trim();
+
+    const house = await House.findById(houseId).select("owner_id members");
+    if (!house) {
+      return res.status(404).json({ message: "Không tìm thấy hộ gia đình" });
+    }
+
+    const isOwner = house.owner_id?.toString() === req.user._id.toString();
+    const isMember = (house.members || []).some(
+      (member) => member.toString() === req.user._id.toString(),
+    );
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({ message: "Bạn không có quyền xem dữ liệu này" });
+    }
+
+    const baseMatch = {
+      user_id: req.user._id,
+      house_id: houseId,
+      type: "SYSTEM",
+      $or: [
+        { "data.localization_key": "estimated_cost_threshold" },
+        { "data.localization_key": "consumption_estimate_threshold" },
+      ],
+    };
+
+    const now = new Date();
+    if (period === "week") {
+      const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      baseMatch.created_at = { $gte: since };
+    } else if (period === "month" && monthKey) {
+      const [yearStr, monthStr] = monthKey.split("-");
+      const year = Number(yearStr);
+      const month = Number(monthStr);
+      if (Number.isInteger(year) && Number.isInteger(month) && month >= 1 && month <= 12) {
+        const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
+        const end = new Date(year, month, 1, 0, 0, 0, 0);
+        baseMatch.created_at = { $gte: start, $lt: end };
+      }
+    }
+
+    const logs = await Notification.find(baseMatch).sort({ created_at: -1 }).limit(300);
+
+    const monthKeys = Array.from(
+      new Set(
+        logs
+          .map((item) => String(item?.data?.month_key || ""))
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => (a > b ? -1 : 1));
+
+    return res.json({
+      logs,
+      month_keys: monthKeys,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi lấy log vượt ngưỡng chi phí" });
+  }
+});
+
 // Protected routes
 app.use("/api/houses", authenticate, houseRoutes);
 app.use("/api/rooms", authenticate, roomRoutes);
@@ -289,6 +356,7 @@ app.use("/api/camera", facesRoutes);
 try {
   initAutomationWorker();
   initDeviceStatusMonitor();
+  initConsumptionThresholdMonitor();
   console.log("[Worker] Automation worker started");
 } catch (error) {
   console.error("[Worker Error]", error.message);

@@ -5,6 +5,7 @@ const Notification = require("../models/Notification");
 const House = require("../models/House");
 const User = require("../models/User");
 const Device = require("../models/Device");
+const DeviceUsage = require("../models/DeviceUsage");
 
 const DEFAULT_NOTIFICATION_SETTINGS = Object.freeze({
   enabled: true,
@@ -13,10 +14,19 @@ const DEFAULT_NOTIFICATION_SETTINGS = Object.freeze({
   device_status: true,
   automation_triggered: true,
   camera_detected: true,
+  consumption_estimate: true,
 });
 
 let firebaseWarningShown = false;
 let deviceMonitorTimer = null;
+let consumptionMonitorTimer = null;
+
+const ESTIMATED_COST_ALERT_THRESHOLDS = Object.freeze([
+  { vnd: 300000, level: "NOTICE" },
+  { vnd: 500000, level: "NORMAL_HIGH" },
+  { vnd: 800000, level: "HIGH" },
+  { vnd: 1200000, level: "VERY_HIGH" },
+]);
 
 const mergeNotificationSettings = (...sources) => {
   const merged = { ...DEFAULT_NOTIFICATION_SETTINGS };
@@ -227,6 +237,35 @@ const getLocalizedNotificationContent = ({
               "Trạng thái: Cần kiểm tra ngay",
             ].join("\n"),
           };
+
+    case "estimated_cost_threshold":
+    case "consumption_estimate_threshold": {
+      const safeThreshold = Number(data.threshold_vnd || 0);
+      const safeTotal = Number(data.total_cost_vnd || 0);
+      const safeMonthLabel = data.month_label || "";
+
+      return safeLanguage === "EN"
+        ? {
+            title: "Estimated electricity cost reached a new level",
+            message: [
+              safeMonthLabel
+                ? `Month: ${safeMonthLabel}`
+                : "Month: Current month",
+              `Reached threshold: ${Math.round(safeThreshold).toLocaleString("en-US")} VND`,
+              `Current estimate: ${Math.round(safeTotal).toLocaleString("en-US")} VND`,
+            ].join("\n"),
+          }
+        : {
+            title: "Chi phí điện ước tính đã đạt ngưỡng mới",
+            message: [
+              safeMonthLabel
+                ? `Tháng: ${safeMonthLabel}`
+                : "Tháng: Tháng hiện tại",
+              `Ngưỡng vừa đạt: ${Math.round(safeThreshold).toLocaleString("vi-VN")} VNĐ`,
+              `Ước tính hiện tại: ${Math.round(safeTotal).toLocaleString("vi-VN")} VNĐ`,
+            ].join("\n"),
+          };
+    }
 
     default:
       return {
@@ -918,6 +957,192 @@ const notifyCameraDetection = async ({
   });
 };
 
+const calculateUsageOverlapSeconds = ({
+  usageStart,
+  usageEnd,
+  rangeStart,
+  rangeEnd,
+}) => {
+  const startMs = Math.max(
+    new Date(usageStart).getTime(),
+    new Date(rangeStart).getTime(),
+  );
+  const endMs = Math.min(
+    new Date(usageEnd).getTime(),
+    new Date(rangeEnd).getTime(),
+  );
+
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return 0;
+  }
+
+  return Math.floor((endMs - startMs) / 1000);
+};
+
+const buildCurrentMonthRange = (now = new Date()) => {
+  const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+
+  return { start, end };
+};
+
+const formatMonthLabel = (date, language) => {
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  return language === "EN" ? `${month}/${year}` : `${month}/${year}`;
+};
+
+const calculateEstimatedElectricCostVnd = (kwh = 0) => {
+  const rates = [
+    { limit: 50, rate: 1484 },
+    { limit: 100, rate: 1533 },
+    { limit: 200, rate: 1786 },
+    { limit: Infinity, rate: 2242 },
+  ];
+
+  let remaining = Number(kwh || 0);
+  let cost = 0;
+
+  for (const { limit, rate } of rates) {
+    if (remaining <= 0) break;
+    const used = Math.min(remaining, limit);
+    cost += used * rate;
+    remaining -= used;
+  }
+
+  return cost;
+};
+
+const estimateHouseMonthlyConsumptionKwh = async ({
+  houseId,
+  rangeStart,
+  rangeEnd,
+}) => {
+  const devices = await Device.find({ house_id: houseId }).lean();
+  if (!devices.length) {
+    return {
+      totalKwh: 0,
+      totalRuntimeSeconds: 0,
+      totalDevicePowerWatt: 0,
+      activePowerWatt: 0,
+    };
+  }
+
+  const powerByDeviceId = new Map(
+    devices.map((device) => [String(device._id), Number(device.power_watt || 0)]),
+  );
+  const deviceIds = devices.map((device) => device._id);
+  const usages = await DeviceUsage.find({
+    device_id: { $in: deviceIds },
+    start_time: { $lt: rangeEnd },
+    $or: [{ end_time: null }, { end_time: { $gt: rangeStart } }],
+  }).lean();
+
+  let totalKwh = 0;
+  let totalRuntimeSeconds = 0;
+  const usedDeviceIds = new Set();
+  const activePowerWatt = devices
+    .filter((device) => !!device.status)
+    .reduce((sum, device) => sum + Number(device.power_watt || 0), 0);
+
+  for (const usage of usages) {
+    const usageStart = usage.start_time;
+    const usageEnd = usage.end_time || new Date();
+    const overlapSeconds = calculateUsageOverlapSeconds({
+      usageStart,
+      usageEnd,
+      rangeStart,
+      rangeEnd,
+    });
+
+    if (overlapSeconds <= 0) continue;
+
+    const powerWatt = powerByDeviceId.get(String(usage.device_id)) || 0;
+    if (powerWatt <= 0) continue;
+
+    usedDeviceIds.add(String(usage.device_id));
+    totalRuntimeSeconds += overlapSeconds;
+    totalKwh += (powerWatt * overlapSeconds) / 3600000;
+  }
+
+  const totalDevicePowerWatt = devices
+    .filter((device) => usedDeviceIds.has(String(device._id)))
+    .reduce((sum, device) => sum + Number(device.power_watt || 0), 0);
+
+  return {
+    totalKwh,
+    totalRuntimeSeconds,
+    totalDevicePowerWatt,
+    activePowerWatt,
+  };
+};
+
+const notifyEstimatedCostThresholdForHouse = async ({ houseId }) => {
+  const now = new Date();
+  const { start, end } = buildCurrentMonthRange(now);
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthlyStats = await estimateHouseMonthlyConsumptionKwh({
+    houseId,
+    rangeStart: start,
+    rangeEnd: end,
+  });
+  const { totalKwh, totalRuntimeSeconds, totalDevicePowerWatt, activePowerWatt } =
+    monthlyStats;
+
+  if (totalKwh <= 0) return;
+
+  const totalEstimatedCostVnd = calculateEstimatedElectricCostVnd(totalKwh);
+
+  const reachedThresholds = ESTIMATED_COST_ALERT_THRESHOLDS.filter(
+    (threshold) => totalEstimatedCostVnd >= threshold.vnd,
+  );
+
+  for (const threshold of reachedThresholds) {
+    const thresholdKey = String(threshold.vnd);
+    const alreadyNotified = await Notification.exists({
+      house_id: houseId,
+      type: "SYSTEM",
+      "data.localization_key": "estimated_cost_threshold",
+      "data.month_key": monthKey,
+      "data.threshold_vnd": thresholdKey,
+    });
+
+    if (alreadyNotified) continue;
+
+    await notifyHouseUsers({
+      houseId,
+      title: "Chi phí điện ước tính đã đạt ngưỡng mới",
+      message: `Chi phí điện ước tính trong tháng đã đạt ${Number(threshold.vnd).toLocaleString("vi-VN")} VNĐ.`,
+      type: "SYSTEM",
+      settingsKey: "consumption_estimate",
+      localizationKey: "estimated_cost_threshold",
+      data: {
+        threshold_vnd: thresholdKey,
+        total_cost_vnd: totalEstimatedCostVnd.toFixed(0),
+        total_kwh: totalKwh.toFixed(3),
+        total_runtime_seconds: String(totalRuntimeSeconds),
+        total_runtime_hours: (totalRuntimeSeconds / 3600).toFixed(2),
+        total_device_power_watt: String(Math.round(totalDevicePowerWatt)),
+        active_power_watt: String(Math.round(activePowerWatt)),
+        month_key: monthKey,
+        month_label: formatMonthLabel(now, "VI"),
+        level: threshold.level,
+        target_screen: "StatisticsScreen",
+      },
+    });
+  }
+};
+
+const checkAndNotifyConsumptionThresholds = async () => {
+  const houseIds = await Device.distinct("house_id", {
+    house_id: { $exists: true, $nin: [null, ""] },
+  });
+
+  for (const houseId of houseIds) {
+    await notifyEstimatedCostThresholdForHouse({ houseId: String(houseId) });
+  }
+};
+
 const buildDevicePingUrl = (hostOrIp) => {
   const raw = String(hostOrIp || "").trim();
   if (!raw) return null;
@@ -1007,6 +1232,25 @@ const initDeviceStatusMonitor = () => {
   console.log("[Notification] Device connectivity monitor started");
 };
 
+const initConsumptionThresholdMonitor = () => {
+  if (consumptionMonitorTimer) return;
+
+  const run = async () => {
+    try {
+      await checkAndNotifyConsumptionThresholds();
+    } catch (error) {
+      console.error(
+        "[Notification] Lỗi monitor ngưỡng tiêu thụ:",
+        error.message,
+      );
+    }
+  };
+
+  run();
+  consumptionMonitorTimer = setInterval(run, 10 * 60 * 1000);
+  console.log("[Notification] Consumption threshold monitor started");
+};
+
 module.exports = {
   DEFAULT_NOTIFICATION_SETTINGS,
   mergeNotificationSettings,
@@ -1019,6 +1263,8 @@ module.exports = {
   notifyAutomationTriggered,
   notifyCameraDetection,
   initDeviceStatusMonitor,
+  initConsumptionThresholdMonitor,
+  checkAndNotifyConsumptionThresholds,
   ensureFirebaseAdmin,
   filterUserPushTokens,
 };

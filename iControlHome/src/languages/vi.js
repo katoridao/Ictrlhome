@@ -52,6 +52,10 @@ export default {
   notification_camera_item: 'Camera phát hiện người xuất hiện',
   notification_camera_desc:
     'Bao gồm cả người quen và người lạ trước cửa hoặc trên cam.',
+  notification_consumption_estimate_item: 'Cảnh báo ngưỡng chi phí điện',
+  notification_consumption_estimate_desc:
+    'Thông báo cho cả gia đình khi chi phí điện ước tính theo tháng vượt các mốc quan trọng.',
+  cost_threshold_filter_month: 'Theo tháng',
   notification_device_offline_item: 'Thiết bị offline',
   notification_device_offline_desc:
     'Báo ngay cho mọi người khi ESP32 hoặc thiết bị trong nhà không phản hồi.',
@@ -194,6 +198,12 @@ export default {
   no_device_data: 'Không có dữ liệu thiết bị',
   statistics_note:
     'Số liệu chỉ mang tính ước tính dựa trên công suất cấu hình và thời gian hoạt động của thiết bị.',
+  statistics_reset_button: 'Reset số liệu tiêu thụ về 0',
+  statistics_reset_confirm_title: 'Reset số liệu tiêu thụ',
+  statistics_reset_confirm_message:
+    'Bạn có chắc muốn reset toàn bộ thời gian sử dụng, điện năng và chi phí ước tính về 0?',
+  statistics_reset_success: 'Đã reset số liệu tiêu thụ thành công.',
+  statistics_reset_error: 'Không thể reset số liệu tiêu thụ.',
   face_list: 'Danh sách khuôn mặt',
   entry_exit_history: 'Lịch sử ra/vào',
   household_people: 'Người trong nhà',

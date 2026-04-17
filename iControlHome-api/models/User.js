@@ -26,6 +26,10 @@ const notificationSettingsSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    consumption_estimate: {
+      type: Boolean,
+      default: true,
+    },
   },
   { _id: false },
 );

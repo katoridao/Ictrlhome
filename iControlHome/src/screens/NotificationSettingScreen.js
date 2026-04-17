@@ -64,6 +64,12 @@ export default function NotificationSettingScreen({ navigation }) {
         title: t.notification_camera_item,
         description: t.notification_camera_desc,
       },
+      {
+        key: 'consumption_estimate',
+        icon: 'chart-line',
+        title: t.notification_consumption_estimate_item,
+        description: t.notification_consumption_estimate_desc,
+      },
     ],
     [t],
   );

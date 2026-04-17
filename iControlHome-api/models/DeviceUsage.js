@@ -17,7 +17,6 @@ const DeviceUsageSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-     // số phút hoạt động(tính bằng phút)
     duration_minutes: {
       type: Number,
       default: 0,

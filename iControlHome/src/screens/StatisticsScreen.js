@@ -16,6 +16,7 @@ import {
   Image,
   TouchableOpacity,
   AppState,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -36,6 +37,11 @@ export default function StatisticsScreen({ navigation }) {
   const [userRole, setUserRole] = useState('MEMBER');
   const [isMember, setIsMember] = useState(null);
   const [memberChecked, setMemberChecked] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [timeFilter, setTimeFilter] = useState('week');
+  const [monthKeys, setMonthKeys] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [openFilter, setOpenFilter] = useState(null);
 
   const appState = useRef(AppState.currentState);
   const socketRef = useRef(null);
@@ -118,12 +124,24 @@ export default function StatisticsScreen({ navigation }) {
         return;
       }
 
-      const res = await api.get('/device-usages/realtime');
+      const params = {
+        period: timeFilter,
+      };
+      if (timeFilter === 'month' && selectedMonth) {
+        params.month_key = selectedMonth;
+      }
+
+      const res = await api.get('/device-usages/realtime', { params });
 
       const devicesFromServer = res.data.devices || [];
       const formatted = devicesFromServer.map(normalizeDeviceStats);
+      const months = Array.isArray(res.data?.month_keys) ? res.data.month_keys : [];
 
       setServerNote(typeof res.data?.note === 'string' ? res.data.note : '');
+      setMonthKeys(months);
+      if (!selectedMonth && months.length > 0) {
+        setSelectedMonth(months[0]);
+      }
 
       setDevices(formatted);
       const now = Date.now();
@@ -139,7 +157,7 @@ export default function StatisticsScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [normalizeDeviceStats, t.home]);
+  }, [normalizeDeviceStats, selectedMonth, t.home, timeFilter]);
 
   useEffect(() => {
     fetchData();
@@ -224,13 +242,35 @@ export default function StatisticsScreen({ navigation }) {
   // ===============================
   // TỔNG ĐIỆN NĂNG + CHI PHÍ ƯỚC TÍNH
   // ===============================
-  const totalKwh = devices.reduce(
-    (sum, d) => sum + (d.estimated_energy_kwh || 0),
+  const computedDevices = devices.map(item => {
+    const baseRuntime = item.runtime_seconds || 0;
+    const lastUpdate = lastUpdateRef.current[String(item.device_id)] || Date.now();
+    const extra =
+      item.isActive && tick >= 0
+        ? Math.max(0, Math.floor((Date.now() - lastUpdate) / 1000))
+        : 0;
+    const runtime = baseRuntime + extra;
+    const energyFromRuntime = ((item.power_watt || 0) * runtime) / 3600000;
+    const energy = Number.isFinite(energyFromRuntime)
+      ? energyFromRuntime
+      : item.estimated_energy_kwh || 0;
+    const cost = calculateEstimatedElectricCost(energy);
+
+    return {
+      ...item,
+      display_runtime_seconds: runtime,
+      display_energy_kwh: energy,
+      display_cost_vnd: cost,
+    };
+  });
+
+  const totalKwh = computedDevices.reduce(
+    (sum, d) => sum + (d.display_energy_kwh || 0),
     0,
   );
 
-  const totalCost = devices.reduce(
-    (sum, d) => sum + (d.estimated_cost_vnd || 0),
+  const totalCost = computedDevices.reduce(
+    (sum, d) => sum + (d.display_cost_vnd || 0),
     0,
   );
 
@@ -247,6 +287,37 @@ export default function StatisticsScreen({ navigation }) {
   const estimationNote =
     language === 'vi' && serverNote ? serverNote : t.statistics_note;
   const notJoined = userRole !== 'OWNER' && isMember === false;
+  const formatMonthLabel = monthKey => {
+    const [year, month] = String(monthKey || '').split('-');
+    if (!year || !month) return monthKey;
+    return `${month}/${year}`;
+  };
+
+  const handleResetStatistics = () => {
+    Alert.alert(
+      t.statistics_reset_confirm_title,
+      t.statistics_reset_confirm_message,
+      [
+        { text: t.cancel, style: 'cancel' },
+        {
+          text: t.confirm,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setResetting(true);
+              await api.post('/device-usages/reset-statistics');
+              await fetchData();
+              Alert.alert(t.success, t.statistics_reset_success);
+            } catch (error) {
+              Alert.alert(t.error, t.statistics_reset_error);
+            } finally {
+              setResetting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View
@@ -312,6 +383,97 @@ export default function StatisticsScreen({ navigation }) {
             />
           }
         >
+          <View style={styles.filterWrapper}>
+            <View style={styles.filterRow}>
+              <TouchableOpacity
+                style={[
+                  styles.filterItem,
+                  {
+                    backgroundColor: openFilter === 'time' ? '#3b9cff' : themeStyles.card,
+                    borderColor:
+                      openFilter === 'time'
+                        ? '#3b9cff'
+                        : themeStyles.border || '#ddd',
+                  },
+                ]}
+                onPress={() => setOpenFilter(openFilter === 'time' ? null : 'time')}
+              >
+                <Text
+                  style={{
+                    color: openFilter === 'time' ? '#fff' : themeStyles.text,
+                  }}
+                >
+                  {timeFilter === 'week'
+                    ? t.last_7_days
+                    : selectedMonth
+                    ? formatMonthLabel(selectedMonth)
+                    : t.cost_threshold_filter_month}
+                </Text>
+                <Image
+                  source={require('../../public/img/down.png')}
+                  style={[
+                    styles.filterIcon,
+                    { tintColor: openFilter === 'time' ? '#fff' : themeStyles.text },
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {openFilter === 'time' && (
+              <View
+                style={[
+                  styles.dropdown,
+                  { backgroundColor: themeStyles.card, borderColor: themeStyles.border || '#ddd' },
+                ]}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownItem,
+                    timeFilter === 'week' && styles.dropdownItemActive,
+                  ]}
+                  onPress={() => {
+                    setTimeFilter('week');
+                    setOpenFilter(null);
+                  }}
+                >
+                  <Text style={{ color: themeStyles.text }}>{t.last_7_days}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownItem,
+                    timeFilter === 'month' && styles.dropdownItemActive,
+                  ]}
+                  onPress={() => {
+                    setTimeFilter('month');
+                    setOpenFilter(null);
+                  }}
+                >
+                  <Text style={{ color: themeStyles.text }}>
+                    {t.cost_threshold_filter_month}
+                  </Text>
+                </TouchableOpacity>
+                {timeFilter === 'month' &&
+                  monthKeys.map(monthKey => (
+                    <TouchableOpacity
+                      key={monthKey}
+                      style={[
+                        styles.dropdownItem,
+                        selectedMonth === monthKey && styles.dropdownItemActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedMonth(monthKey);
+                        setOpenFilter(null);
+                      }}
+                    >
+                      <Text style={{ color: themeStyles.text }}>
+                        {formatMonthLabel(monthKey)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            )}
+          </View>
+
           {/* SUMMARY */}
           <View
             style={[
@@ -358,6 +520,23 @@ export default function StatisticsScreen({ navigation }) {
             </Text>
           </View>
 
+          <TouchableOpacity
+            style={[
+              styles.resetButton,
+              {
+                backgroundColor: themeStyles.card,
+                borderColor: themeStyles.border || '#ddd',
+                opacity: resetting ? 0.6 : 1,
+              },
+            ]}
+            onPress={handleResetStatistics}
+            disabled={resetting || userRole !== 'OWNER'}
+          >
+            <Text style={[styles.resetButtonText, { color: themeStyles.text }]}>
+              {resetting ? t.loading : t.statistics_reset_button}
+            </Text>
+          </TouchableOpacity>
+
           <Text style={[styles.sectionTitle, { color: themeStyles.text }]}>
             {t.device_details}
           </Text>
@@ -375,14 +554,8 @@ export default function StatisticsScreen({ navigation }) {
               {t.no_device_data}
             </Text>
           ) : (
-            devices.map(item => {
-              const baseRuntime = item.runtime_seconds || 0;
-              const lastUpdate =
-                lastUpdateRef.current[String(item.device_id)] || Date.now();
-              const extra = item.isActive
-                ? Math.max(0, Math.floor((Date.now() - lastUpdate) / 1000))
-                : 0;
-              const runtime = baseRuntime + extra;
+            computedDevices.map(item => {
+              const runtime = item.display_runtime_seconds || 0;
               const minutes = Math.floor(runtime / 60);
               const seconds = Math.floor(runtime % 60);
 
@@ -434,13 +607,13 @@ export default function StatisticsScreen({ navigation }) {
                         { color: themeStyles.primary },
                       ]}
                     >
-                      ~ {formatCurrency(item.estimated_cost_vnd)} {t.vnd}
+                      ~ {formatCurrency(item.display_cost_vnd)} {t.vnd}
                     </Text>
 
                     <Text
                       style={[styles.deviceKwh, { color: themeStyles.subText }]}
                     >
-                      ~ {formatKwh(item.estimated_energy_kwh)} {t.kwh}
+                      ~ {formatKwh(item.display_energy_kwh)} {t.kwh}
                     </Text>
                   </View>
                 </View>
@@ -478,6 +651,40 @@ const styles = StyleSheet.create({
   },
 
   body: { padding: 16 },
+  filterWrapper: {
+    marginBottom: 16,
+    zIndex: 2,
+  },
+  filterRow: {
+    flexDirection: 'row',
+  },
+  filterItem: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  filterIcon: {
+    width: 14,
+    height: 14,
+    marginLeft: 8,
+  },
+  dropdown: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  dropdownItemActive: {
+    backgroundColor: 'rgba(59, 156, 255, 0.16)',
+  },
 
   summaryCard: {
     borderRadius: 16,
@@ -527,6 +734,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 12,
     marginBottom: 16,
+  },
+  resetButton: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  resetButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   noteText: {

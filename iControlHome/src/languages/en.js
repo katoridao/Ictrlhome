@@ -52,6 +52,11 @@ export default {
   notification_camera_item: 'Camera detects someone',
   notification_camera_desc:
     'Includes both known faces and unknown visitors on the camera.',
+  notification_consumption_estimate_item:
+    'Estimated electricity cost threshold alerts',
+  notification_consumption_estimate_desc:
+    'Notify the whole family when monthly estimated electricity cost passes key milestones.',
+  cost_threshold_filter_month: 'By month',
   notification_device_offline_item: 'Device offline',
   notification_device_offline_desc:
     'Alert everyone as soon as an ESP32 or smart device stops responding.',
@@ -194,6 +199,12 @@ export default {
   no_device_data: 'No device data',
   statistics_note:
     'These values are estimates based on configured device power and runtime.',
+  statistics_reset_button: 'Reset consumption metrics to zero',
+  statistics_reset_confirm_title: 'Reset consumption metrics',
+  statistics_reset_confirm_message:
+    'Are you sure you want to reset all runtime, energy usage, and estimated cost back to zero?',
+  statistics_reset_success: 'Consumption metrics have been reset successfully.',
+  statistics_reset_error: 'Unable to reset consumption metrics.',
   face_list: 'Face list',
   entry_exit_history: 'Entry/exit history',
   household_people: 'People at home',

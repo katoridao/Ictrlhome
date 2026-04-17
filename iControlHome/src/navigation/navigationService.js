@@ -19,6 +19,7 @@ const resolveNotificationTarget = (data = {}) => {
     device_status: 'DeviceLogScreen',
     automation: 'DeviceLogScreen',
     automation_triggered: 'DeviceLogScreen',
+    estimated_cost_threshold: 'StatisticsScreen',
     system: 'DeviceLogScreen',
     device_offline: 'DeviceLogScreen',
     camera: 'EntryExitScreen',
