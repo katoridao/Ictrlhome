@@ -138,14 +138,6 @@ export default function SettingScreen({ navigation }) {
             textColor={themeStyles.text}
             onPress={() => navigation.navigate('AppearanceScreen')}
           />
-          {hasHouseAccess && (
-            <SettingItem
-              icon={require('../../public/img/device_usage.png')}
-              label={t.statistics}
-              textColor={themeStyles.text}
-              onPress={() => navigation.navigate('StatisticsScreen')}
-            />
-          )}
           <SettingItem
             icon={require('../../public/img/language.png')}
             label={t.language}
@@ -162,6 +154,12 @@ export default function SettingScreen({ navigation }) {
         >
           {hasHouseAccess ? (
             <>
+              <SettingItem
+                icon={require('../../public/img/device_usage.png')}
+                label={t.statistics}
+                textColor={themeStyles.text}
+                onPress={() => navigation.navigate('StatisticsScreen')}
+              />
               <SettingItem
                 icon={require('../../public/img/user.png')}
                 label={t.face_list}
