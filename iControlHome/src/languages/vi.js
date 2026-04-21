@@ -24,7 +24,7 @@ export default {
   // Setting screen
   settings: 'Cài đặt',
   section_app: 'Ứng dụng',
-  section_people: 'Người ra vào nhà',
+  section_people: 'Nhà',
   section_other: 'Khác',
   notifications: 'Thông báo',
   notification_settings_title: 'Cài đặt thông báo',
