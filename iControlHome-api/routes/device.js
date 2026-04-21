@@ -243,6 +243,14 @@ router.put(
             detail: esp32Result,
           });
         }
+
+        // if (!esp32Result.ok) {
+        //   // ⚠️ DEMO MODE: Bỏ qua lỗi ESP32, vẫn cập nhật DB
+        //   console.warn("[ESP32] DEMO MODE - Bỏ qua lỗi ESP32:", esp32Result.error);
+        //   // Bỏ comment dòng dưới nếu muốn cập nhật trạng thái OFFLINE:
+        //   // await Device.findByIdAndUpdate(current._id, { connectivity_status: "OFFLINE" });
+        //   // return res.status(502).json({ message: "ESP32 không phản hồi" });
+        // }
       }
 
       const device = await Device.findOneAndUpdate(
