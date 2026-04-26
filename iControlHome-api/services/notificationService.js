@@ -22,10 +22,10 @@ let deviceMonitorTimer = null;
 let consumptionMonitorTimer = null;
 
 const ESTIMATED_COST_ALERT_THRESHOLDS = Object.freeze([
-  { vnd: 300000, level: "NOTICE" },
-  { vnd: 500000, level: "NORMAL_HIGH" },
-  { vnd: 800000, level: "HIGH" },
-  { vnd: 1200000, level: "VERY_HIGH" },
+  { vnd: 30, level: "NOTICE" },
+  { vnd: 50, level: "NORMAL_HIGH" },
+  { vnd: 80, level: "HIGH" },
+  { vnd: 120, level: "VERY_HIGH" },
 ]);
 
 const mergeNotificationSettings = (...sources) => {
@@ -972,7 +972,11 @@ const calculateUsageOverlapSeconds = ({
     new Date(rangeEnd).getTime(),
   );
 
-  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+  if (
+    !Number.isFinite(startMs) ||
+    !Number.isFinite(endMs) ||
+    endMs <= startMs
+  ) {
     return 0;
   }
 
@@ -1029,7 +1033,10 @@ const estimateHouseMonthlyConsumptionKwh = async ({
   }
 
   const powerByDeviceId = new Map(
-    devices.map((device) => [String(device._id), Number(device.power_watt || 0)]),
+    devices.map((device) => [
+      String(device._id),
+      Number(device.power_watt || 0),
+    ]),
   );
   const deviceIds = devices.map((device) => device._id);
   const usages = await DeviceUsage.find({
@@ -1086,8 +1093,12 @@ const notifyEstimatedCostThresholdForHouse = async ({ houseId }) => {
     rangeStart: start,
     rangeEnd: end,
   });
-  const { totalKwh, totalRuntimeSeconds, totalDevicePowerWatt, activePowerWatt } =
-    monthlyStats;
+  const {
+    totalKwh,
+    totalRuntimeSeconds,
+    totalDevicePowerWatt,
+    activePowerWatt,
+  } = monthlyStats;
 
   if (totalKwh <= 0) return;
 
