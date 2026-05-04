@@ -12,6 +12,7 @@ const DEFAULT_NOTIFICATION_SETTINGS = Object.freeze({
   new_member: true,
   permission_granted: true,
   device_status: true,
+  device_offline: true,
   automation_triggered: true,
   camera_detected: true,
   consumption_estimate: true,
@@ -20,6 +21,8 @@ const DEFAULT_NOTIFICATION_SETTINGS = Object.freeze({
 let firebaseWarningShown = false;
 let deviceMonitorTimer = null;
 let consumptionMonitorTimer = null;
+const offlineNotifiedHouseIds = new Set();
+const houseConnectivityState = new Map();
 
 const ESTIMATED_COST_ALERT_THRESHOLDS = Object.freeze([
   { vnd: 30, level: "NOTICE" },
@@ -174,6 +177,74 @@ const getLocalizedNotificationContent = ({
               `Thiết bị: ${safeDeviceName || "Không xác định"}`,
               `Người thao tác: ${actorName}`,
               `Trạng thái: ${statusOn ? "BẬT" : "TẮT"}`,
+            ].join("\n"),
+          };
+    }
+
+    case "device_offline": {
+      const safeDisconnectedAt = data.disconnected_at
+        ? new Date(data.disconnected_at)
+        : null;
+      const hasDisconnectedTime =
+        safeDisconnectedAt instanceof Date &&
+        !Number.isNaN(safeDisconnectedAt.getTime());
+      const disconnectedLabel = hasDisconnectedTime
+        ? safeLanguage === "EN"
+          ? safeDisconnectedAt.toLocaleString("en-US")
+          : safeDisconnectedAt.toLocaleString("vi-VN")
+        : safeLanguage === "EN"
+          ? "Unknown"
+          : "Không xác định";
+
+      return safeLanguage === "EN"
+        ? {
+            title: "ESP32 connection lost",
+            message: [
+              "Main controller: ESP32",
+              "Status: OFFLINE",
+              `Disconnected at: ${disconnectedLabel}`,
+            ].join("\n"),
+          }
+        : {
+            title: "ESP32 đã mất kết nối",
+            message: [
+              "Bộ điều khiển chính: ESP32",
+              "Trạng thái: OFFLINE",
+              `Mất kết nối lúc: ${disconnectedLabel}`,
+            ].join("\n"),
+          };
+    }
+
+    case "device_reconnected": {
+      const safeReconnectedAt = data.reconnected_at
+        ? new Date(data.reconnected_at)
+        : null;
+      const hasReconnectedTime =
+        safeReconnectedAt instanceof Date &&
+        !Number.isNaN(safeReconnectedAt.getTime());
+      const reconnectedLabel = hasReconnectedTime
+        ? safeLanguage === "EN"
+          ? safeReconnectedAt.toLocaleString("en-US")
+          : safeReconnectedAt.toLocaleString("vi-VN")
+        : safeLanguage === "EN"
+          ? "Unknown"
+          : "Không xác định";
+
+      return safeLanguage === "EN"
+        ? {
+            title: "ESP32 reconnected",
+            message: [
+              "Main controller: ESP32",
+              "Status: ONLINE",
+              `Reconnected at: ${reconnectedLabel}`,
+            ].join("\n"),
+          }
+        : {
+            title: "ESP32 đã kết nối lại",
+            message: [
+              "Bộ điều khiển chính: ESP32",
+              "Trạng thái: ONLINE",
+              `Kết nối lại lúc: ${reconnectedLabel}`,
             ].join("\n"),
           };
     }
@@ -904,6 +975,61 @@ const notifyDeviceStatusChanged = async ({
   });
 };
 
+const normalizeHouseId = (houseId) => String(houseId || "H001");
+
+const notifyHouseEsp32DisconnectedOnce = async ({
+  houseId = "H001",
+  disconnectedAt = new Date(),
+}) => {
+  const normalizedHouseId = normalizeHouseId(houseId);
+  if (offlineNotifiedHouseIds.has(normalizedHouseId)) {
+    return { stored: 0, pushed: 0, skipped: true };
+  }
+
+  offlineNotifiedHouseIds.add(normalizedHouseId);
+  await notifyHouseUsers({
+    houseId: normalizedHouseId,
+    title: "ESP32 đã mất kết nối",
+    message:
+      "Bộ điều khiển ESP32 đang OFFLINE. Vui lòng kiểm tra nguồn điện và kết nối mạng.",
+    type: "DEVICE",
+    settingsKey: "device_offline",
+    localizationKey: "device_offline",
+    data: {
+      device_name: "ESP32",
+      device_id: "",
+      status: "OFFLINE",
+      disconnected_at: new Date(disconnectedAt).toISOString(),
+      target_screen: "Home",
+    },
+  });
+};
+
+const notifyHouseEsp32Reconnected = async ({
+  houseId = "H001",
+  reconnectedAt = new Date(),
+}) => {
+  const normalizedHouseId = normalizeHouseId(houseId);
+  offlineNotifiedHouseIds.delete(normalizedHouseId);
+
+  await notifyHouseUsers({
+    houseId: normalizedHouseId,
+    title: "ESP32 đã kết nối lại",
+    message:
+      "Bộ điều khiển ESP32 đã ONLINE trở lại. Hệ thống có thể điều khiển thiết bị bình thường.",
+    type: "DEVICE",
+    settingsKey: "device_offline",
+    localizationKey: "device_reconnected",
+    data: {
+      device_name: "ESP32",
+      device_id: "",
+      status: "ONLINE",
+      reconnected_at: new Date(reconnectedAt).toISOString(),
+      target_screen: "Home",
+    },
+  });
+};
+
 const notifyAutomationTriggered = async ({
   houseId = "H001",
   automationName,
@@ -1208,6 +1334,7 @@ const initDeviceStatusMonitor = () => {
       const devices = await Device.find({
         esp32_ip: { $exists: true, $nin: [null, ""] },
       });
+      const houseProbeSummary = new Map();
 
       for (const device of devices) {
         const probe = await pingDevice(device.esp32_ip);
@@ -1217,9 +1344,19 @@ const initDeviceStatusMonitor = () => {
         const update = {
           connectivity_status: nextStatus,
         };
+        const normalizedHouseId = normalizeHouseId(device.house_id);
+        if (!houseProbeSummary.has(normalizedHouseId)) {
+          houseProbeSummary.set(normalizedHouseId, {
+            hasOnlineDevice: false,
+          });
+        }
+        if (probe.online) {
+          houseProbeSummary.get(normalizedHouseId).hasOnlineDevice = true;
+        }
 
         if (probe.online) {
           update.last_seen_at = now;
+          offlineNotifiedHouseIds.delete(normalizedHouseId);
         }
 
         await Device.findByIdAndUpdate(device._id, update);
@@ -1229,11 +1366,46 @@ const initDeviceStatusMonitor = () => {
             .to(String(device.house_id || "H001"))
             .emit("device_connectivity_changed", {
               device_id: device._id.toString(),
-              house_id: device.house_id || "H001",
+              house_id: normalizedHouseId,
               connectivity_status: nextStatus,
               last_seen_at: update.last_seen_at || device.last_seen_at || null,
             });
         }
+
+        if (previousStatus !== "OFFLINE" && nextStatus === "OFFLINE") {
+          await notifyHouseEsp32DisconnectedOnce({
+            houseId: normalizedHouseId,
+            disconnectedAt: now,
+          });
+        }
+      }
+
+      for (const [houseId, summary] of houseProbeSummary.entries()) {
+        const previousHouseStatus =
+          houseConnectivityState.get(houseId) || "UNKNOWN";
+        const nextHouseStatus = summary.hasOnlineDevice ? "ONLINE" : "OFFLINE";
+
+        if (
+          previousHouseStatus !== "OFFLINE" &&
+          nextHouseStatus === "OFFLINE"
+        ) {
+          await notifyHouseEsp32DisconnectedOnce({
+            houseId,
+            disconnectedAt: new Date(),
+          });
+        }
+
+        if (
+          previousHouseStatus === "OFFLINE" &&
+          nextHouseStatus === "ONLINE"
+        ) {
+          await notifyHouseEsp32Reconnected({
+            houseId,
+            reconnectedAt: new Date(),
+          });
+        }
+
+        houseConnectivityState.set(houseId, nextHouseStatus);
       }
     } catch (error) {
       console.error("[Notification] Lỗi monitor thiết bị:", error.message);
@@ -1271,6 +1443,8 @@ module.exports = {
   notifyNewMemberJoined,
   notifyPermissionGranted,
   notifyDeviceStatusChanged,
+  notifyHouseEsp32DisconnectedOnce,
+  notifyHouseEsp32Reconnected,
   notifyAutomationTriggered,
   notifyCameraDetection,
   initDeviceStatusMonitor,

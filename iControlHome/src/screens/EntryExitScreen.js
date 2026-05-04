@@ -16,6 +16,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
+import {
+  connectSocket,
+  getSocket,
+  subscribeSocketLifecycle,
+} from '../database/socket';
 import moment from 'moment';
 import 'moment/locale/vi';
 
@@ -141,6 +146,40 @@ export default function EntryExitScreen() {
         active = false;
       };
     }, [fetchHistory, t]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      const refreshOnRealtime = () => {
+        if (!mounted) return;
+        fetchHistory();
+      };
+
+      const setupSocket = async () => {
+        try {
+          const socket = await connectSocket();
+          socket.off('camera_detection').on('camera_detection', refreshOnRealtime);
+        } catch (error) {
+          console.warn('[EntryExitScreen] socket setup warning:', error?.message);
+        }
+      };
+
+      setupSocket();
+      const unsubscribeLifecycle = subscribeSocketLifecycle(event => {
+        if (!mounted) return;
+        if (event?.type === 'reconnect') {
+          fetchHistory();
+        }
+      });
+
+      return () => {
+        mounted = false;
+        unsubscribeLifecycle();
+        const socket = getSocket();
+        socket?.off('camera_detection');
+      };
+    }, [fetchHistory]),
   );
 
   const onRefresh = useCallback(async () => {

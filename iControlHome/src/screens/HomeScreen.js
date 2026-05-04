@@ -21,7 +21,11 @@ import { LanguageContext } from '../context/LanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../database/api';
-import { connectSocket, getSocket } from '../database/socket';
+import {
+  connectSocket,
+  getSocket,
+  subscribeSocketLifecycle,
+} from '../database/socket';
 
 const { width } = Dimensions.get('window');
 const SHEET_HEIGHT = 260;
@@ -87,6 +91,17 @@ export default function HomeScreen({ navigation }) {
       const onRoomDeleted = refreshHomeData;
       const onMemberAdded = refreshHomeData;
       const onMemberRemoved = refreshHomeData;
+      const onNotificationCreated = refreshHomeData;
+      const onDeviceConnectivityChanged = ({ device_id, connectivity_status }) => {
+        if (!mounted || !device_id) return;
+        setDevices(prev =>
+          prev.map(d =>
+            d._id === device_id
+              ? { ...d, connectivity_status: connectivity_status || d.connectivity_status }
+              : d,
+          ),
+        );
+      };
       const onHouseUpdated = ({ house }) => {
         if (!mounted) return;
         if (house) {
@@ -125,6 +140,12 @@ export default function HomeScreen({ navigation }) {
           socket.off('member_added').on('member_added', onMemberAdded);
           socket.off('member_removed').on('member_removed', onMemberRemoved);
           socket.off('house_updated').on('house_updated', onHouseUpdated);
+          socket
+            .off('notification_created')
+            .on('notification_created', onNotificationCreated);
+          socket
+            .off('device_connectivity_changed')
+            .on('device_connectivity_changed', onDeviceConnectivityChanged);
 
           console.log('[HomeScreen] Socket listeners registered');
         } catch (err) {
@@ -133,9 +154,16 @@ export default function HomeScreen({ navigation }) {
       };
 
       setupSocket();
+      const unsubscribeLifecycle = subscribeSocketLifecycle(event => {
+        if (!mounted) return;
+        if (event?.type === 'reconnect') {
+          refreshHomeData();
+        }
+      });
 
       return () => {
         mounted = false;
+        unsubscribeLifecycle();
         const socket = getSocket();
         if (socket) {
           console.log('[HomeScreen] Cleaning up socket listeners');
@@ -151,6 +179,8 @@ export default function HomeScreen({ navigation }) {
           socket.off('member_added');
           socket.off('member_removed');
           socket.off('house_updated');
+          socket.off('notification_created');
+          socket.off('device_connectivity_changed');
         }
       };
     }, []),
@@ -260,7 +290,7 @@ export default function HomeScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     useCallback(() => {

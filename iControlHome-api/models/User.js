@@ -18,6 +18,10 @@ const notificationSettingsSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    device_offline: {
+      type: Boolean,
+      default: true,
+    },
     automation_triggered: {
       type: Boolean,
       default: true,

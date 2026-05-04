@@ -17,6 +17,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
   new_member: true,
   permission_granted: true,
   device_status: true,
+  device_offline: true,
   automation_triggered: true,
   camera_detected: true,
   consumption_estimate: true,
@@ -182,6 +183,69 @@ const resolveLocalizedRemoteContent = async remoteMessage => {
             ].join('\n'),
           };
 
+    case 'device_offline': {
+      const disconnectedAt = data.disconnected_at
+        ? new Date(data.disconnected_at)
+        : null;
+      const hasDisconnectedTime =
+        disconnectedAt instanceof Date &&
+        !Number.isNaN(disconnectedAt.getTime());
+      const disconnectedLabel = hasDisconnectedTime
+        ? disconnectedAt.toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')
+        : language === 'en'
+        ? 'Unknown'
+        : 'Không xác định';
+
+      return language === 'en'
+        ? {
+            title: 'ESP32 connection lost',
+            body: [
+              'Main controller: ESP32',
+              'Status: OFFLINE',
+              `Disconnected at: ${disconnectedLabel}`,
+            ].join('\n'),
+          }
+        : {
+            title: 'ESP32 đã mất kết nối',
+            body: [
+              'Bộ điều khiển chính: ESP32',
+              'Trạng thái: OFFLINE',
+              `Mất kết nối lúc: ${disconnectedLabel}`,
+            ].join('\n'),
+          };
+    }
+
+    case 'device_reconnected': {
+      const reconnectedAt = data.reconnected_at
+        ? new Date(data.reconnected_at)
+        : null;
+      const hasReconnectedTime =
+        reconnectedAt instanceof Date && !Number.isNaN(reconnectedAt.getTime());
+      const reconnectedLabel = hasReconnectedTime
+        ? reconnectedAt.toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')
+        : language === 'en'
+        ? 'Unknown'
+        : 'Không xác định';
+
+      return language === 'en'
+        ? {
+            title: 'ESP32 reconnected',
+            body: [
+              'Main controller: ESP32',
+              'Status: ONLINE',
+              `Reconnected at: ${reconnectedLabel}`,
+            ].join('\n'),
+          }
+        : {
+            title: 'ESP32 đã kết nối lại',
+            body: [
+              'Bộ điều khiển chính: ESP32',
+              'Trạng thái: ONLINE',
+              `Kết nối lại lúc: ${reconnectedLabel}`,
+            ].join('\n'),
+          };
+    }
+
     case 'automation_triggered':
       return language === 'en'
         ? {
@@ -294,6 +358,20 @@ const getNotificationVisualProfile = (data = {}, language = 'vi') => {
         tag: isEn ? 'Device activity' : 'Trạng thái thiết bị',
         category: AndroidCategory.STATUS,
         vibrationPattern: [180, 120, 180, 250],
+      };
+    case 'device_offline':
+      return {
+        accentColor: '#EF4444',
+        tag: isEn ? 'Device offline' : 'Thiết bị mất kết nối',
+        category: AndroidCategory.STATUS,
+        vibrationPattern: [300, 200, 300, 450],
+      };
+    case 'device_reconnected':
+      return {
+        accentColor: '#10B981',
+        tag: isEn ? 'Device online' : 'Thiết bị đã kết nối lại',
+        category: AndroidCategory.STATUS,
+        vibrationPattern: [180, 120, 180, 260],
       };
     case 'automation_triggered':
       return {

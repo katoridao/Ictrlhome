@@ -11,10 +11,15 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { LanguageContext } from '../context/LanguageContext';
 import api from '../database/api';
+import {
+  connectSocket,
+  getSocket,
+  subscribeSocketLifecycle,
+} from '../database/socket';
 
 export default function ScriptScreen({ navigation }) {
   const { theme, styles: themeStyles } = useTheme();
@@ -88,6 +93,44 @@ export default function ScriptScreen({ navigation }) {
       loadScripts();
     }
   }, [isFocused]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      const refreshScripts = () => {
+        if (!mounted) return;
+        loadScripts();
+      };
+
+      const setupSocket = async () => {
+        try {
+          const socket = await connectSocket();
+          socket.off('device-update').on('device-update', refreshScripts);
+          socket
+            .off('notification_created')
+            .on('notification_created', refreshScripts);
+        } catch (error) {
+          console.warn('[ScriptScreen] socket setup warning:', error?.message);
+        }
+      };
+
+      setupSocket();
+      const unsubscribeLifecycle = subscribeSocketLifecycle(event => {
+        if (!mounted) return;
+        if (event?.type === 'reconnect') {
+          refreshScripts();
+        }
+      });
+
+      return () => {
+        mounted = false;
+        unsubscribeLifecycle();
+        const socket = getSocket();
+        socket?.off('device-update');
+        socket?.off('notification_created');
+      };
+    }, [isFocused]),
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

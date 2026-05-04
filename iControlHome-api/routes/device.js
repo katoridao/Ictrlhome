@@ -14,6 +14,7 @@ const {
 const {
   notifyPermissionGranted,
   notifyDeviceStatusChanged,
+  notifyHouseEsp32DisconnectedOnce,
 } = require("../services/notificationService");
 
 const normalizeEsp32Url = (hostOrIp, on) => {
@@ -233,9 +234,17 @@ router.put(
         });
 
         if (!esp32Result.ok) {
+          const wasOffline = current.connectivity_status === "OFFLINE";
           await Device.findByIdAndUpdate(current._id, {
             connectivity_status: "OFFLINE",
           });
+
+          if (!wasOffline) {
+            await notifyHouseEsp32DisconnectedOnce({
+              houseId: current.house_id || "H001",
+              disconnectedAt: new Date(),
+            });
+          }
 
           return res.status(502).json({
             message:

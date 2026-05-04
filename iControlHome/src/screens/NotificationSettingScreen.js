@@ -53,6 +53,12 @@ export default function NotificationSettingScreen({ navigation }) {
         description: t.notification_device_status_desc,
       },
       {
+        key: 'device_offline',
+        icon: 'access-point-off',
+        title: t.notification_device_offline_item,
+        description: t.notification_device_offline_desc,
+      },
+      {
         key: 'automation_triggered',
         icon: 'robot-outline',
         title: t.notification_automation_item,

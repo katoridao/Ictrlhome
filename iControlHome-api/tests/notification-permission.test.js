@@ -18,7 +18,7 @@ test("filterUserPushTokens removes only the active device token", () => {
   assert.deepEqual(filterUserPushTokens(["token-a"], ["token-x"]), ["token-a"]);
 });
 
-test("mergeNotificationSettings keeps per-user flags and strips legacy offline keys", () => {
+test("mergeNotificationSettings keeps per-user notification flags", () => {
   assert.equal(typeof mergeNotificationSettings, "function");
 
   const merged = mergeNotificationSettings(
@@ -37,7 +37,7 @@ test("mergeNotificationSettings keeps per-user flags and strips legacy offline k
   assert.equal(merged.new_member, false);
   assert.equal(merged.device_status, true);
   assert.equal(merged.camera_detected, false);
-  assert.equal(Object.hasOwn(merged, "device_offline"), false);
+  assert.equal(merged.device_offline, false);
 });
 
 test("hasControlPermission respects owner, room, and device permissions", () => {

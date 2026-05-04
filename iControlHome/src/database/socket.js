@@ -1,10 +1,37 @@
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SOCKET_BASE_URL } from '../config/backend';
 
-const SOCKET_URL = 'https://postperforated-inwrought-susy.ngrok-free.dev';
+const SOCKET_URL = SOCKET_BASE_URL;
 
 let socket = null;
 let isConnecting = false;
+const lifecycleSubscribers = new Set();
+
+const emitLifecycle = async type => {
+  const payload = {
+    type,
+    socketId: socket?.id || null,
+    at: Date.now(),
+  };
+
+  for (const callback of lifecycleSubscribers) {
+    try {
+      callback(payload);
+    } catch (error) {
+      console.warn('[Socket] lifecycle callback error:', error?.message);
+    }
+  }
+};
+
+export const subscribeSocketLifecycle = callback => {
+  if (typeof callback !== 'function') {
+    return () => {};
+  }
+
+  lifecycleSubscribers.add(callback);
+  return () => lifecycleSubscribers.delete(callback);
+};
 
 export const getSocket = () => socket;
 
@@ -39,6 +66,8 @@ export const connectSocket = async () => {
     if (houseId) {
       socket.emit('join_house', { house_id: houseId });
     }
+
+    await emitLifecycle('connect');
   });
 
   socket.off('reconnect').on('reconnect', async () => {
@@ -47,6 +76,8 @@ export const connectSocket = async () => {
     if (houseId) {
       socket.emit('join_house', { house_id: houseId });
     }
+
+    await emitLifecycle('reconnect');
   });
 
   socket.off('disconnect').on('disconnect', reason => {

@@ -1,11 +1,11 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config/backend';
 
-const BASE_URL = 'http://192.168.100.91:3000/api';
 const REGISTERED_FCM_TOKEN_KEY = 'registered_fcm_token';
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
