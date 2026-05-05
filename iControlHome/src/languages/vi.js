@@ -304,6 +304,9 @@ export default {
   join_house_success: 'Đã tham gia nhà thành công!',
   join_house_success_with_owner: 'Bạn đã gia nhập nhà của {owner} thành công.',
   added_to_house_success: 'Bạn đã được {owner} thêm vào hộ gia đình.',
+  cannot_join_house: 'Không thể tham gia nhà. Vui lòng kiểm tra lại thông tin.',
+  unknown_name: 'Không xác định',
+  automation_permission_denied: 'Bạn không có quyền điều khiển thiết bị này.',
   notification: 'Thông báo',
   no_house_selected_message:
     'Bạn cần chọn hoặc tạo nhà trước khi thêm thiết bị.',
@@ -330,8 +333,8 @@ export default {
   automation_setup_desc: 'Tạo một kịch bản 1 lần.',
   automation_device_hint: 'Chọn thiết bị để tự động hóa.',
   automation_action_hint: 'Chọn hành động để tự động hóa.',
-  automation_action_turn_on_desc: 'Bật thiết bị.',
-  automation_action_turn_off_desc: 'Tắt thiết bị.',
+  automation_action_turn_on_desc: 'Bật thiết bị',
+  automation_action_turn_off_desc: 'Tắt thiết bị',
   automation_preview_title: 'Xem trước kịch bản',
 
   // Appearance

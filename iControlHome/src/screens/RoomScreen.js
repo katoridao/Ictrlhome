@@ -38,21 +38,43 @@ export default function RoomScreen({ navigation }) {
     try {
       const role = await AsyncStorage.getItem('user_role');
       setIsOwner(role === 'OWNER');
+      const userInfoJson = await AsyncStorage.getItem('user_info');
+      const currentUserId = userInfoJson ? JSON.parse(userInfoJson)?._id : null;
 
       const response = await api.get('/rooms');
       const roomList = response.data?.rooms || [];
 
       const roomsWithStatus = await Promise.all(
         roomList.map(async room => {
+          const roomId = room._id;
+          const roomPerm = room.permissions?.find(
+            p =>
+              currentUserId &&
+              p.user_id?.toString() === currentUserId.toString(),
+          );
+          const roomCanControl = role === 'OWNER' || !!roomPerm?.can_control;
+
           try {
             const devRes = await api.get('/devices', {
-              params: { room_id: room._id },
+              params: { room_id: roomId },
             });
             const devices = devRes.data.devices || [];
             const onCount = devices.filter(d => d.status).length;
-            return { ...room, devices, onCount, totalDevices: devices.length };
+            return {
+              ...room,
+              devices,
+              onCount,
+              totalDevices: devices.length,
+              roomCanControl,
+            };
           } catch {
-            return { ...room, devices: [], onCount: 0, totalDevices: 0 };
+            return {
+              ...room,
+              devices: [],
+              onCount: 0,
+              totalDevices: 0,
+              roomCanControl,
+            };
           }
         }),
       );
@@ -152,13 +174,21 @@ export default function RoomScreen({ navigation }) {
 
           // Setup listeners for real-time updates
           socket
-            .off('device_status_changed')
+            .off('device_status_changed', onStatusChanged)
             .on('device_status_changed', onStatusChanged);
-          socket.off('room_added').on('room_added', onRoomAdded);
-          socket.off('room_updated').on('room_updated', onRoomUpdated);
-          socket.off('room_deleted').on('room_deleted', onRoomDeleted);
-          socket.off('device_added').on('device_added', onDeviceAdded);
-          socket.off('device_deleted').on('device_deleted', onDeviceDeleted);
+          socket.off('room_added', onRoomAdded).on('room_added', onRoomAdded);
+          socket
+            .off('room_updated', onRoomUpdated)
+            .on('room_updated', onRoomUpdated);
+          socket
+            .off('room_deleted', onRoomDeleted)
+            .on('room_deleted', onRoomDeleted);
+          socket
+            .off('device_added', onDeviceAdded)
+            .on('device_added', onDeviceAdded);
+          socket
+            .off('device_deleted', onDeviceDeleted)
+            .on('device_deleted', onDeviceDeleted);
 
           console.log('[RoomScreen] Socket listeners registered');
         } catch (err) {
@@ -173,12 +203,12 @@ export default function RoomScreen({ navigation }) {
         const socket = getSocket();
         if (socket) {
           console.log('[RoomScreen] Cleaning up socket listeners');
-          socket.off('device_status_changed');
-          socket.off('room_added');
-          socket.off('room_updated');
-          socket.off('room_deleted');
-          socket.off('device_added');
-          socket.off('device_deleted');
+          socket.off('device_status_changed', onStatusChanged);
+          socket.off('room_added', onRoomAdded);
+          socket.off('room_updated', onRoomUpdated);
+          socket.off('room_deleted', onRoomDeleted);
+          socket.off('device_added', onDeviceAdded);
+          socket.off('device_deleted', onDeviceDeleted);
         }
       };
     }, []),
@@ -396,6 +426,7 @@ function RoomItem({
 }) {
   const allOn = room.totalDevices > 0 && room.onCount === room.totalDevices;
   const hasDevices = room.totalDevices > 0;
+  const canControlRoom = isOwner || room.roomCanControl;
 
   return (
     <TouchableOpacity
@@ -406,7 +437,12 @@ function RoomItem({
         <Text style={[styles.roomName, { color: themeStyles.text }]}>
           {room.name}
         </Text>
-        <Text style={[styles.roomSub, { color: themeStyles.subText }]}>
+        <Text
+          style={[
+            styles.roomSub,
+            { color: canControlRoom ? themeStyles.subText : '#9E9E9E' },
+          ]}
+        >
           {hasDevices
             ? `${room.onCount}/${room.totalDevices} ${t.devices_on}`
             : t.no_devices_in_room}
@@ -414,7 +450,7 @@ function RoomItem({
       </View>
 
       <View style={styles.roomActions}>
-        {hasDevices && (
+        {hasDevices && canControlRoom && (
           <TouchableOpacity
             style={[
               styles.toggleAllBtn,

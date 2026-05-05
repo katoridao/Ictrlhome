@@ -1430,7 +1430,7 @@ const initConsumptionThresholdMonitor = () => {
   };
 
   run();
-  consumptionMonitorTimer = setInterval(run, 10 * 60 * 1000);
+  consumptionMonitorTimer = setInterval(run, 1 * 60 * 1000);
   console.log("[Notification] Consumption threshold monitor started");
 };
 

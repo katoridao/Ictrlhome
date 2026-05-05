@@ -146,9 +146,11 @@ export default function Device_logScreen() {
         const socket = await connectSocket();
 
         socket
-          .off('device_status_changed')
+          .off('device_status_changed', refreshLogsRealtime)
           .on('device_status_changed', refreshLogsRealtime);
-        socket.off('device-update').on('device-update', refreshLogsRealtime);
+        socket
+          .off('device-update', refreshLogsRealtime)
+          .on('device-update', refreshLogsRealtime);
       } catch (error) {
         console.error('Lỗi kết nối socket nhật ký:', error);
       }
@@ -160,8 +162,8 @@ export default function Device_logScreen() {
       mounted = false;
       const socket = getSocket();
       if (!socket) return;
-      socket.off('device_status_changed');
-      socket.off('device-update');
+      socket.off('device_status_changed', refreshLogsRealtime);
+      socket.off('device-update', refreshLogsRealtime);
     };
   }, [isFocused, fetchData, notJoined]);
 
@@ -395,6 +397,10 @@ function HistoryItem({
   const actionText = action === 'ON' ? t.turned_on : t.turned_off;
   const actionColor = action === 'ON' ? '#4CAF50' : '#F44336';
   const actionIcon = action === 'ON' ? '🟢' : '🔴';
+  const isOnAction = action === 'ON';
+  const deviceIconTint = isOnAction
+    ? undefined
+    : themeStyles.subText || '#9E9E9E';
 
   return (
     <View
@@ -403,7 +409,10 @@ function HistoryItem({
         { backgroundColor: themeStyles.card, shadowColor: themeStyles.text },
       ]}
     >
-      <Image source={getIcon(type)} style={styles.deviceIcon} />
+      <Image
+        source={getIcon(type)}
+        style={[styles.deviceIcon, { tintColor: deviceIconTint }]}
+      />
       <View style={styles.itemContent}>
         <View style={styles.itemHeader}>
           <Text style={[styles.itemTitle, { color: themeStyles.text }]}>

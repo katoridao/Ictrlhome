@@ -61,9 +61,7 @@ export default function JoinHouseScreen({ navigation }) {
 
       setTimeout(() => navigation.replace('Main'), 1500);
     } catch (error) {
-      const msg =
-        error.response?.data?.message ||
-        'Không thể tham gia nhà. Kiểm tra lại thông tin.';
+      const msg = error.response?.data?.message || t.cannot_join_house;
       Toast.show({ type: 'error', text1: t.error, text2: msg });
     } finally {
       setLoading(false);

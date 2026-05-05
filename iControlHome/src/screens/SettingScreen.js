@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  body: { padding: 16, paddingBottom: 40 },
+  body: { padding: 16, paddingBottom: 0 },
   userBox: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -307,6 +307,10 @@ export default {
   join_house_success: 'Successfully joined house!',
   join_house_success_with_owner: "You joined {owner}'s house successfully.",
   added_to_house_success: "You were added to {owner}'s house.",
+  cannot_join_house: 'Unable to join the house. Please check your information.',
+  unknown_name: 'Unknown',
+  automation_permission_denied:
+    'You do not have permission to control this device.',
   notification: 'Notification',
   no_house_selected_message:
     'You need to select or create a house before adding a device.',

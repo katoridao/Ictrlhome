@@ -3,6 +3,7 @@ const router = express.Router();
 
 const DeviceUsage = require("../models/DeviceUsage");
 const Device = require("../models/Device");
+const Notification = require("../models/Notification");
 const {
   authenticate,
   canControlDevice,
@@ -319,6 +320,12 @@ router.post(
       const deleteResult = await DeviceUsage.deleteMany({
         device_id: { $in: deviceIds },
       });
+      const thresholdNotificationDeleteResult = await Notification.deleteMany({
+        house_id: houseId,
+        "data.localization_key": {
+          $in: ["estimated_cost_threshold", "consumption_estimate_threshold"],
+        },
+      });
 
       await Device.updateMany(
         { _id: { $in: deviceIds } },
@@ -348,9 +355,11 @@ router.post(
 
       return res.json({
         message:
-          "Đã reset toàn bộ thời gian sử dụng, điện năng và chi phí ước tính về 0",
+          "Đã reset toàn bộ số liệu tiêu thụ và trạng thái cảnh báo ngưỡng chi phí về ban đầu",
         reset_device_count: deviceIds.length,
         deleted_usage_count: deleteResult?.deletedCount || 0,
+        deleted_threshold_notification_count:
+          thresholdNotificationDeleteResult?.deletedCount || 0,
         restarted_active_devices: activeDeviceIds.length,
       });
     } catch (error) {

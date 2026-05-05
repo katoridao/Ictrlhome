@@ -14,6 +14,7 @@ import {
   TouchableWithoutFeedback,
   PanResponder,
   TextInput,
+  Switch,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
@@ -92,12 +93,19 @@ export default function HomeScreen({ navigation }) {
       const onMemberAdded = refreshHomeData;
       const onMemberRemoved = refreshHomeData;
       const onNotificationCreated = refreshHomeData;
-      const onDeviceConnectivityChanged = ({ device_id, connectivity_status }) => {
+      const onDeviceConnectivityChanged = ({
+        device_id,
+        connectivity_status,
+      }) => {
         if (!mounted || !device_id) return;
         setDevices(prev =>
           prev.map(d =>
             d._id === device_id
-              ? { ...d, connectivity_status: connectivity_status || d.connectivity_status }
+              ? {
+                  ...d,
+                  connectivity_status:
+                    connectivity_status || d.connectivity_status,
+                }
               : d,
           ),
         );
@@ -141,9 +149,6 @@ export default function HomeScreen({ navigation }) {
           socket.off('member_removed').on('member_removed', onMemberRemoved);
           socket.off('house_updated').on('house_updated', onHouseUpdated);
           socket
-            .off('notification_created')
-            .on('notification_created', onNotificationCreated);
-          socket
             .off('device_connectivity_changed')
             .on('device_connectivity_changed', onDeviceConnectivityChanged);
 
@@ -167,20 +172,22 @@ export default function HomeScreen({ navigation }) {
         const socket = getSocket();
         if (socket) {
           console.log('[HomeScreen] Cleaning up socket listeners');
-          socket.off('device_status_changed');
-          socket.off('device_added');
-          socket.off('device_updated');
-          socket.off('device_deleted');
-          socket.off('permission_updated');
-          socket.off('permission_removed');
-          socket.off('room_added');
-          socket.off('room_updated');
-          socket.off('room_deleted');
-          socket.off('member_added');
-          socket.off('member_removed');
-          socket.off('house_updated');
-          socket.off('notification_created');
-          socket.off('device_connectivity_changed');
+          socket.off('device_status_changed', onStatusChanged);
+          socket.off('device_added', onDeviceAdded);
+          socket.off('device_updated', onDeviceUpdated);
+          socket.off('device_deleted', onDeviceDeleted);
+          socket.off('permission_updated', onPermissionUpdated);
+          socket.off('permission_removed', onPermissionRemoved);
+          socket.off('room_added', onRoomAdded);
+          socket.off('room_updated', onRoomUpdated);
+          socket.off('room_deleted', onRoomDeleted);
+          socket.off('member_added', onMemberAdded);
+          socket.off('member_removed', onMemberRemoved);
+          socket.off('house_updated', onHouseUpdated);
+          socket.off(
+            'device_connectivity_changed',
+            onDeviceConnectivityChanged,
+          );
         }
       };
     }, []),
@@ -303,14 +310,44 @@ export default function HomeScreen({ navigation }) {
       await api.delete(`/devices/${deviceId}`);
       Toast.show({
         type: 'success',
-        text1: 'Thành công',
-        text2: 'Đã xóa thiết bị!',
+        text1: t.success,
+        text2: t.deleted_device,
       });
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Lỗi',
-        text2: 'Bạn không có quyền thực hiện hành động này.',
+        text1: t.error,
+        text2: error.response?.data?.message || t.no_permission,
+      });
+    }
+  };
+
+  const handleToggleDevice = async (deviceId, nextStatus, hasPermission) => {
+    if (!hasPermission) {
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: t.no_permission,
+      });
+      return;
+    }
+
+    setDevices(prev =>
+      prev.map(d => (d._id === deviceId ? { ...d, status: nextStatus } : d)),
+    );
+
+    try {
+      await api.put(`/devices/${deviceId}/status`, { status: nextStatus });
+    } catch (error) {
+      setDevices(prev =>
+        prev.map(d =>
+          d._id === deviceId ? { ...d, status: nextStatus ? 0 : 1 } : d,
+        ),
+      );
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: error?.response?.data?.message || t.unable_to_update,
       });
     }
   };
@@ -393,15 +430,36 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const getDeviceTypeLabel = type => {
+    if (type === 'light') return t.device_type_light;
+    if (type === 'fan') return t.device_type_fan;
+    return t.device;
+  };
+
   const renderDeviceItem = ({ item }) => {
     const isActive = item.status === 1 || item.status === true;
     const hasPermission = userRole === 'OWNER' || item.can_control === true;
+    const iconTintColor = !hasPermission
+      ? '#BDBDBD'
+      : isActive
+      ? undefined
+      : themeStyles.subText || '#9E9E9E';
+    const cardBackground = hasPermission
+      ? themeStyles.card || '#fff'
+      : '#F5F5F5';
+    const cardBorderColor = !hasPermission
+      ? '#D1D5DB'
+      : isActive
+      ? `${themeStyles.primary}33`
+      : themeStyles.border || '#E3E7EE';
     return (
       <TouchableOpacity
         style={[
           styles.deviceCard,
-          { backgroundColor: themeStyles.card || '#fff' },
-          !hasPermission && { opacity: 0.4 },
+          {
+            backgroundColor: cardBackground,
+            borderColor: cardBorderColor,
+          },
         ]}
         onPress={() => {
           if (!hasPermission) return;
@@ -410,43 +468,90 @@ export default function HomeScreen({ navigation }) {
         onLongPress={() => onLongPressDevice(item)}
         delayLongPress={500}
         activeOpacity={hasPermission ? 0.85 : 1}
+        disabled={!hasPermission}
       >
         <View style={styles.cardHeader}>
-          <View
-            style={[
-              styles.iconBox,
-              { backgroundColor: isActive ? '#E8F5E9' : '#F5F5F5' },
-            ]}
-          >
-            <Image
-              source={getDeviceIcon(item.type)}
-              style={styles.deviceImage}
-              resizeMode="contain"
-            />
+          <View style={styles.cardIdentity}>
+            <View
+              style={[
+                styles.iconBox,
+                {
+                  backgroundColor: !hasPermission
+                    ? '#E0E0E0'
+                    : isActive
+                    ? '#E8F5E9'
+                    : '#F5F5F5',
+                },
+              ]}
+            >
+              <Image
+                source={getDeviceIcon(item.type)}
+                style={[styles.deviceImage, { tintColor: iconTintColor }]}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.cardMeta}>
+              <Text
+                style={[
+                  styles.deviceName,
+                  { color: hasPermission ? themeStyles.text : '#9E9E9E' },
+                ]}
+                numberOfLines={1}
+              >
+                {item.name}
+              </Text>
+              <Text
+                style={[
+                  styles.deviceTypeText,
+                  { color: hasPermission ? themeStyles.subText : '#9E9E9E' },
+                ]}
+                numberOfLines={1}
+              >
+                {getDeviceTypeLabel(item.type)}
+              </Text>
+            </View>
           </View>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: isActive ? '#4CAF50' : '#F44336' },
-            ]}
-          >
-            <Text style={styles.statusText}>{isActive ? 'ON' : 'OFF'}</Text>
+          <View style={styles.cardActionWrap}>
+            <Switch
+              value={isActive}
+              onValueChange={value =>
+                handleToggleDevice(item._id, value ? 1 : 0, hasPermission)
+              }
+              disabled={!hasPermission}
+              trackColor={{
+                false: '#C7CDD6',
+                true: hasPermission ? themeStyles.primary : '#C7CDD6',
+              }}
+              thumbColor={isActive ? '#FFFFFF' : '#F4F3F4'}
+              ios_backgroundColor="#C7CDD6"
+            />
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: isActive ? '#4CAF50' : '#F44336',
+                },
+              ]}
+            >
+              <Text style={styles.statusText}>{isActive ? t.on : t.off}</Text>
+            </View>
           </View>
         </View>
-        <View style={styles.cardContent}>
-          <Text
-            style={[styles.deviceName, { color: themeStyles.text }]}
-            numberOfLines={1}
-          >
-            {item.name}
-          </Text>
+        <View
+          style={[
+            styles.cardFooter,
+            { borderTopColor: themeStyles.border || '#ECEFF3' },
+          ]}
+        >
           <View style={styles.roomRow}>
             <Text style={styles.roomDot}>{item.room_id ? '📍' : '📦'}</Text>
             <Text
               style={[
                 styles.roomLabel,
                 {
-                  color: item.room_id
+                  color: !hasPermission
+                    ? '#9E9E9E'
+                    : item.room_id
                     ? themeStyles.subText || '#888'
                     : '#BDBDBD',
                 },
@@ -850,27 +955,57 @@ const styles = StyleSheet.create({
   row: { justifyContent: 'space-between' },
   deviceCard: {
     width: width / 2 - 18,
-    borderRadius: 20,
-    padding: 15,
+    borderRadius: 18,
+    padding: 12,
     marginBottom: 12,
-    elevation: 3,
+    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10,
+    gap: 10,
   },
-  iconBox: { padding: 10, borderRadius: 12 },
-  deviceImage: { width: 35, height: 35 },
+  cardIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  cardMeta: { flex: 1 },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deviceImage: { width: 24, height: 24 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   statusText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-  cardContent: {},
-  deviceName: { fontSize: 16, fontWeight: '700' },
-  roomRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 3 },
+  cardActionWrap: { alignItems: 'flex-end', gap: 6 },
+  deviceName: { fontSize: 14, fontWeight: '700' },
+  deviceTypeText: { fontSize: 11, marginTop: 1, textTransform: 'capitalize' },
+  cardFooter: {
+    marginTop: 2,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  roomRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
   roomDot: { fontSize: 10 },
   roomLabel: { fontSize: 11, fontWeight: '500', flexShrink: 1 },
+  cardHint: { fontSize: 18, fontWeight: '400', lineHeight: 18 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: 16, marginBottom: 15 },
   addBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },

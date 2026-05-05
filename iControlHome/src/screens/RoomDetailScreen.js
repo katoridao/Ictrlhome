@@ -64,26 +64,28 @@ export default function RoomDetailScreen({ route, navigation }) {
 
   useEffect(() => {
     let mounted = true;
+    const handleStatusChanged = ({ device_id, status }) => {
+      if (!mounted) return;
+      setDevices(prev =>
+        prev.map(d => (d._id === device_id ? { ...d, status } : d)),
+      );
+    };
+
     const setupSocket = async () => {
       const socket = await connectSocket();
-      socket.on('device_status_changed', ({ device_id, status }) => {
-        if (!mounted) return;
-        setDevices(prev =>
-          prev.map(d => (d._id === device_id ? { ...d, status } : d)),
-        );
-      });
+      socket.on('device_status_changed', handleStatusChanged);
     };
     setupSocket();
     return () => {
       mounted = false;
       const socket = getSocket();
-      if (socket) socket.off('device_status_changed');
+      if (socket) socket.off('device_status_changed', handleStatusChanged);
     };
   }, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: room.name || 'Chi tiết phòng',
+      headerTitle: room.name || t.room_detail,
       headerRight: () =>
         userRole === 'OWNER' ? (
           <TouchableOpacity
@@ -94,7 +96,7 @@ export default function RoomDetailScreen({ route, navigation }) {
           ></TouchableOpacity>
         ) : null,
     });
-  }, [navigation, room, userRole]);
+  }, [navigation, room, userRole, t]);
 
   const controllableDevices = useMemo(
     () => devices.filter(d => userRole === 'OWNER' || d.can_control),
@@ -260,15 +262,22 @@ export default function RoomDetailScreen({ route, navigation }) {
     const isActive = !!item.status;
     const hasPermission = userRole === 'OWNER' || item.can_control === true;
     const isSelected = selectedIds.has(item._id);
+    const iconTintColor = !hasPermission
+      ? '#BDBDBD'
+      : isActive
+      ? undefined
+      : themeStyles.subText || '#9E9E9E';
+    const cardBackground = hasPermission ? themeStyles.card : '#F5F5F5';
+    const cardBorderColor = hasPermission ? '#E3E7EE' : '#D1D5DB';
 
     return (
       <TouchableOpacity
         style={[
           styles.deviceCard,
-          { backgroundColor: themeStyles.card },
+          { backgroundColor: cardBackground, borderColor: cardBorderColor },
           isSelected && styles.deviceCardSelected,
-          !hasPermission && styles.deviceCardLocked,
         ]}
+        disabled={!hasPermission}
         onPress={() => {
           if (selectMode) {
             if (hasPermission) toggleSelectItem(item._id);
@@ -312,17 +321,17 @@ export default function RoomDetailScreen({ route, navigation }) {
             style={[
               styles.iconBox,
               {
-                backgroundColor: hasPermission
-                  ? isActive
-                    ? '#E8F5E9'
-                    : '#F5F5F5'
-                  : '#F0F0F0',
+                backgroundColor: !hasPermission
+                  ? '#E0E0E0'
+                  : isActive
+                  ? '#E8F5E9'
+                  : '#F5F5F5',
               },
             ]}
           >
             <Image
               source={getDeviceIcon(item.type)}
-              style={styles.deviceIcon}
+              style={[styles.deviceIcon, { tintColor: iconTintColor }]}
             />
           </View>
           <View style={{ marginLeft: 12, flex: 1 }}>

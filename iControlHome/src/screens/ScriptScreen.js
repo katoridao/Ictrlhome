@@ -105,9 +105,11 @@ export default function ScriptScreen({ navigation }) {
       const setupSocket = async () => {
         try {
           const socket = await connectSocket();
-          socket.off('device-update').on('device-update', refreshScripts);
           socket
-            .off('notification_created')
+            .off('device-update', refreshScripts)
+            .on('device-update', refreshScripts);
+          socket
+            .off('notification_created', refreshScripts)
             .on('notification_created', refreshScripts);
         } catch (error) {
           console.warn('[ScriptScreen] socket setup warning:', error?.message);
@@ -126,8 +128,8 @@ export default function ScriptScreen({ navigation }) {
         mounted = false;
         unsubscribeLifecycle();
         const socket = getSocket();
-        socket?.off('device-update');
-        socket?.off('notification_created');
+        socket?.off('device-update', refreshScripts);
+        socket?.off('notification_created', refreshScripts);
       };
     }, [isFocused]),
   );
@@ -140,7 +142,7 @@ export default function ScriptScreen({ navigation }) {
   const handleDelete = (id, name) => {
     Alert.alert(
       t.confirm_delete_script,
-      t.delete_schedule_confirm.replace('{name}', name || 'không xác định'),
+      t.confirm_delete_script.replace('{name}', name || t.unknown_name),
       [
         { text: t.cancel, style: 'cancel' },
         {

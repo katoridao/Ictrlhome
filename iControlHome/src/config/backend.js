@@ -1,4 +1,4 @@
-const BACKEND_ORIGIN = 'https://postperforated-inwrought-susy.ngrok-free.dev';
+const BACKEND_ORIGIN = 'http://192.168.100.91:3000';
 
 const trimTrailingSlash = value => String(value || '').replace(/\/+$/, '');
 

@@ -28,6 +28,7 @@ const MainAutomationScreen = ({ navigation }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [mode, setMode] = useState('date');
   const [loading, setLoading] = useState(true);
+  const [deviceDropdownOpen, setDeviceDropdownOpen] = useState(false);
 
   useEffect(() => {
     loadDevices();
@@ -42,6 +43,9 @@ const MainAutomationScreen = ({ navigation }) => {
       const devData = res.data.devices || [];
       const controllableDevices = devData.filter(dev => dev.can_control);
       setDevices(controllableDevices);
+      if (!selectedDevice && controllableDevices.length > 0) {
+        setSelectedDevice(controllableDevices[0]._id);
+      }
     } catch (err) {
       console.error('Lỗi tải thiết bị:', err.message);
     } finally {
@@ -84,6 +88,15 @@ const MainAutomationScreen = ({ navigation }) => {
       return;
     }
 
+    if (devices.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: t.error,
+        text2: t.no_devices_available,
+      });
+      return;
+    }
+
     try {
       const houseId = await AsyncStorage.getItem('current_house_id');
       const payload = {
@@ -114,7 +127,7 @@ const MainAutomationScreen = ({ navigation }) => {
         type: 'error',
         text1: t.error,
         text2: forbidden
-          ? 'Bạn chưa được cấp quyền điều khiển thiết bị này.'
+          ? t.automation_permission_denied
           : t.automation_schedule_failed,
       });
     }
@@ -125,14 +138,14 @@ const MainAutomationScreen = ({ navigation }) => {
     {
       value: true,
       emoji: '🟢',
-      label: t.turn_on,
+      label: t.automation_action_turn_on_desc,
       description: t.automation_action_turn_on_desc,
       activeColor: '#16A34A',
     },
     {
       value: false,
       emoji: '🔴',
-      label: t.turn_off,
+      label: t.automation_action_turn_off_desc,
       description: t.automation_action_turn_off_desc,
       activeColor: '#DC2626',
     },
@@ -153,10 +166,6 @@ const MainAutomationScreen = ({ navigation }) => {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={[styles.headerSubtitle, { color: themeStyles.subText }]}>
-        {t.automation_setup_desc}
-      </Text>
-
       <View
         style={[
           styles.sectionCard,
@@ -250,39 +259,108 @@ const MainAutomationScreen = ({ navigation }) => {
         <Text style={[styles.helperText, { color: themeStyles.subText }]}>
           {t.automation_device_hint}
         </Text>
-        <View style={styles.deviceList}>
-          {devices.length > 0 ? (
-            devices.map(dev => (
-              <TouchableOpacity
-                key={dev._id}
+        {devices.length > 0 ? (
+          <View style={styles.dropdownWrap}>
+            <TouchableOpacity
+              style={[
+                styles.dropdownTrigger,
+                {
+                  borderColor: deviceDropdownOpen
+                    ? themeStyles.primary
+                    : themeStyles.border,
+                  backgroundColor: themeStyles.background,
+                },
+              ]}
+              onPress={() => setDeviceDropdownOpen(prev => !prev)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.dropdownTriggerContent}>
+                <Text
+                  style={[styles.dropdownLabel, { color: themeStyles.subText }]}
+                >
+                  {t.device}
+                </Text>
+                <Text
+                  style={[styles.dropdownValue, { color: themeStyles.text }]}
+                >
+                  {selectedDeviceInfo?.name || t.select_device_action}
+                </Text>
+              </View>
+              <Text
                 style={[
-                  styles.deviceItem,
+                  styles.dropdownArrow,
+                  {
+                    color: themeStyles.primary,
+                    transform: [
+                      { rotate: deviceDropdownOpen ? '180deg' : '0deg' },
+                    ],
+                  },
+                ]}
+              >
+                ▼
+              </Text>
+            </TouchableOpacity>
+
+            {deviceDropdownOpen && (
+              <View
+                style={[
+                  styles.dropdownMenu,
                   {
                     borderColor: themeStyles.border,
                     backgroundColor: themeStyles.background,
                   },
-                  selectedDevice === dev._id && {
-                    backgroundColor: themeStyles.primary,
-                    borderColor: themeStyles.primary,
-                  },
                 ]}
-                onPress={() => setSelectedDevice(dev._id)}
               >
-                <Text
-                  style={{
-                    color:
-                      selectedDevice === dev._id ? '#FFF' : themeStyles.text,
-                    fontWeight: selectedDevice === dev._id ? '700' : '500',
-                  }}
+                <ScrollView
+                  style={styles.dropdownScroll}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
                 >
-                  {dev.name}
-                </Text>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <Text style={{ color: '#F44336' }}>{t.no_devices_available}.</Text>
-          )}
-        </View>
+                  {devices.map(dev => {
+                    const isSelected = selectedDevice === dev._id;
+                    return (
+                      <TouchableOpacity
+                        key={dev._id}
+                        style={[
+                          styles.dropdownItem,
+                          {
+                            borderColor: isSelected
+                              ? `${themeStyles.primary}55`
+                              : 'transparent',
+                            backgroundColor: isSelected
+                              ? `${themeStyles.primary}1A`
+                              : 'transparent',
+                          },
+                        ]}
+                        onPress={() => {
+                          setSelectedDevice(dev._id);
+                          setDeviceDropdownOpen(false);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          style={[
+                            styles.dropdownItemText,
+                            {
+                              color: isSelected
+                                ? themeStyles.primary
+                                : themeStyles.text,
+                              fontWeight: isSelected ? '700' : '500',
+                            },
+                          ]}
+                        >
+                          {dev.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        ) : (
+          <Text style={{ color: '#F44336' }}>{t.no_devices_available}.</Text>
+        )}
       </View>
 
       <View
@@ -300,20 +378,20 @@ const MainAutomationScreen = ({ navigation }) => {
         <Text style={[styles.helperText, { color: themeStyles.subText }]}>
           {t.automation_action_hint}
         </Text>
-        <View style={styles.actionGrid}>
+        <View style={styles.actionTabs}>
           {actionOptions.map(option => {
             const isActive = status === option.value;
             return (
               <TouchableOpacity
                 key={option.label}
                 style={[
-                  styles.actionCard,
+                  styles.actionTab,
                   {
                     borderColor: isActive
                       ? option.activeColor
                       : themeStyles.border,
                     backgroundColor: isActive
-                      ? option.activeColor
+                      ? `${option.activeColor}20`
                       : themeStyles.background,
                   },
                 ]}
@@ -323,19 +401,11 @@ const MainAutomationScreen = ({ navigation }) => {
                 <Text style={styles.actionEmoji}>{option.emoji}</Text>
                 <Text
                   style={[
-                    styles.actionTitle,
-                    { color: isActive ? '#FFF' : themeStyles.text },
+                    styles.actionTabTitle,
+                    { color: isActive ? option.activeColor : themeStyles.text },
                   ]}
                 >
                   {option.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.actionDesc,
-                    { color: isActive ? '#F8FAFC' : themeStyles.subText },
-                  ]}
-                >
-                  {option.description}
                 </Text>
               </TouchableOpacity>
             );
@@ -370,8 +440,13 @@ const MainAutomationScreen = ({ navigation }) => {
       </View>
 
       <TouchableOpacity
-        style={[styles.saveBtn, { backgroundColor: themeStyles.primary }]}
+        style={[
+          styles.saveBtn,
+          { backgroundColor: themeStyles.primary },
+          (devices.length === 0 || loading) && { opacity: 0.6 },
+        ]}
         onPress={createAuto}
+        disabled={devices.length === 0 || loading}
       >
         <Text style={styles.saveBtnText}>{t.save_automation}</Text>
       </TouchableOpacity>
@@ -381,7 +456,7 @@ const MainAutomationScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 36 },
+  content: { padding: 20, paddingBottom: 20, paddingTop: 5 },
   loader: { flex: 1 },
   headerSubtitle: { marginTop: 6, fontSize: 14, lineHeight: 20 },
   sectionCard: {
@@ -409,30 +484,59 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   timeText: { fontSize: 22, fontWeight: 'bold', marginTop: 4 },
-  deviceList: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
-  deviceItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderRadius: 12,
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  actionGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  actionCard: {
-    width: '48%',
+  dropdownWrap: { marginTop: 6 },
+  dropdownTrigger: {
     borderWidth: 1,
     borderRadius: 14,
-    padding: 14,
-    minHeight: 120,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  actionEmoji: { fontSize: 22, marginBottom: 10 },
-  actionTitle: { fontSize: 15, fontWeight: '700' },
-  actionDesc: { fontSize: 12, lineHeight: 18, marginTop: 8 },
+  dropdownTriggerContent: { flex: 1, paddingRight: 10 },
+  dropdownLabel: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
+  dropdownValue: { fontSize: 15, fontWeight: '700' },
+  dropdownArrow: { fontSize: 12, fontWeight: '700' },
+  dropdownMenu: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 8,
+  },
+  dropdownScroll: { maxHeight: 220 },
+  dropdownItem: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+  },
+  dropdownItemText: { fontSize: 14 },
+  actionTabs: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  actionTab: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionEmoji: { fontSize: 22, marginBottom: 8 },
+  actionTabTitle: { fontSize: 14, fontWeight: '700' },
+  actionDetailCard: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  actionDetailTitle: { fontSize: 14, fontWeight: '700' },
+  actionDetailDesc: { fontSize: 12, lineHeight: 18, marginTop: 6 },
   previewCard: {
     marginTop: 16,
     padding: 16,
