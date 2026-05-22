@@ -388,10 +388,6 @@ export default function RoomDetailScreen({ route, navigation }) {
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Image
-                  source={require('../../public/img/device_default.png')}
-                  style={styles.quickIcon}
-                />
                 <Text style={styles.quickBtnText}>
                   {allOn ? t.turn_off_all : t.turn_on_all}
                 </Text>
@@ -403,7 +399,6 @@ export default function RoomDetailScreen({ route, navigation }) {
             onPress={enterSelectMode}
             activeOpacity={0.8}
           >
-            <Text style={styles.selectModeBtnIcon}>☑</Text>
             <Text style={styles.selectModeBtnText}>{t.select_action}</Text>
           </TouchableOpacity>
         </View>
@@ -547,10 +542,8 @@ const styles = StyleSheet.create({
     gap: 6,
     justifyContent: 'center',
   },
-  quickIcon: { width: 16, height: 16, tintColor: '#fff' },
   quickBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   selectModeBtn: { backgroundColor: '#5C6BC0', paddingHorizontal: 16 },
-  selectModeBtnIcon: { fontSize: 16, color: '#fff' },
   selectModeBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   selectHeader: {
     flexDirection: 'row',

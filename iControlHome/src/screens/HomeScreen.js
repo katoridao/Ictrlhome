@@ -459,6 +459,7 @@ export default function HomeScreen({ navigation }) {
           {
             backgroundColor: cardBackground,
             borderColor: cardBorderColor,
+            opacity: hasPermission ? 1 : 0.5,
           },
         ]}
         onPress={() => {

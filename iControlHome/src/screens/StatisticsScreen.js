@@ -135,7 +135,9 @@ export default function StatisticsScreen({ navigation }) {
 
       const devicesFromServer = res.data.devices || [];
       const formatted = devicesFromServer.map(normalizeDeviceStats);
-      const months = Array.isArray(res.data?.month_keys) ? res.data.month_keys : [];
+      const months = Array.isArray(res.data?.month_keys)
+        ? res.data.month_keys
+        : [];
 
       setServerNote(typeof res.data?.note === 'string' ? res.data.note : '');
       setMonthKeys(months);
@@ -244,7 +246,8 @@ export default function StatisticsScreen({ navigation }) {
   // ===============================
   const computedDevices = devices.map(item => {
     const baseRuntime = item.runtime_seconds || 0;
-    const lastUpdate = lastUpdateRef.current[String(item.device_id)] || Date.now();
+    const lastUpdate =
+      lastUpdateRef.current[String(item.device_id)] || Date.now();
     const extra =
       item.isActive && tick >= 0
         ? Math.max(0, Math.floor((Date.now() - lastUpdate) / 1000))
@@ -389,14 +392,17 @@ export default function StatisticsScreen({ navigation }) {
                 style={[
                   styles.filterItem,
                   {
-                    backgroundColor: openFilter === 'time' ? '#3b9cff' : themeStyles.card,
+                    backgroundColor:
+                      openFilter === 'time' ? '#3b9cff' : themeStyles.card,
                     borderColor:
                       openFilter === 'time'
                         ? '#3b9cff'
                         : themeStyles.border || '#ddd',
                   },
                 ]}
-                onPress={() => setOpenFilter(openFilter === 'time' ? null : 'time')}
+                onPress={() =>
+                  setOpenFilter(openFilter === 'time' ? null : 'time')
+                }
               >
                 <Text
                   style={{
@@ -413,7 +419,10 @@ export default function StatisticsScreen({ navigation }) {
                   source={require('../../public/img/down.png')}
                   style={[
                     styles.filterIcon,
-                    { tintColor: openFilter === 'time' ? '#fff' : themeStyles.text },
+                    {
+                      tintColor:
+                        openFilter === 'time' ? '#fff' : themeStyles.text,
+                    },
                   ]}
                 />
               </TouchableOpacity>
@@ -423,7 +432,10 @@ export default function StatisticsScreen({ navigation }) {
               <View
                 style={[
                   styles.dropdown,
-                  { backgroundColor: themeStyles.card, borderColor: themeStyles.border || '#ddd' },
+                  {
+                    backgroundColor: themeStyles.card,
+                    borderColor: themeStyles.border || '#ddd',
+                  },
                 ]}
               >
                 <TouchableOpacity
@@ -436,7 +448,9 @@ export default function StatisticsScreen({ navigation }) {
                     setOpenFilter(null);
                   }}
                 >
-                  <Text style={{ color: themeStyles.text }}>{t.last_7_days}</Text>
+                  <Text style={{ color: themeStyles.text }}>
+                    {t.last_7_days}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -520,7 +534,7 @@ export default function StatisticsScreen({ navigation }) {
             </Text>
           </View>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[
               styles.resetButton,
               {
@@ -535,7 +549,7 @@ export default function StatisticsScreen({ navigation }) {
             <Text style={[styles.resetButtonText, { color: themeStyles.text }]}>
               {resetting ? t.loading : t.statistics_reset_button}
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <Text style={[styles.sectionTitle, { color: themeStyles.text }]}>
             {t.device_details}
