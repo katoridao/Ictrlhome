@@ -445,7 +445,7 @@ GitHub: @HoangHung3999
 - API Security Support
 - Database Integration
 
-GitHub: @Htiep-HN
+GitHub: @tvucute
 
 ### Hoàng Tiệp
 
@@ -454,7 +454,7 @@ GitHub: @Htiep-HN
 - Firebase Authentication Integration
 - User Session Handling
 
-GitHub: @HoangHung3999
+GitHub: @Htiep-HN
 
 ## Additional Notes
 
