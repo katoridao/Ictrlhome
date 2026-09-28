@@ -1,22 +1,22 @@
 # iControlHome API
 
-## Tổng quan
+## Overview
 
-Thư mục `iControlHome-api/` chứa backend của hệ thống `iControlHome`. Thành phần này chịu trách nhiệm cung cấp API, xác thực người dùng, quản lý nhà / phòng / thiết bị, xử lý automation, gửi notification và phát sự kiện realtime cho ứng dụng mobile.
+The `iControlHome-api/` directory contains the backend for the `iControlHome` system. It provides the API, handles user authentication, manages houses, rooms, and devices, processes automations, sends notifications, and emits real-time events to the mobile app.
 
-## Phạm vi chức năng
+## Features
 
-Backend hiện đảm nhiệm các nhóm chức năng sau:
+The backend currently provides the following main features:
 
-- đăng nhập, đăng ký và cập nhật hồ sơ người dùng
-- quản lý nhà, thành viên và phân quyền
-- quản lý thiết bị, nhật ký hoạt động và thống kê sử dụng
-- chạy automation và các worker theo lịch
-- xử lý camera / nhận diện khuôn mặt
-- lưu trữ notification và gửi push notification
-- phát sự kiện realtime bằng `Socket.IO`
+- User sign-in, registration, and profile updates
+- House, member, and access-permission management
+- Device management, activity logs, and usage statistics
+- Automation execution and scheduled workers
+- Camera and facial recognition processing
+- Notification storage and push notification delivery
+- Real-time event delivery using `Socket.IO`
 
-## Công nghệ sử dụng
+## Technologies
 
 - `Node.js`
 - `Express`
@@ -26,33 +26,33 @@ Backend hiện đảm nhiệm các nhóm chức năng sau:
 - `Firebase Admin`
 - `Nodemailer`
 
-## Yêu cầu trước khi chạy
+## Requirements
 
-Môi trường local nên có sẵn:
+The local environment should have the following:
 
-- Node.js phiên bản `20+`
+- Node.js version `20+`
 - npm
-- MongoDB khả dụng
-- file Firebase service account nếu cần kiểm thử push notification
+- An accessible MongoDB instance
+- A Firebase service account file if testing push notifications
 
-## Cài đặt nhanh
+## Quick Start
 
-Trong thư mục `iControlHome-api/`, thực hiện:
+From the `iControlHome-api/` directory, run:
 
 ```bash
 npm install
 npm start
 ```
 
-## Biến môi trường quan trọng
+## Important Environment Variables
 
-File `.env` thực tế không nên được commit cùng mã nguồn. Repo chỉ nên chứa file mẫu `.env.example`. Có thể tạo file local bằng lệnh:
+The actual `.env` file should not be committed with the source code. The repository should contain only the `.env.example` template. Create a local `.env` file with:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Sau đó cập nhật các giá trị theo môi trường triển khai:
+Then update the values for your deployment environment:
 
 ```env
 MONGO_URL=your_mongodb_connection_string
@@ -60,13 +60,13 @@ JWT_SECRET=your_secret_here
 FIREBASE_SERVICE_ACCOUNT_PATH=./your-firebase-adminsdk.json
 ```
 
-> Các giá trị bảo mật nên được quản lý thông qua `.env` hoặc secret manager, không nên hardcode trực tiếp trong source code.
+> Manage sensitive values through `.env` or a secret manager. Do not hardcode them in the source code.
 
-## Các nhóm route chính
+## Main Route Groups
 
-Backend hiện cung cấp các nhóm route chính như sau:
+The backend currently provides the following route groups:
 
-- `/api` → xác thực, cấu hình chung, notification token
+- `/api` → authentication, general configuration, and notification tokens
 - `/api/houses`
 - `/api/rooms`
 - `/api/devices`
@@ -76,21 +76,21 @@ Backend hiện cung cấp các nhóm route chính như sau:
 - `/api/camera`
 - `/api/notifications`
 
-## Điều kiện để notification hoạt động
+## Push Notification Requirements
 
-Push notification hoạt động ổn định khi đồng thời đáp ứng các điều kiện sau:
+Push notifications work reliably when all of the following conditions are met:
 
-1. Firebase Admin được cấu hình chính xác trên backend
-2. ứng dụng mobile đã đăng ký FCM token thành công
-3. thiết bị hoặc máy ảo có Google Play Services
+1. Firebase Admin is configured correctly on the backend.
+2. The mobile app has successfully registered an FCM token.
+3. The device or emulator has Google Play Services.
 
-Khi kiểm thử trên **Genymotion**, nên bổ sung **GApps / Google Play Services** để tránh lỗi không lấy được token.
+When testing on **Genymotion**, install **GApps / Google Play Services** to avoid issues generating a token.
 
-## Lưu ý trong quá trình phát triển
+## Development Notes
 
-- khi thay đổi API, cần đối chiếu lại phía mobile
-- khi thay đổi socket event, cần kiểm tra cả phía phát và phía nhận
-- không commit `.env`, Firebase key hoặc credential thực tế
-- nếu secret đã từng bị lộ trong git history, cần rotate ngay lập tức
+- When changing the API, verify the corresponding mobile app implementation.
+- When changing a socket event, check both the sender and receiver.
+- Do not commit `.env`, Firebase keys, or actual credentials.
+- If a secret has ever been exposed in Git history, rotate it immediately.
 
-Sau mỗi thay đổi quan trọng, nên kiểm tra lại cả API lẫn luồng realtime để bảo đảm backend và mobile luôn đồng bộ.
+After every significant change, test both the API and real-time flows to ensure the backend and mobile app remain in sync.

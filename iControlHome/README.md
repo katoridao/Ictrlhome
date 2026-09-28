@@ -1,21 +1,21 @@
 # iControlHome Mobile App
 
-## Tổng quan
+## Overview
 
-Thư mục `iControlHome/` chứa ứng dụng mobile của hệ thống `iControlHome`, được phát triển bằng React Native. Ứng dụng này phục vụ các tác vụ như xác thực người dùng, quản lý nhà và phòng, điều khiển thiết bị, xử lý automation, nhận thông báo và hiển thị lịch sử camera.
+The `iControlHome/` directory contains the `iControlHome` mobile application, built with React Native. It supports user authentication, house and room management, device control, automation, notifications, and camera activity history.
 
-## Phạm vi chức năng
+## Features
 
-Ứng dụng mobile hiện đảm nhiệm các nhóm chức năng chính sau:
+The mobile app currently provides the following main features:
 
-- đăng nhập, đăng ký và quên mật khẩu
-- quản lý phòng và thiết bị trong nhà
-- điều khiển thiết bị và nhận cập nhật realtime
-- thiết lập automation / lịch chạy
-- nhận thông báo và cấu hình notification
-- theo dõi lịch sử người ra vào / nhận diện camera
+- Sign in, registration, and password recovery
+- House room and device management
+- Device control and real-time updates
+- Automation and schedule configuration
+- Notifications and notification settings
+- Entry and exit history and camera-based recognition
 
-## Công nghệ sử dụng
+## Technologies
 
 - `React Native 0.83.1`
 - `React 19`
@@ -26,64 +26,64 @@ Thư mục `iControlHome/` chứa ứng dụng mobile của hệ thống `iContr
 - `Firebase Messaging`
 - `Notifee`
 
-## Cấu hình cần kiểm tra trước khi chạy
+## Configuration to Check Before Running
 
-Các cấu hình quan trọng cần được rà soát trước khi khởi động ứng dụng:
+Review the following settings before starting the application:
 
-- `src/database/api.js` → địa chỉ API backend
-- `src/database/socket.js` → địa chỉ socket realtime
-- `android/app/google-services.json` → cấu hình Firebase cho Android
-- `ios/.../GoogleService-Info.plist` → cấu hình Firebase cho iOS (nếu áp dụng)
+- `src/database/api.js` → backend API address
+- `src/database/socket.js` → real-time socket address
+- `android/app/google-services.json` → Firebase configuration for Android
+- `ios/.../GoogleService-Info.plist` → Firebase configuration for iOS (if applicable)
 
-> Trong môi trường local, mobile app, backend và ESP32 nên nằm trên cùng một mạng LAN / Wi‑Fi để bảo đảm khả năng kết nối ổn định.
+> In a local environment, the mobile app, backend, and ESP32 should be connected to the same LAN / Wi-Fi network to ensure a stable connection.
 
-## Lưu ý khi sử dụng Genymotion
+## Using Genymotion
 
-Nếu kiểm thử notification trên **Genymotion**, môi trường giả lập cần có **Google Play Services / GApps**. Nếu thiếu thành phần này, Firebase có thể không tạo được FCM token và push notification sẽ không hoạt động.
+When testing notifications on **Genymotion**, the emulator must include **Google Play Services / GApps**. Without these components, Firebase may be unable to generate an FCM token, and push notifications will not work.
 
-## Cài đặt và chạy nhanh
+## Quick Start
 
-Trong thư mục `iControlHome/`, thực hiện:
+From the `iControlHome/` directory, run:
 
 ```bash
 npm install
 ```
 
-Nếu cần thay đổi IP backend hoặc URL realtime, cập nhật trực tiếp tại:
+To change the backend IP address or real-time URL, update these files:
 
 ```text
 src/database/api.js
 src/database/socket.js
 ```
 
-Sau đó khởi động ứng dụng:
+Then start the application:
 
 ```bash
 npm start
 npm run android
 ```
 
-Khi sử dụng thiết bị Android thật, có thể cần thêm lệnh sau để chuyển tiếp cổng Metro:
+When using a physical Android device, you may need to forward the Metro port with:
 
 ```bash
 adb reverse tcp:8081 tcp:8081
 ```
 
-## Hướng dẫn kiểm tra sự cố cơ bản
+## Basic Troubleshooting
 
-Nếu ứng dụng không hoạt động đúng như mong đợi, nên kiểm tra theo thứ tự sau:
+If the application does not work as expected, check the following in order:
 
-1. các package đã được cài đầy đủ bằng `npm install`
-2. Metro bundler đã được khởi động
-3. `src/database/api.js` và `src/database/socket.js` đã trỏ đúng tới backend và socket server
-4. thiết bị thật / máy ảo có cùng mạng với backend
-5. Google Play Services đã sẵn sàng nếu kiểm thử notification trên Genymotion
+1. All packages are installed with `npm install`.
+2. The Metro bundler is running.
+3. `src/database/api.js` and `src/database/socket.js` point to the correct backend and socket server.
+4. The physical device or emulator is on the same network as the backend.
+5. Google Play Services is available if testing notifications on Genymotion.
 
-## Ghi chú cấu hình
+## Configuration Notes
 
-Với cấu trúc hiện tại, địa chỉ API và socket được chỉnh trực tiếp trong:
+With the current setup, the API and socket addresses are configured directly in:
 
 - `src/database/api.js`
 - `src/database/socket.js`
 
-Khi đổi môi trường chạy local, chỉ cần cập nhật hai file này cho phù hợp.
+When switching local environments, update these two files accordingly.

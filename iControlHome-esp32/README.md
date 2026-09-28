@@ -1,17 +1,17 @@
 # iControlHome ESP32 and Camera Service
 
-## Tổng quan
+## Overview
 
-Thư mục `iControlHome-esp32/` chứa các thành phần liên quan tới phần cứng và camera của dự án, gồm hai tệp chính:
+The `iControlHome-esp32/` directory contains the project's hardware and camera components, including two main files:
 
-- `main.py` → chương trình MicroPython chạy trên ESP32 để điều khiển thiết bị qua HTTP
-- `camera.py` → dịch vụ Python sử dụng webcam để nhận diện khuôn mặt và gửi dữ liệu về backend
+- `main.py` → MicroPython program that runs on the ESP32 to control devices over HTTP
+- `camera.py` → Python service that uses a webcam for facial recognition and sends data to the backend
 
-Thành phần này đóng vai trò kết nối giữa hệ thống phần mềm và thiết bị thực tế.
+These components connect the software system to the physical devices.
 
-## Chức năng của `main.py`
+## `main.py` Features
 
-`main.py` chạy trên ESP32 và mở một HTTP server đơn giản. Backend hoặc ứng dụng có thể gọi các đường dẫn như:
+`main.py` runs on the ESP32 and starts a simple HTTP server. The backend or application can call paths such as:
 
 - `/on`, `/off`
 - `/all/on`, `/all/off`
@@ -19,41 +19,41 @@ Thành phần này đóng vai trò kết nối giữa hệ thống phần mềm 
 - `/led2/on`, `/led2/off`
 - `/led3/on`, `/led3/off`
 
-Trước khi nạp code lên board, cập nhật trực tiếp trong `main.py` các giá trị sau:
+Before flashing the code to the board, update the following values directly in `main.py`:
 
 - `SSID`
 - `PWD`
 - `PORT`
 
-> ESP32 nên sử dụng cùng mạng Wi‑Fi với backend và ứng dụng mobile để bảo đảm độ ổn định của kết nối.
+> The ESP32 should use the same Wi-Fi network as the backend and mobile app to ensure a stable connection.
 
-## Chức năng của `camera.py`
+## `camera.py` Features
 
-`camera.py` chịu trách nhiệm:
+`camera.py` is responsible for:
 
-- đọc khung hình từ webcam
-- so khớp khuôn mặt đã lưu
-- gửi sự kiện nhận diện về backend
-- hỗ trợ đăng ký thêm khuôn mặt mới
+- Reading frames from the webcam
+- Matching faces against saved data
+- Sending recognition events to the backend
+- Supporting registration of new faces
 
-Trước khi chạy, cần chỉnh trực tiếp ở đầu file `camera.py` các giá trị sau:
+Before running it, edit the following values near the top of `camera.py`:
 
 - `SERVER_BASE_URL`
 - `HOUSE_ID`
 - `DEVICE_TOKEN`
 - `CAMERA_INDEX`
 
-## Yêu cầu môi trường
+## Requirements
 
-- Python `3.10` được khuyến nghị
+- Python `3.10` is recommended
 - `pip`
-- webcam hoạt động ổn định
-- ESP32 có hỗ trợ MicroPython
-- `esptool` hoặc công cụ upload như MicroPico / Thonny
+- A working webcam
+- An ESP32 board that supports MicroPython
+- `esptool` or an upload tool such as MicroPico / Thonny
 
-## Khởi động nhanh camera service
+## Quick Start: Camera Service
 
-Trong thư mục `iControlHome-esp32/`, thực hiện:
+From the `iControlHome-esp32/` directory, run:
 
 ```powershell
 py -3.10 -m venv venv
@@ -64,13 +64,13 @@ pip install -r requirements.txt
 python camera.py
 ```
 
-Khi cần thay đổi URL backend, token camera hoặc Wi‑Fi ESP32, cập nhật trực tiếp trong `camera.py` và `main.py`.
+To change the backend URL, camera token, or ESP32 Wi-Fi settings, update `camera.py` and `main.py` directly.
 
-Nếu gặp khó khăn khi cài `face-recognition`, nên ưu tiên sử dụng Python `3.10` để tăng khả năng tương thích.
+If you have trouble installing `face-recognition`, use Python `3.10` for better compatibility.
 
-## Flash / upload ESP32
+## Flashing / Uploading to the ESP32
 
-Khi cần dùng `esptool`, có thể thực hiện:
+To use `esptool`, run:
 
 ```bash
 pip install esptool
@@ -78,19 +78,19 @@ python -m esptool --port COM5 erase-flash
 python -m esptool --chip esp32 --port COM5 write-flash -z 0x1000 esp32.bin
 ```
 
-Trong đó, `COM5` cần được thay bằng đúng cổng serial của thiết bị đang sử dụng.
+Replace `COM5` with the serial port used by your device.
 
-Nếu sử dụng **MicroPico** hoặc **Thonny**, chỉ cần chỉnh trực tiếp `main.py` rồi upload lên board.
+If using **MicroPico** or **Thonny**, edit `main.py` directly and upload it to the board.
 
-## Checklist trước khi kiểm thử toàn hệ thống
+## Full-System Testing Checklist
 
-1. backend đã được khởi động
-2. ESP32 đã kết nối Wi‑Fi và hiển thị IP
-3. `camera.py` có thể kết nối tới backend
-4. IP lưu trong database khớp với IP thực tế của ESP32
+1. The backend is running.
+2. The ESP32 is connected to Wi-Fi and displays its IP address.
+3. `camera.py` can connect to the backend.
+4. The IP address stored in the database matches the ESP32's actual IP address.
 
-## Ghi chú cấu hình
+## Configuration Notes
 
-Các giá trị như Wi‑Fi, URL backend và token camera hiện được chỉnh trực tiếp trong mã nguồn để thuận tiện cho việc demo và kiểm thử.
+Values such as Wi-Fi settings, the backend URL, and the camera token are currently configured directly in the source code for convenience during demos and testing.
 
-Khi thay đổi môi trường chạy, chỉ cần cập nhật lại `main.py` và `camera.py`.
+When changing environments, update `main.py` and `camera.py` accordingly.
